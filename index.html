@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>김정은 사진 퍼즐 게임</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>김정은 사진 퍼즐</h1>
+      <p>사진 조각을 슬라이딩해서 원래 이미지로 맞춰 보세요.</p>
+    </header>
+
+    <main class="app">
+      <section class="controls">
+        <label class="file-picker">
+          <span>사진 불러오기</span>
+          <input type="file" id="imageLoader" accept="image/*" />
+        </label>
+
+        <label class="select-group">
+          <span>퍼즐 크기</span>
+          <select id="boardSize">
+            <option value="3">3 × 3</option>
+            <option value="4" selected>4 × 4</option>
+            <option value="5">5 × 5</option>
+          </select>
+        </label>
+
+        <div class="button-group">
+          <button id="shuffleBtn">섞기</button>
+          <button id="resetBtn" class="ghost">초기화</button>
+        </div>
+
+        <div class="stats">
+          <div>
+            <span class="label">이동</span>
+            <span id="moveCounter">0</span>
+          </div>
+          <div>
+            <span class="label">시간</span>
+            <span id="timer">00:00</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="board-wrapper">
+        <div id="board" aria-live="polite"></div>
+        <p id="statusMessage" role="status"></p>
+      </section>
+    </main>
+
+    <section class="tips">
+      <h2>사진 준비 방법</h2>
+      <ol>
+        <li>`assets` 폴더에 김정은 사진 파일을 넣습니다. (예: `assets/kim-photo.jpg`)</li>
+        <li>위의 “사진 불러오기” 버튼으로 파일을 선택하거나 `script.js` 의 기본 경로를 수정하세요.</li>
+        <li>모바일에서도 동작하므로 친구들과 함께 퍼즐 레이스를 즐겨보세요.</li>
+      </ol>
+    </section>
+
+    <footer>
+      <small>브라우저에서만 실행되는 오프라인 퍼즐입니다.</small>
+    </footer>
+
+    <script src="./script.js" type="module"></script>
+  </body>
+</html>
