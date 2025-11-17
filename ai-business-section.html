@@ -10,36 +10,25 @@
 
   <div class="con ai-business">
     <div class="inner">
-      <div class="row row1 ai-hero">
-        <div class="ai-hero__copy">
-          <p class="eyebrow">AI SOLUTION</p>
-          <h3>
-            RAG, AI 통합 인프라, GPU 쿠버네티스까지<br>
-            BIT가 직접 설계·구축·운영합니다.
-          </h3>
-          <p>
-            축적된 하이퍼스케일 인프라 구축 경험과 디지털 트윈 수준의 레퍼런스를 바탕으로
-            생성형 AI 도입의 모든 단계(데이터 파이프라인 &rarr; 모델 &rarr; 운영)를 유연하게 연결합니다.
-          </p>
+        <div class="row row1 ai-hero">
+          <div class="ai-hero__copy">
+            <p class="eyebrow">AI SOLUTION</p>
+            <h3>
+              RAG, AI 통합 인프라, GPU 쿠버네티스까지<br>
+              BIT가 직접 설계·구축·운영합니다.
+            </h3>
+            <p>
+              축적된 하이퍼스케일 인프라 구축 경험과 디지털 트윈 수준의 레퍼런스를 바탕으로
+              생성형 AI 도입의 모든 단계(데이터 파이프라인 &rarr; 모델 &rarr; 운영)를 유연하게 연결합니다.
+            </p>
+          </div>
         </div>
-        <dl class="ai-hero__highlights">
-          <div>
-            <dt>핵심 레퍼런스</dt>
-            <dd>국내 대기업 · 금융권 GPU 팜, RAG 포털</dd>
-          </div>
-          <div>
-            <dt>서비스 범위</dt>
-            <dd>컨설팅 → 구축 → MLOps → 상시 운영</dd>
-          </div>
-          <div>
-            <dt>핵심 강점</dt>
-            <dd>NVIDIA DGX · NetApp · 쿠버네티스 통합</dd>
-          </div>
-        </dl>
-      </div>
 
       <div class="row row2 ai-pillars">
         <article class="ai-card">
+          <figure class="ai-card__visual">
+            <img src="/img/ai/solution_rag.jpg" alt="사내 지식과 LLM을 결합한 RAG 파이프라인">
+          </figure>
           <p class="ai-card__eyebrow">Solution 01</p>
           <h4>RAG 구축</h4>
           <p>
@@ -54,6 +43,9 @@
         </article>
 
         <article class="ai-card">
+          <figure class="ai-card__visual">
+            <img src="/img/ai/solution_infra.jpg" alt="AI 통합 인프라 아키텍처 다이어그램">
+          </figure>
           <p class="ai-card__eyebrow">Solution 02</p>
           <h4>AI 통합 인프라 구축</h4>
           <p>
@@ -68,6 +60,9 @@
         </article>
 
         <article class="ai-card">
+          <figure class="ai-card__visual">
+            <img src="/img/ai/solution_gpu.jpg" alt="GPU 쿠버네티스 오케스트레이션 화면">
+          </figure>
           <p class="ai-card__eyebrow">Solution 03</p>
           <h4>GPU 통합 쿠버네티스 클러스터</h4>
           <p>
@@ -135,12 +130,10 @@
 .ai-hero__copy {flex:1 1 420px;}
 .ai-hero__copy h3 {font-size:3.2rem; line-height:1.35; margin-bottom:16px;}
 .ai-hero__copy p {color:#555; line-height:1.8;}
-.ai-hero__highlights {flex:1 1 320px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:0;}
-.ai-hero__highlights dt {font-weight:600; color:#111; margin-bottom:6px;}
-.ai-hero__highlights dd {margin:0; color:#666; line-height:1.6;}
-
 .ai-pillars {display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; margin-top:80px;}
-.ai-card {background:#fff; border:1px solid #e3e5eb; border-radius:16px; padding:32px; box-shadow:0 20px 35px rgba(6,25,49,0.08); position:relative; overflow:hidden;}
+  .ai-card {background:#fff; border:1px solid #e3e5eb; border-radius:16px; padding:32px; box-shadow:0 20px 35px rgba(6,25,49,0.08); position:relative; overflow:hidden;}
+  .ai-card__visual {margin:-32px -32px 28px; height:180px; background:#0d1b2a; overflow:hidden;}
+  .ai-card__visual img {width:100%; height:100%; object-fit:cover; display:block;}
 .ai-card__eyebrow {font-size:1.2rem; font-weight:600; color:#8f98ad; margin-bottom:12px;}
 .ai-card h4 {font-size:2.1rem; margin-bottom:12px;}
 .ai-card p {color:#4e5868; line-height:1.7; margin-bottom:20px;}
