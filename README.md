@@ -25,6 +25,10 @@ npm run dev
   - Body: `{ email, password, name?, phone?, marketingConsent? }`
   - 기능: 이메일 중복 체크 → BCrypt 해시 → `users` 테이블에 저장
   - 응답: `201 Created` / 오류 시 적절한 상태 코드와 메시지
+- **GET `/api/me`**
+  - 세션 기반 로그인 여부와 사용자 정보 반환
+- **POST `/api/logout`**
+  - 세션 파기 후 로그아웃
 - **GET `/auth/kakao`**
   - 카카오 OAuth 인가 요청으로 리다이렉트. `KAKAO_CLIENT_ID`, `KAKAO_REDIRECT_URI` 환경 변수가 필요
 - **GET `/auth/kakao/callback`**

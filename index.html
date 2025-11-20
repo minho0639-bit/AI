@@ -13,6 +13,15 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <header class="top-nav">
+      <div class="brand">팬레터포스트</div>
+      <div class="user-controls">
+        <span class="user-nickname">Guest</span>
+        <button id="profileBtn" class="quiet tiny" type="button">내 정보</button>
+        <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
+      </div>
+    </header>
+
     <main>
       <section id="intro" class="canvas">
         <div class="hero">
@@ -29,10 +38,10 @@
             </div>
           </div>
 
-          <div class="panel">
+          <div class="panel login-panel">
             <div class="panel-head">
               <span>로그인</span>
-              <button class="quiet tiny">비밀번호 찾기</button>
+              <button class="quiet tiny" type="button">비밀번호 찾기</button>
             </div>
             <form class="form auth-form">
               <label>
@@ -43,9 +52,11 @@
                 비밀번호
                 <input type="password" placeholder="영문+숫자 8자" required />
               </label>
-              <button class="primary full">로그인하기</button>
+              <button class="primary full" type="submit">로그인하기</button>
             </form>
-            <button class="ghost full" onclick="window.location.href='signup.html'">신규 회원가입</button>
+            <button class="ghost full" type="button" onclick="window.location.href='signup.html'">
+              신규 회원가입
+            </button>
             <div class="divider">
               <span>SNS로 가입 / 로그인</span>
             </div>
@@ -57,7 +68,20 @@
               <button type="button" class="social google">Google로 시작하기</button>
             </div>
           </div>
+
+          <div class="home-visual">
+            <div class="home-visual__image"></div>
+            <div class="home-visual__text">
+              <p>“팬레터포스트가 직접 인쇄하고 封합니다.”</p>
+              <span>실시간 제작 현황 · 배송 트래킹</span>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <section class="home-actions">
+        <p>새로운 편지를 작성해 오늘 접수 리스트에 올려보세요.</p>
+        <button id="writeLetterBtn" class="primary letter-cta" type="button">편지 쓰기</button>
       </section>
     </main>
 
@@ -72,5 +96,47 @@
           <a id="contact" href="mailto:sales@b-itsolution.com">문의 sales@b-itsolution.com</a>
         </div>
       </footer>
+    <script>
+      const nicknameEl = document.querySelector(".user-nickname");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const profileBtn = document.getElementById("profileBtn");
+      const letterBtn = document.getElementById("writeLetterBtn");
+      const loginPanel = document.querySelector(".login-panel");
+
+      async function fetchSession() {
+        try {
+          const res = await fetch("/api/me");
+          const data = await res.json();
+          if (data.loggedIn) {
+            document.body.classList.add("logged-in");
+            nicknameEl.textContent = data.user.name || data.user.email;
+          } else {
+            document.body.classList.remove("logged-in");
+          }
+        } catch (error) {
+          console.error("세션 정보를 가져오지 못했습니다.", error);
+        }
+      }
+
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (error) {
+          console.error("로그아웃 실패", error);
+        } finally {
+          window.location.reload();
+        }
+      });
+
+      profileBtn.addEventListener("click", () => {
+        alert("내 정보 페이지는 곧 제공될 예정입니다.");
+      });
+
+      letterBtn.addEventListener("click", () => {
+        alert("편지 작성 페이지가 곧 열립니다!");
+      });
+
+      fetchSession();
+    </script>
   </body>
 </html>

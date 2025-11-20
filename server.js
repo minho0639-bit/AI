@@ -69,6 +69,37 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
+app.get("/api/me", async (req, res) => {
+  if (!req.session.userId) {
+    return res.json({ loggedIn: false });
+  }
+  try {
+    const user = await getUserById(req.session.userId);
+    if (!user) {
+      req.session.destroy(() => {});
+      return res.json({ loggedIn: false });
+    }
+    res.json({
+      loggedIn: true,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
+  } catch (error) {
+    console.error("me endpoint error:", error);
+    res.status(500).json({ loggedIn: false });
+  }
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("logout error:", err);
+      return res.status(500).json({ message: "로그아웃 중 오류가 발생했습니다." });
+    }
+    res.clearCookie("connect.sid");
+    res.json({ message: "로그아웃 되었습니다." });
+  });
+});
+
 app.get("/auth/kakao", (req, res) => {
   if (!KAKAO_CLIENT_ID) {
     return res.status(500).send("Kakao OAuth 설정이 필요합니다.");
@@ -176,6 +207,11 @@ async function findOrCreateSocialUser(provider, providerUserId, payload) {
   );
 
   return userId;
+}
+
+async function getUserById(userId) {
+  const [rows] = await pool.query("SELECT id, email, name FROM users WHERE id = ?", [userId]);
+  return rows[0];
 }
 
 app.listen(PORT, () => {
