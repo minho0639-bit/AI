@@ -164,8 +164,7 @@ button:active {
   font-size: 0.95rem;
 }
 
-.form,
-.letter-form {
+.form {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -208,10 +207,40 @@ textarea {
   background: var(--border);
 }
 
-.letter-actions {
+.social-login {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 12px;
+}
+
+.social {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  background: #fff;
+  color: var(--text);
+}
+
+.social.kakao {
+  background: #ffe812;
+  border-color: #ffe812;
+  color: #2b1d00;
+}
+
+.social.naver {
+  background: #03c75a;
+  border-color: #03c75a;
+  color: #ffffff;
+}
+
+.social.google {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
 .flow {
