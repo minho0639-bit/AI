@@ -69,6 +69,34 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "이메일과 비밀번호를 입력해 주세요." });
+  }
+  try {
+    const [rows] = await pool.query("SELECT id, email, name, password_hash FROM users WHERE email = ?", [
+      email,
+    ]);
+    if (rows.length === 0) {
+      return res.status(401).json({ message: "일치하는 계정을 찾을 수 없습니다." });
+    }
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ message: "비밀번호가 올바르지 않습니다." });
+    }
+    req.session.userId = user.id;
+    res.json({
+      message: "로그인되었습니다.",
+      user: { id: user.id, email: user.email, name: user.name },
+    });
+  } catch (error) {
+    console.error("login error:", error);
+    res.status(500).json({ message: "로그인 처리 중 오류가 발생했습니다." });
+  }
+});
+
 app.get("/api/me", async (req, res) => {
   if (!req.session.userId) {
     return res.json({ loggedIn: false });

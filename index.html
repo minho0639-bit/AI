@@ -43,17 +43,18 @@
               <span>로그인</span>
               <button class="quiet tiny" type="button">비밀번호 찾기</button>
             </div>
-            <form class="form auth-form">
+            <form id="login-form" class="form auth-form">
               <label>
                 이메일
-                <input type="email" placeholder="fan@letter.com" required />
+                <input type="email" name="email" placeholder="fan@letter.com" required />
               </label>
               <label>
                 비밀번호
-                <input type="password" placeholder="영문+숫자 8자" required />
+                <input type="password" name="password" placeholder="영문+숫자 8자" required />
               </label>
               <button class="primary full" type="submit">로그인하기</button>
             </form>
+            <p id="loginMessage" class="message"></p>
             <button class="ghost full" type="button" onclick="window.location.href='signup.html'">
               신규 회원가입
             </button>
@@ -102,16 +103,28 @@
       const profileBtn = document.getElementById("profileBtn");
       const letterBtn = document.getElementById("writeLetterBtn");
       const loginPanel = document.querySelector(".login-panel");
+      const loginForm = document.getElementById("login-form");
+      const loginMessage = document.getElementById("loginMessage");
+
+      function applySession(user) {
+        document.body.classList.add("logged-in");
+        nicknameEl.textContent = user?.name || user?.email || "팬";
+        if (loginMessage) loginMessage.textContent = "";
+      }
+
+      function clearSessionState() {
+        document.body.classList.remove("logged-in");
+        nicknameEl.textContent = "Guest";
+      }
 
       async function fetchSession() {
         try {
           const res = await fetch("/api/me");
           const data = await res.json();
           if (data.loggedIn) {
-            document.body.classList.add("logged-in");
-            nicknameEl.textContent = data.user.name || data.user.email;
+            applySession(data.user);
           } else {
-            document.body.classList.remove("logged-in");
+            clearSessionState();
           }
         } catch (error) {
           console.error("세션 정보를 가져오지 못했습니다.", error);
@@ -135,6 +148,34 @@
       letterBtn.addEventListener("click", () => {
         alert("편지 작성 페이지가 곧 열립니다!");
       });
+
+      if (loginForm) {
+        loginForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          loginMessage.textContent = "";
+          loginMessage.classList.remove("error", "success");
+          const formData = new FormData(loginForm);
+          const payload = Object.fromEntries(formData.entries());
+          try {
+            const res = await fetch("/api/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              throw new Error(data.message || "로그인에 실패했습니다.");
+            }
+            loginMessage.textContent = data.message;
+            loginMessage.classList.add("success");
+            applySession(data.user);
+            loginForm.reset();
+          } catch (error) {
+            loginMessage.textContent = error.message;
+            loginMessage.classList.add("error");
+          }
+        });
+      }
 
       fetchSession();
     </script>

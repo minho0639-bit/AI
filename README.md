@@ -25,6 +25,9 @@ npm run dev
   - Body: `{ email, password, name?, phone?, marketingConsent? }`
   - 기능: 이메일 중복 체크 → BCrypt 해시 → `users` 테이블에 저장
   - 응답: `201 Created` / 오류 시 적절한 상태 코드와 메시지
+- **POST `/api/login`**
+  - Body: `{ email, password }`
+  - 기능: 이메일/비밀번호 검증 후 세션 생성
 - **GET `/api/me`**
   - 세션 기반 로그인 여부와 사용자 정보 반환
 - **POST `/api/logout`**

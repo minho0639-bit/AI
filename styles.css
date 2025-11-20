@@ -315,6 +315,21 @@ textarea {
   border-radius: 999px;
 }
 
+.message {
+  font-size: 0.9rem;
+  min-height: 20px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.message.error {
+  color: #d73341;
+}
+
+.message.success {
+  color: #15803d;
+}
+
 .flow {
   margin-top: 80px;
   display: grid;
