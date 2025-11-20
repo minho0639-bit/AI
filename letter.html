@@ -24,17 +24,23 @@
         <p>
           대분류 카테고리를 먼저 선택하면, 소속∙팀∙아티스트까지 단계별로 찾아 편지를 작성할 수 있습니다.
         </p>
+        <div class="search-box">
+          <input type="text" id="artistSearch" placeholder="이름이나 팀을 검색해 주세요" />
+          <button type="button" id="searchBtn" class="primary">검색</button>
+        </div>
       </section>
 
       <section class="category-grid">
         <article class="category-card" data-category="entertainment">
           <div class="badge">Entertainment</div>
           <h2>엔터테인먼트</h2>
+          <div class="category-media entertainment"></div>
           <p>아이돌, 배우, 모델, 예능인 등 엔터테인먼트 산업 전반</p>
         </article>
         <article class="category-card" data-category="sports">
           <div class="badge">Sports</div>
           <h2>스포츠</h2>
+          <div class="category-media sports"></div>
           <p>축구, 야구, 농구, e스포츠 등 다양한 종목의 선수들에게</p>
         </article>
       </section>
@@ -88,6 +94,8 @@
       const selectionPreview = document.getElementById("selectionPreview");
       const nextButton = document.getElementById("nextStep");
       const backHome = document.getElementById("backHome");
+      const artistSearch = document.getElementById("artistSearch");
+      const searchBtn = document.getElementById("searchBtn");
 
       backHome.addEventListener("click", () => {
         window.location.href = "/";
@@ -314,6 +322,23 @@
       nextButton.addEventListener("click", () => {
         if (!nextButton.disabled) {
           alert(`'${selectionPreview.textContent}' 대상에게 편지를 작성하는 페이지로 이동합니다.`);
+        }
+      });
+
+      function handleSearch() {
+        const keyword = artistSearch.value.trim();
+        if (!keyword) {
+          alert("검색어를 입력해 주세요.");
+          return;
+        }
+        alert(`'${keyword}'에 대한 검색 결과는 곧 제공됩니다.`);
+      }
+
+      searchBtn.addEventListener("click", handleSearch);
+      artistSearch.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          handleSearch();
         }
       });
     </script>
