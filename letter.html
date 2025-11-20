@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>팬레터포스트 | 편지 작성</title>
+    <title>팬레터포스트 | 카테고리 선택</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,10 +20,8 @@
 
     <main class="write-main">
       <section class="intro">
-        <h1>누구에게 편지를 전하고 싶나요?</h1>
-        <p>
-          대분류 카테고리를 먼저 선택하면, 소속∙팀∙아티스트까지 단계별로 찾아 편지를 작성할 수 있습니다.
-        </p>
+        <h1>편지를 전하고 싶은 대상의 분야를 선택해 주세요</h1>
+        <p>대분류를 먼저 선택하면 세부 카테고리 페이지로 이동해 더 정확하게 대상을 찾을 수 있습니다.</p>
         <div class="search-box">
           <input type="text" id="artistSearch" placeholder="이름이나 팀을 검색해 주세요" />
           <button type="button" id="searchBtn" class="primary">검색</button>
@@ -34,66 +32,19 @@
         <article class="category-card" data-category="entertainment">
           <div class="badge">Entertainment</div>
           <h2>엔터테인먼트</h2>
-          <div class="category-media entertainment"></div>
-          <p>아이돌, 배우, 모델, 예능인 등 엔터테인먼트 산업 전반</p>
+          <div class="category-media entertainment small"></div>
         </article>
         <article class="category-card" data-category="sports">
           <div class="badge">Sports</div>
           <h2>스포츠</h2>
-          <div class="category-media sports"></div>
-          <p>축구, 야구, 농구, e스포츠 등 다양한 종목의 선수들에게</p>
+          <div class="category-media sports small"></div>
         </article>
-      </section>
-
-      <section class="subcategories" id="subcategorySection">
-        <p class="section-title">중간 분류를 선택하세요</p>
-        <div class="chip-list" id="subcategoryChips"></div>
-      </section>
-
-      <section class="details" id="detailsSection">
-        <p class="section-title">소속사, 팀, 이름을 선택하세요</p>
-        <div class="selection-grid">
-          <label>
-            소속사
-            <select id="agencySelect">
-              <option value="">먼저 중간 분류를 선택하세요</option>
-            </select>
-          </label>
-          <label>
-            팀 / 그룹
-            <select id="teamSelect" disabled>
-              <option value="">소속사를 선택하세요</option>
-            </select>
-          </label>
-          <label>
-            이름
-            <select id="nameSelect" disabled>
-              <option value="">팀을 선택하세요</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <section class="summary">
-        <div>
-          <p>선택한 대상</p>
-          <h3 id="selectionPreview">아직 선택되지 않았습니다.</h3>
-        </div>
-        <button type="button" id="nextStep" class="primary" disabled>편지 작성으로 이동</button>
       </section>
     </main>
 
     <script>
-      const categoryCards = document.querySelectorAll(".category-card");
-      const subcategorySection = document.getElementById("subcategorySection");
-      const detailsSection = document.getElementById("detailsSection");
-      const subcategoryChips = document.getElementById("subcategoryChips");
-      const agencySelect = document.getElementById("agencySelect");
-      const teamSelect = document.getElementById("teamSelect");
-      const nameSelect = document.getElementById("nameSelect");
-      const selectionPreview = document.getElementById("selectionPreview");
-      const nextButton = document.getElementById("nextStep");
       const backHome = document.getElementById("backHome");
+      const categoryCards = document.querySelectorAll(".category-card");
       const artistSearch = document.getElementById("artistSearch");
       const searchBtn = document.getElementById("searchBtn");
 
@@ -101,247 +52,21 @@
         window.location.href = "/";
       });
 
-      function scrollIntoViewIfMobile(target) {
-        if (window.innerWidth <= 768 && target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-
-      const categoryData = {
-        entertainment: {
-          label: "엔터테인먼트",
-          subcategories: {
-            idol: {
-              label: "아이돌",
-              agencies: {
-                HYBE: {
-                  teams: {
-                    "뉴진스": ["민지", "하니", "다니엘", "해린", "혜인"],
-                    "세븐틴": ["에스쿱스", "정한", "조슈아", "준", "호시"],
-                  },
-                },
-                "SM엔터테인먼트": {
-                  teams: {
-                    "에스파": ["카리나", "윈터", "지젤", "닝닝"],
-                    "NCT 127": ["태일", "쟈니", "태용", "유타", "재현"],
-                  },
-                },
-              },
-            },
-            singer: {
-              label: "가수",
-              agencies: {
-                "안테나뮤직": { teams: { "솔로": ["이무진", "권진아"] } },
-                "어도어": { teams: { "솔로": ["백예린"] } },
-              },
-            },
-            actor: {
-              label: "배우",
-              agencies: {
-                "BH엔터테인먼트": { teams: { "배우": ["이병헌", "한지민", "박보영"] } },
-                "어썸이엔티": { teams: { "배우": ["박서준", "한지혜"] } },
-              },
-            },
-            model: {
-              label: "모델",
-              agencies: {
-                Esteem: { teams: { "모델": ["한혜진", "장윤주"] } },
-                YGKPlus: { teams: { "모델": ["정호연", "이성경"] } },
-              },
-            },
-          },
-        },
-        sports: {
-          label: "스포츠",
-          subcategories: {
-            football: {
-              label: "축구",
-              agencies: {
-                "토트넘 홋스퍼": { teams: { "1군": ["손흥민", "해리 케인"] } },
-                "울버햄튼": { teams: { "1군": ["황희찬"] } },
-                "K리그": {
-                  teams: {
-                    "울산 현대": ["조현우", "이청용"],
-                    "전북 현대": ["송범근", "백승호"],
-                  },
-                },
-              },
-            },
-            baseball: {
-              label: "야구",
-              agencies: {
-                "샌디에이고 파드리스": { teams: { "MLB": ["김하성"] } },
-                "KBO": {
-                  teams: {
-                    "LG 트윈스": ["김현수", "문보경"],
-                    "SSG 랜더스": ["최정", "박성한"],
-                  },
-                },
-              },
-            },
-            esports: {
-              label: "e스포츠",
-              agencies: {
-                "T1": { teams: { "LoL": ["Faker", "Zeus"] } },
-                "Gen.G": { teams: { "LoL": ["Chovy", "Peanut"] } },
-              },
-            },
-          },
-        },
+      const categories = {
+        entertainment: "엔터테인먼트",
+        sports: "스포츠",
       };
-
-      let selectedCategory = null;
-      let selectedSubcategory = null;
-      let selectedAgency = null;
-      let selectedTeam = null;
-      let selectedName = null;
-
-      function resetSelections(level = "category") {
-        if (level === "category") {
-          selectedSubcategory = null;
-          selectedAgency = null;
-          selectedTeam = null;
-          selectedName = null;
-          subcategoryChips.innerHTML = "";
-          agencySelect.innerHTML = '<option value="">먼저 중간 분류를 선택하세요</option>';
-          teamSelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-          nameSelect.innerHTML = '<option value="">팀을 선택하세요</option>';
-          detailsSection.classList.remove("visible");
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-          nextButton.disabled = true;
-        } else if (level === "subcategory") {
-          selectedAgency = null;
-          selectedTeam = null;
-          selectedName = null;
-          teamSelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-          teamSelect.disabled = true;
-          nameSelect.innerHTML = '<option value="">팀을 선택하세요</option>';
-          nameSelect.disabled = true;
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-          nextButton.disabled = true;
-        } else if (level === "agency") {
-          selectedTeam = null;
-          selectedName = null;
-          nameSelect.innerHTML = '<option value="">팀을 선택하세요</option>';
-          nameSelect.disabled = true;
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-          nextButton.disabled = true;
-        } else if (level === "team") {
-          selectedName = null;
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-          nextButton.disabled = true;
-        }
-      }
-
-      function updateSelectionPreview() {
-        if (selectedCategory && selectedSubcategory && selectedAgency && selectedTeam && selectedName) {
-          const categoryLabel = categoryData[selectedCategory].label;
-          const subcategoryLabel = categoryData[selectedCategory].subcategories[selectedSubcategory].label;
-          selectionPreview.textContent = `${categoryLabel} · ${subcategoryLabel} · ${selectedAgency} · ${selectedTeam} · ${selectedName}`;
-          nextButton.disabled = false;
-        } else {
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-          nextButton.disabled = true;
-        }
-      }
 
       categoryCards.forEach((card) => {
         card.addEventListener("click", () => {
-          categoryCards.forEach((c) => c.classList.remove("active"));
-          card.classList.add("active");
-          selectedCategory = card.dataset.category;
-          resetSelections("category");
-
-          const subcategories = categoryData[selectedCategory].subcategories;
-          subcategoryChips.innerHTML = "";
-          Object.entries(subcategories).forEach(([key, value]) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "chip";
-            button.dataset.subcategory = key;
-            button.textContent = value.label;
-            button.addEventListener("click", () => {
-              document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
-              button.classList.add("active");
-              selectedSubcategory = key;
-              resetSelections("subcategory");
-
-              detailsSection.classList.add("visible");
-              scrollIntoViewIfMobile(detailsSection);
-              const agencies = subcategories[key].agencies;
-              agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-              Object.keys(agencies).forEach((agency) => {
-                const option = document.createElement("option");
-                option.value = agency;
-                option.textContent = agency;
-                agencySelect.appendChild(option);
-              });
-              agencySelect.disabled = false;
-            });
-            subcategoryChips.appendChild(button);
-          });
-
-          subcategorySection.classList.add("visible");
-          scrollIntoViewIfMobile(subcategorySection);
-        });
-      });
-
-      agencySelect.addEventListener("change", () => {
-        selectedAgency = agencySelect.value || null;
-        resetSelections("agency");
-        if (!selectedAgency || !selectedCategory || !selectedSubcategory) return;
-
-        const teams =
-          categoryData[selectedCategory].subcategories[selectedSubcategory].agencies[selectedAgency].teams;
-        teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
-        Object.keys(teams).forEach((team) => {
-          const option = document.createElement("option");
-          option.value = team;
-          option.textContent = team;
-          teamSelect.appendChild(option);
-        });
-        teamSelect.disabled = false;
-      });
-
-      teamSelect.addEventListener("change", () => {
-        selectedTeam = teamSelect.value || null;
-        resetSelections("team");
-        if (!selectedTeam || !selectedCategory || !selectedSubcategory || !selectedAgency) return;
-
-        const names =
-          categoryData[selectedCategory].subcategories[selectedSubcategory].agencies[selectedAgency].teams[
-            selectedTeam
-          ];
-        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-        names.forEach((name) => {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          nameSelect.appendChild(option);
-        });
-        nameSelect.disabled = false;
-        scrollIntoViewIfMobile(detailsSection);
-      });
-
-      nameSelect.addEventListener("change", () => {
-        selectedName = nameSelect.value || null;
-        updateSelectionPreview();
-      });
-
-      nextButton.addEventListener("click", () => {
-        if (!nextButton.disabled) {
+          const key = card.dataset.category;
+          const label = categories[key];
           const params = new URLSearchParams({
-            category: selectedCategory,
-            categoryLabel: categoryData[selectedCategory].label,
-            subcategory: selectedSubcategory,
-            subcategoryLabel:
-              categoryData[selectedCategory].subcategories[selectedSubcategory].label,
-            agency: selectedAgency,
-            team: selectedTeam,
-            name: selectedName,
+            category: key,
+            categoryLabel: label,
           });
-          window.location.href = `/letter-compose.html?${params.toString()}`;
-        }
+          window.location.href = `/letter-target.html?${params.toString()}`;
+        });
       });
 
       function handleSearch() {

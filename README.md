@@ -1,6 +1,6 @@
 # 팬레터포스트 웹
 
-정적인 서비스 소개 페이지(`index.html`)와 회원가입 전용 페이지(`signup.html`), 그리고 MySQL과 연동되는 간단한 Express 백엔드(`server.js`)로 구성되어 있습니다.
+정적인 서비스 소개 페이지(`index.html`), 카테고리 선택/세부 선택/편지 작성 페이지(`letter.html`, `letter-target.html`, `letter-compose.html`), 회원가입 전용 페이지(`signup.html`), 그리고 MySQL과 연동되는 간단한 Express 백엔드(`server.js`)로 구성되어 있습니다.
 
 ## 사전 준비
 1. MySQL에 `fanletter_post`(혹은 원하는 이름) DB 및 테이블 생성  

@@ -20,6 +20,10 @@ body {
   padding: 24px clamp(20px, 7vw, 120px) 80px;
 }
 
+.muted {
+  color: var(--muted);
+}
+
 .write-nav {
   display: flex;
   justify-content: space-between;
@@ -127,11 +131,15 @@ button:active {
 
 .category-media {
   width: 100%;
-  height: 160px;
+  height: 140px;
   border-radius: 20px;
   margin: 16px 0;
   background-size: cover;
   background-position: center;
+}
+
+.category-media.small {
+  height: 120px;
 }
 
 .category-media.entertainment {

@@ -214,7 +214,17 @@
       });
 
       backToSelect.addEventListener("click", () => {
-        window.location.href = "/letter.html";
+        const category = params.get("category");
+        const categoryLabel = params.get("categoryLabel") || "";
+        if (category) {
+          const targetParams = new URLSearchParams({
+            category,
+            categoryLabel,
+          });
+          window.location.href = `/letter-target.html?${targetParams.toString()}`;
+        } else {
+          window.location.href = "/letter.html";
+        }
       });
 
       backHome.addEventListener("click", () => {
