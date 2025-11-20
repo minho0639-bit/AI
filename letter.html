@@ -101,6 +101,12 @@
         window.location.href = "/";
       });
 
+      function scrollIntoViewIfMobile(target) {
+        if (window.innerWidth <= 768 && target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
       const categoryData = {
         entertainment: {
           label: "엔터테인먼트",
@@ -261,6 +267,7 @@
               resetSelections("subcategory");
 
               detailsSection.classList.add("visible");
+              scrollIntoViewIfMobile(detailsSection);
               const agencies = subcategories[key].agencies;
               agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
               Object.keys(agencies).forEach((agency) => {
@@ -275,6 +282,7 @@
           });
 
           subcategorySection.classList.add("visible");
+          scrollIntoViewIfMobile(subcategorySection);
         });
       });
 
@@ -312,6 +320,7 @@
           nameSelect.appendChild(option);
         });
         nameSelect.disabled = false;
+        scrollIntoViewIfMobile(detailsSection);
       });
 
       nameSelect.addEventListener("change", () => {
