@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 회원가입</title>
+    <link rel="stylesheet" href="signup.css" />
+  </head>
+  <body>
+    <div class="signup-shell">
+      <header>
+        <p class="tag">Fanletter Post</p>
+        <h1>회원가입</h1>
+        <p class="subtitle">
+          이메일과 비밀번호만 입력하면 바로 손 편지를 작성할 수 있어요. SNS 계정으로
+          시작하면 더 빨라요.
+        </p>
+      </header>
+
+      <form id="signup-form" class="card">
+        <label>
+          이름
+          <input id="name" name="name" type="text" placeholder="이름 혹은 닉네임" />
+        </label>
+        <label>
+          이메일
+          <input id="email" name="email" type="email" placeholder="fan@letter.com" required />
+        </label>
+        <label>
+          비밀번호
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="8자 이상"
+            minlength="8"
+            required
+          />
+        </label>
+        <label>
+          비밀번호 확인
+          <input
+            id="passwordConfirm"
+            name="passwordConfirm"
+            type="password"
+            placeholder="다시 입력"
+            minlength="8"
+            required
+          />
+        </label>
+        <label>
+          연락처 (선택)
+          <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" />
+        </label>
+        <label class="checkbox">
+          <input id="marketingConsent" type="checkbox" />
+          팬레터포스트 소식/이벤트를 이메일로 받고 싶어요.
+        </label>
+
+        <button type="submit" class="primary">가입하기</button>
+        <p id="message" class="message"></p>
+      </form>
+
+      <section class="social">
+        <p>또는 SNS 계정으로 3초만에 시작하기</p>
+        <div class="social-actions">
+          <button class="kakao">카카오</button>
+          <button class="naver">네이버</button>
+          <button class="google">Google</button>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const form = document.getElementById("signup-form");
+      const messageEl = document.getElementById("message");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        messageEl.textContent = "";
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const passwordConfirm = document.getElementById("passwordConfirm").value;
+        const name = document.getElementById("name").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const marketingConsent = document.getElementById("marketingConsent").checked;
+
+        if (password !== passwordConfirm) {
+          messageEl.textContent = "비밀번호가 일치하지 않습니다.";
+          messageEl.classList.add("error");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/signup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password, name, phone, marketingConsent }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "회원가입에 실패했습니다.");
+          }
+
+          messageEl.textContent = data.message;
+          messageEl.classList.remove("error");
+          messageEl.classList.add("success");
+          form.reset();
+        } catch (error) {
+          messageEl.textContent = error.message;
+          messageEl.classList.remove("success");
+          messageEl.classList.add("error");
+        }
+      });
+    </script>
+  </body>
+</html>
