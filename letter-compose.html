@@ -28,54 +28,31 @@
         <p id="targetDetail" class="muted"></p>
       </section>
 
-      <section class="stationery">
+      <section class="paper-section">
         <div class="section-head">
           <div>
             <p class="badge">STEP 01</p>
-            <h2>편지지 스타일</h2>
-            <p class="muted">분위기에 맞는 편지지를 선택하면 미리보기에서 바로 확인할 수 있어요.</p>
+            <h2>편지 작성</h2>
+            <p class="muted">기본 편지지 위에서 바로 제목과 내용을 작성해 주세요.</p>
           </div>
         </div>
-        <div class="stationery-grid" id="stationeryGrid"></div>
-      </section>
-
-      <section class="font-picker">
-        <div class="section-head">
-          <div>
-            <p class="badge">STEP 02</p>
-            <h2>폰트 선택</h2>
-            <p class="muted">분위기를 살릴 수 있는 폰트를 고르면 손편지 감성이 살아납니다.</p>
+        <div class="paper-wrapper">
+          <div class="paper-toolbar">
+            <span id="charCount">0 / 1500자</span>
           </div>
-        </div>
-        <div class="font-grid" id="fontGrid"></div>
-      </section>
-
-      <section class="editor">
-        <div class="editor-layout">
-          <div class="editor-form">
-            <label>
-              편지 제목
-              <input type="text" id="letterTitle" placeholder="예) 생일을 축하해요" maxlength="80" />
-            </label>
-            <label>
-              편지 내용
-              <textarea
-                id="letterBody"
-                rows="8"
-                maxlength="1500"
-                placeholder="이곳에 마음을 담아 작성해 주세요. 1,500자까지 입력 가능합니다."
-              ></textarea>
-            </label>
-            <div class="editor-meta">
-              <span id="charCount">0 / 1500자</span>
-            </div>
-          </div>
-          <div class="preview-panel">
-            <p>실시간 미리보기</p>
-            <div class="preview-canvas" id="previewCanvas">
-              <h3 id="previewTitle">제목이 여기에 표시됩니다</h3>
-              <p id="previewBody">편지 내용을 입력하면 여기에 미리보기가 나타납니다.</p>
-            </div>
+          <div class="letter-paper" id="letterPaper">
+            <div
+              id="paperTitle"
+              class="paper-title"
+              contenteditable="true"
+              data-placeholder="제목을 입력하세요 (최대 80자)"
+            ></div>
+            <div
+              id="paperBody"
+              class="paper-body"
+              contenteditable="true"
+              data-placeholder="편지 내용을 입력하세요 (최대 1,500자)"
+            ></div>
           </div>
         </div>
       </section>
@@ -90,11 +67,8 @@
       const params = new URLSearchParams(window.location.search);
       const targetName = document.getElementById("targetName");
       const targetDetail = document.getElementById("targetDetail");
-      const previewCanvas = document.getElementById("previewCanvas");
-      const previewTitle = document.getElementById("previewTitle");
-      const previewBody = document.getElementById("previewBody");
-      const letterTitle = document.getElementById("letterTitle");
-      const letterBody = document.getElementById("letterBody");
+      const paperTitle = document.getElementById("paperTitle");
+      const paperBody = document.getElementById("paperBody");
       const charCount = document.getElementById("charCount");
       const backToSelect = document.getElementById("backToSelect");
       const backHome = document.getElementById("backHome");
@@ -121,97 +95,49 @@
 
       setTargetSummary();
 
-      const stationeryOptions = [
-        {
-          id: "classic",
-          name: "클래식 코튼",
-          desc: "따뜻한 크림색 코튼 텍스처",
-          className: "classic",
-        },
-        {
-          id: "midnight",
-          name: "미드나잇 블루",
-          desc: "딥블루와 금박 라인",
-          className: "midnight",
-        },
-        {
-          id: "pastel",
-          name: "파스텔 러브",
-          desc: "파스텔 톤 그라디언트",
-          className: "pastel",
-        },
-      ];
+      const MAX_TITLE = 80;
+      const MAX_BODY = 1500;
+      let lastBodyText = "";
+      let lastTitleText = "";
 
-      const fontOptions = [
-        { id: "pretendard", name: "Pretendard", className: "font-pretendard" },
-        { id: "cormorant", name: "Cormorant", className: "font-cormorant" },
-        { id: "nanum", name: "Nanum Pen", className: "font-nanum" },
-      ];
-
-      let selectedStationery = stationeryOptions[0].id;
-      let selectedFont = fontOptions[0].id;
-
-      function renderStationery() {
-        const grid = document.getElementById("stationeryGrid");
-        grid.innerHTML = "";
-        stationeryOptions.forEach((option) => {
-          const card = document.createElement("button");
-          card.type = "button";
-          card.className = `stationery-card ${option.className} ${
-            option.id === selectedStationery ? "active" : ""
-          }`;
-          card.innerHTML = `
-            <div class="stationery-preview"></div>
-            <div>
-              <strong>${option.name}</strong>
-              <p>${option.desc}</p>
-            </div>
-          `;
-          card.addEventListener("click", () => {
-            selectedStationery = option.id;
-            renderStationery();
-            applyPreviewStyles();
-          });
-          grid.appendChild(card);
-        });
+      function getPlainText(element) {
+        return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
       }
 
-      function renderFonts() {
-        const grid = document.getElementById("fontGrid");
-        grid.innerHTML = "";
-        fontOptions.forEach((option) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = `font-card ${option.className} ${
-            option.id === selectedFont ? "active" : ""
-          }`;
-          button.textContent = option.name;
-          button.addEventListener("click", () => {
-            selectedFont = option.id;
-            renderFonts();
-            applyPreviewStyles();
-          });
-          grid.appendChild(button);
-        });
+      function updateCharCount() {
+        const text = getPlainText(paperBody);
+        charCount.textContent = `${text.length} / ${MAX_BODY}자`;
       }
 
-      function applyPreviewStyles() {
-        previewCanvas.className = `preview-canvas stationery-${selectedStationery}`;
-        previewCanvas.classList.add(selectedFont);
-        previewTitle.className = "";
-        previewBody.className = "";
-        previewTitle.classList.add(`font-${selectedFont}`);
-        previewBody.classList.add(`font-${selectedFont}`);
-      }
-
-      letterTitle.addEventListener("input", () => {
-        previewTitle.textContent = letterTitle.value || "제목이 여기에 표시됩니다";
+      paperTitle.addEventListener("input", () => {
+        let text = getPlainText(paperTitle);
+        if (text.length > MAX_TITLE) {
+          paperTitle.innerText = lastTitleText;
+          placeCursorEnd(paperTitle);
+        } else {
+          lastTitleText = text;
+        }
       });
 
-      letterBody.addEventListener("input", () => {
-        previewBody.textContent = letterBody.value || "편지 내용을 입력하면 여기에 미리보기가 나타납니다.";
-        charCount.textContent = `${letterBody.value.length} / 1500자`;
+      paperBody.addEventListener("input", () => {
+        let text = getPlainText(paperBody);
+        if (text.length > MAX_BODY) {
+          paperBody.innerText = lastBodyText;
+          placeCursorEnd(paperBody);
+        } else {
+          lastBodyText = text;
+          updateCharCount();
+        }
       });
+
+      function placeCursorEnd(el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
 
       backToSelect.addEventListener("click", () => {
         const category = params.get("category");
@@ -239,9 +165,7 @@
         alert("다음 단계(검수/결제)는 곧 연결됩니다.");
       });
 
-      renderStationery();
-      renderFonts();
-      applyPreviewStyles();
+      updateCharCount();
     </script>
   </body>
 </html>
