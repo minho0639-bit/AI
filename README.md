@@ -38,6 +38,6 @@ npm run dev
   - Kakao 토큰 교환 및 사용자 정보 조회 → `social_accounts` / `users` 테이블에 저장 → 세션 발급 후 `/`로 리다이렉트
 
 ## 다음 단계 제안
-- OAuth(Kakao/Naver/Google) 실제 연동 엔드포인트 추가
+- OAuth Naver/Google 연동 확장
 - 이메일 인증/비밀번호 재설정 플로우
-- 편지 작성 → 제작 → 배송 화면 및 API 연결
+- 편지 작성 내용 입력/미리보기/결제 연동
