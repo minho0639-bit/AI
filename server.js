@@ -161,7 +161,7 @@ app.get("/auth/kakao/callback", async (req, res) => {
     });
 
     req.session.userId = userId;
-    res.redirect("/?login=success");
+    res.redirect("/");
   } catch (error) {
     console.error("kakao oauth error:", error.response?.data || error.message);
     res.redirect("/?login=failed");
