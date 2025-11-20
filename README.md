@@ -11,6 +11,7 @@
    ```
 3. 환경 변수  
    `.env.example`를 복사해 `.env`를 만든 뒤 DB 접속 정보를 입력합니다.
+   - `SESSION_SECRET`, `KAKAO_CLIENT_ID`, `KAKAO_REDIRECT_URI` 등 OAuth 항목도 함께 설정
 
 ## 실행 방법
 ```bash
@@ -24,6 +25,10 @@ npm run dev
   - Body: `{ email, password, name?, phone?, marketingConsent? }`
   - 기능: 이메일 중복 체크 → BCrypt 해시 → `users` 테이블에 저장
   - 응답: `201 Created` / 오류 시 적절한 상태 코드와 메시지
+- **GET `/auth/kakao`**
+  - 카카오 OAuth 인가 요청으로 리다이렉트. `KAKAO_CLIENT_ID`, `KAKAO_REDIRECT_URI` 환경 변수가 필요
+- **GET `/auth/kakao/callback`**
+  - Kakao 토큰 교환 및 사용자 정보 조회 → `social_accounts` / `users` 테이블에 저장 → 세션 발급 후 `/`로 리다이렉트
 
 ## 다음 단계 제안
 - OAuth(Kakao/Naver/Google) 실제 연동 엔드포인트 추가
