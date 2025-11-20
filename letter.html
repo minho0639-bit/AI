@@ -330,7 +330,17 @@
 
       nextButton.addEventListener("click", () => {
         if (!nextButton.disabled) {
-          alert(`'${selectionPreview.textContent}' 대상에게 편지를 작성하는 페이지로 이동합니다.`);
+          const params = new URLSearchParams({
+            category: selectedCategory,
+            categoryLabel: categoryData[selectedCategory].label,
+            subcategory: selectedSubcategory,
+            subcategoryLabel:
+              categoryData[selectedCategory].subcategories[selectedSubcategory].label,
+            agency: selectedAgency,
+            team: selectedTeam,
+            name: selectedName,
+          });
+          window.location.href = `/letter-compose.html?${params.toString()}`;
         }
       });
 
