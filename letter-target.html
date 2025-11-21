@@ -87,88 +87,123 @@
         window.location.replace("/letter.html");
       }
 
-      const categoryData = {
-        entertainment: {
-          label: "엔터테인먼트",
-          subcategories: {
-            idol: {
-              label: "아이돌",
-              agencies: {
-                HYBE: {
-                  teams: {
-                    "뉴진스": ["민지", "하니", "다니엘", "해린", "혜인"],
-                    "세븐틴": ["에스쿱스", "정한", "조슈아", "준", "호시"],
+        const categoryData = {
+          entertainment: {
+            label: "엔터테인먼트",
+            subcategories: {
+              idol: {
+                label: "아이돌",
+                icon: "🎤",
+                accent: "#ff4d8d",
+                background: "linear-gradient(135deg, #fff5f9, #ffe3ef)",
+                iconBg: "rgba(255, 77, 141, 0.18)",
+                shadow: "rgba(255, 77, 141, 0.25)",
+                agencies: {
+                  HYBE: {
+                    teams: {
+                      "뉴진스": ["민지", "하니", "다니엘", "해린", "혜인"],
+                      "세븐틴": ["에스쿱스", "정한", "조슈아", "준", "호시"],
+                    },
+                  },
+                  "SM엔터테인먼트": {
+                    teams: {
+                      "에스파": ["카리나", "윈터", "지젤", "닝닝"],
+                      "NCT 127": ["태일", "쟈니", "태용", "유타", "재현"],
+                    },
                   },
                 },
-                "SM엔터테인먼트": {
-                  teams: {
-                    "에스파": ["카리나", "윈터", "지젤", "닝닝"],
-                    "NCT 127": ["태일", "쟈니", "태용", "유타", "재현"],
-                  },
+              },
+              singer: {
+                label: "가수",
+                icon: "🎧",
+                accent: "#7b5cff",
+                background: "linear-gradient(135deg, #f3f0ff, #e3dbff)",
+                iconBg: "rgba(123, 92, 255, 0.2)",
+                shadow: "rgba(123, 92, 255, 0.2)",
+                agencies: {
+                  "안테나뮤직": { teams: { "솔로": ["이무진", "권진아"] } },
+                  "어도어": { teams: { "솔로": ["백예린"] } },
                 },
               },
-            },
-            singer: {
-              label: "가수",
-              agencies: {
-                "안테나뮤직": { teams: { "솔로": ["이무진", "권진아"] } },
-                "어도어": { teams: { "솔로": ["백예린"] } },
+              actor: {
+                label: "배우",
+                icon: "🎬",
+                accent: "#ff9f43",
+                background: "linear-gradient(135deg, #fff5eb, #ffe2c8)",
+                iconBg: "rgba(255, 159, 67, 0.22)",
+                shadow: "rgba(255, 159, 67, 0.22)",
+                agencies: {
+                  "BH엔터테인먼트": { teams: { "배우": ["이병헌", "한지민", "박보영"] } },
+                  "어썸이엔티": { teams: { "배우": ["박서준", "한지혜"] } },
+                },
               },
-            },
-            actor: {
-              label: "배우",
-              agencies: {
-                "BH엔터테인먼트": { teams: { "배우": ["이병헌", "한지민", "박보영"] } },
-                "어썸이엔티": { teams: { "배우": ["박서준", "한지혜"] } },
-              },
-            },
-            model: {
-              label: "모델",
-              agencies: {
-                Esteem: { teams: { "모델": ["한혜진", "장윤주"] } },
-                YGKPlus: { teams: { "모델": ["정호연", "이성경"] } },
+              model: {
+                label: "모델",
+                icon: "👗",
+                accent: "#00c6ae",
+                background: "linear-gradient(135deg, #e8fffb, #d3fff4)",
+                iconBg: "rgba(0, 198, 174, 0.18)",
+                shadow: "rgba(0, 198, 174, 0.25)",
+                agencies: {
+                  Esteem: { teams: { "모델": ["한혜진", "장윤주"] } },
+                  YGKPlus: { teams: { "모델": ["정호연", "이성경"] } },
+                },
               },
             },
           },
-        },
-        sports: {
-          label: "스포츠",
-          subcategories: {
-            football: {
-              label: "축구",
-              agencies: {
-                "토트넘 홋스퍼": { teams: { "1군": ["손흥민", "해리 케인"] } },
-                "울버햄튼": { teams: { "1군": ["황희찬"] } },
-                "K리그": {
-                  teams: {
-                    "울산 현대": ["조현우", "이청용"],
-                    "전북 현대": ["송범근", "백승호"],
+          sports: {
+            label: "스포츠",
+            subcategories: {
+              football: {
+                label: "축구",
+                icon: "⚽",
+                accent: "#00b894",
+                background: "linear-gradient(135deg, #ecfff9, #d3ffee)",
+                iconBg: "rgba(0, 184, 148, 0.2)",
+                shadow: "rgba(0, 184, 148, 0.2)",
+                agencies: {
+                  "토트넘 홋스퍼": { teams: { "1군": ["손흥민", "해리 케인"] } },
+                  "울버햄튼": { teams: { "1군": ["황희찬"] } },
+                  "K리그": {
+                    teams: {
+                      "울산 현대": ["조현우", "이청용"],
+                      "전북 현대": ["송범근", "백승호"],
+                    },
                   },
                 },
               },
-            },
-            baseball: {
-              label: "야구",
-              agencies: {
-                "샌디에이고 파드리스": { teams: { "MLB": ["김하성"] } },
-                "KBO": {
-                  teams: {
-                    "LG 트윈스": ["김현수", "문보경"],
-                    "SSG 랜더스": ["최정", "박성한"],
+              baseball: {
+                label: "야구",
+                icon: "⚾",
+                accent: "#ff6b6b",
+                background: "linear-gradient(135deg, #fff0f0, #ffdada)",
+                iconBg: "rgba(255, 107, 107, 0.2)",
+                shadow: "rgba(255, 107, 107, 0.2)",
+                agencies: {
+                  "샌디에이고 파드리스": { teams: { "MLB": ["김하성"] } },
+                  "KBO": {
+                    teams: {
+                      "LG 트윈스": ["김현수", "문보경"],
+                      "SSG 랜더스": ["최정", "박성한"],
+                    },
                   },
                 },
               },
-            },
-            esports: {
-              label: "e스포츠",
-              agencies: {
-                "T1": { teams: { "LoL": ["Faker", "Zeus"] } },
-                "Gen.G": { teams: { "LoL": ["Chovy", "Peanut"] } },
+              esports: {
+                label: "e스포츠",
+                icon: "🎮",
+                accent: "#00a8ff",
+                background: "linear-gradient(135deg, #eef6ff, #d8ecff)",
+                iconBg: "rgba(0, 168, 255, 0.2)",
+                shadow: "rgba(0, 168, 255, 0.2)",
+                agencies: {
+                  "T1": { teams: { "LoL": ["Faker", "Zeus"] } },
+                  "Gen.G": { teams: { "LoL": ["Chovy", "Peanut"] } },
+                },
               },
             },
           },
-        },
-      };
+        };
 
       const selectedCategoryData = categoryData[categoryKey];
       if (!selectedCategoryData) {
@@ -220,35 +255,45 @@
         }
       }
 
-      function setupSubcategories() {
-        const subcategories = selectedCategoryData.subcategories;
-        subcategoryChips.innerHTML = "";
-        Object.entries(subcategories).forEach(([key, value]) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "chip";
-          button.dataset.subcategory = key;
-          button.textContent = value.label;
-          button.addEventListener("click", () => {
-            document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
-            button.classList.add("active");
-            selectedSubcategory = key;
-            resetSelections("subcategory");
+        function setupSubcategories() {
+          const subcategories = selectedCategoryData.subcategories;
+          subcategoryChips.innerHTML = "";
+          Object.entries(subcategories).forEach(([key, value]) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "chip";
+            button.dataset.subcategory = key;
+            button.innerHTML = `
+              <span class="chip-icon" aria-hidden="true">${value.icon || "✨"}</span>
+              <span class="chip-details">
+                <span class="chip-label">${value.label}</span>
+              </span>
+            `;
+            button.style.setProperty("--chip-accent", value.accent || "var(--primary)");
+            button.style.setProperty("--chip-bg", value.background || "#fff");
+            button.style.setProperty("--chip-icon-bg", value.iconBg || "rgba(17, 17, 17, 0.08)");
+            button.style.setProperty("--chip-shadow", value.shadow || "rgba(17, 17, 17, 0.05)");
+            button.addEventListener("click", () => {
+              document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
+              button.classList.add("active");
+              selectedSubcategory = key;
+              resetSelections("subcategory");
 
-            const agencies = subcategories[key].agencies;
-            agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-            Object.keys(agencies).forEach((agency) => {
-              const option = document.createElement("option");
-              option.value = agency;
-              option.textContent = agency;
-              agencySelect.appendChild(option);
+              const agencies = subcategories[key].agencies;
+              agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
+              Object.keys(agencies).forEach((agency) => {
+                const option = document.createElement("option");
+                option.value = agency;
+                option.textContent = agency;
+                agencySelect.appendChild(option);
+              });
+              agencySelect.disabled = false;
+              detailsSection.classList.add("visible");
+              detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
             });
-            agencySelect.disabled = false;
-            detailsSection.classList.add("visible");
+            subcategoryChips.appendChild(button);
           });
-          subcategoryChips.appendChild(button);
-        });
-      }
+        }
 
       agencySelect.addEventListener("change", () => {
         selectedAgency = agencySelect.value || null;
@@ -286,24 +331,24 @@
         nameSelect.disabled = false;
       });
 
-      nameSelect.addEventListener("change", () => {
-        selectedName = nameSelect.value || null;
-        updateSelectionPreview();
-      });
-
-      nextButton.addEventListener("click", () => {
-        if (nextButton.disabled) return;
-        const params = new URLSearchParams({
-          category: categoryKey,
-          categoryLabel: selectedCategoryData.label,
-          subcategory: selectedSubcategory,
-          subcategoryLabel: selectedCategoryData.subcategories[selectedSubcategory].label,
-          agency: selectedAgency,
-          team: selectedTeam,
-          name: selectedName,
+        nameSelect.addEventListener("change", () => {
+          selectedName = nameSelect.value || null;
+          updateSelectionPreview();
         });
-        window.location.href = `/letter-compose.html?${params.toString()}`;
-      });
+
+        nextButton.addEventListener("click", () => {
+          if (nextButton.disabled) return;
+          const params = new URLSearchParams({
+            category: categoryKey,
+            categoryLabel: selectedCategoryData.label,
+            subcategory: selectedSubcategory,
+            subcategoryLabel: selectedCategoryData.subcategories[selectedSubcategory].label,
+            agency: selectedAgency,
+            team: selectedTeam,
+            name: selectedName,
+          });
+          window.location.href = `/letter-stationery.html?${params.toString()}`;
+        });
 
       setupSubcategories();
     </script>
