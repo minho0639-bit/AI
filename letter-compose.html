@@ -64,6 +64,20 @@
               <span class="meta-count" id="charCount">0 / 1500자</span>
             </div>
           </div>
+          <div class="write-panel secondary" id="secondPagePanel" hidden>
+            <div class="letter-paper" id="letterPaper2">
+              <div
+                id="paperBody2"
+                class="paper-body font-default"
+                contenteditable="true"
+                data-placeholder="두 번째 편지 내용을 이어서 입력하세요"
+              ></div>
+            </div>
+            <div class="paper-footer">
+              <span class="meta-label" id="stationeryLabel2">기본 편지지</span>
+              <span class="meta-count" id="charCount2">0 / 1500자</span>
+            </div>
+          </div>
         </section>
 
         <section class="compose-actions">
@@ -77,6 +91,11 @@
         const paperBody = document.getElementById("paperBody");
         const letterPaper = document.getElementById("letterPaper");
         const charCount = document.getElementById("charCount");
+        const secondPagePanel = document.getElementById("secondPagePanel");
+        const letterPaper2 = document.getElementById("letterPaper2");
+        const paperBody2 = document.getElementById("paperBody2");
+        const charCount2 = document.getElementById("charCount2");
+        const secondPageFooter = secondPagePanel?.querySelector(".paper-footer");
         const backToSelect = document.getElementById("backToSelect");
         const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
@@ -88,7 +107,8 @@
         const emojiToggle = document.getElementById("emojiToggle");
         const emojiPopover = document.getElementById("emojiPopover");
 
-        const MAX_BODY = 1500;
+        const MAX_BODY_PAGE = 850;
+        const MAX_BODY_TOTAL = 1600;
 
         const stationeryThemes = {
           basic: {
@@ -120,6 +140,7 @@
         const emojiOptions = ["😊", "😍", "🥰", "✨", "🌸", "🎉", "💌", "⭐", "🐻"];
 
         let lastBodyText = "";
+        let lastBodyText2 = "";
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
@@ -170,24 +191,33 @@
 
         function applyStationeryStyles() {
           const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
-          letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
-          if (theme.image) {
-            letterPaper.classList.add("paper-photo");
-            const imageUrl = encodeURI(theme.image);
-            letterPaper.style.backgroundImage = `url("${imageUrl}")`;
-          } else {
-            letterPaper.style.backgroundImage = "";
-          }
-          stationeryLabel.textContent = theme.label;
+          const panels = [
+            { paper: letterPaper, label: stationeryLabel },
+            { paper: letterPaper2, label: stationeryLabel2 },
+          ];
+          panels.forEach(({ paper, label }, index) => {
+            paper.className = `letter-paper ${theme.className || ""}`.trim();
+            if (theme.image) {
+              const imageUrl = encodeURI(theme.image);
+              paper.classList.add("paper-photo");
+              paper.style.backgroundImage = `url("${imageUrl}")`;
+            } else {
+              paper.style.backgroundImage = "";
+            }
+            label.textContent = index === 0 ? theme.label : `${theme.label} · ${index + 1}`;
+          });
         }
 
         function applyTypography() {
           paperBody.className = `paper-body font-${selectedFont}`;
+          paperBody2.className = `paper-body font-${selectedFont}`;
           paperBody.style.fontSize = `${FIXED_FONT_SIZE}px`;
+          paperBody2.style.fontSize = `${FIXED_FONT_SIZE}px`;
           paperBody.dataset.placeholder =
             selectedFont === "handwriting"
               ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
               : "편지 내용을 입력하세요 (최대 1,500자)";
+          paperBody2.dataset.placeholder = "두 번째 편지 내용을 이어서 입력하세요";
         }
 
         function getPlainText(element) {
@@ -195,19 +225,52 @@
         }
 
         function updateCharCount() {
-          const text = getPlainText(paperBody);
-          charCount.textContent = `${text.length} / ${MAX_BODY}자`;
+          const text1 = getPlainText(paperBody);
+          charCount.textContent = `${text1.length} / ${MAX_BODY_PAGE}자`;
+          const text2 = getPlainText(paperBody2);
+          charCount2.textContent = `${text2.length} / ${MAX_BODY_PAGE}자`;
+        }
+
+        function ensureSecondPageVisible() {
+          if (!secondPagePanel.hidden) return;
+          secondPagePanel.hidden = false;
+          secondPagePanel.classList.add("visible");
+        }
+
+        function hideSecondPageIfEmpty() {
+          if (getPlainText(paperBody2).length === 0) {
+            secondPagePanel.hidden = true;
+            secondPagePanel.classList.remove("visible");
+          }
         }
 
         paperBody.addEventListener("input", () => {
           let text = getPlainText(paperBody);
-          if (text.length > MAX_BODY) {
-            paperBody.innerText = lastBodyText;
+          if (text.length > MAX_BODY_PAGE) {
+            const overflow = text.slice(MAX_BODY_PAGE);
+            paperBody.innerText = text.slice(0, MAX_BODY_PAGE);
             placeCursorEnd(paperBody);
+            ensureSecondPageVisible();
+            const existing = getPlainText(paperBody2);
+            paperBody2.innerText = overflow + existing;
+            placeCursorEnd(paperBody2);
           } else {
             lastBodyText = text;
-            updateCharCount();
           }
+          updateCharCount();
+        });
+
+        paperBody2.addEventListener("input", () => {
+          let text = getPlainText(paperBody2);
+          const total = getPlainText(paperBody).length + text.length;
+          if (text.length > MAX_BODY_PAGE || total > MAX_BODY_TOTAL) {
+            paperBody2.innerText = lastBodyText2;
+            placeCursorEnd(paperBody2);
+          } else {
+            lastBodyText2 = text;
+          }
+          hideSecondPageIfEmpty();
+          updateCharCount();
         });
 
         function placeCursorEnd(el) {
