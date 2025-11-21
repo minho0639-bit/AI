@@ -225,18 +225,11 @@ button:active {
   color: #f2f4ff;
 }
 
-.paper-title,
 .paper-body {
   outline: none;
   font-family: "Pretendard", sans-serif;
   position: relative;
   z-index: 1;
-}
-
-.paper-title {
-  font-size: 1.6rem;
-  font-weight: 600;
-  min-height: 40px;
 }
 
 .paper-body {

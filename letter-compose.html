@@ -51,12 +51,6 @@
             </div>
             <div class="letter-paper" id="letterPaper">
               <div
-                id="paperTitle"
-                class="paper-title font-default"
-                contenteditable="true"
-                data-placeholder="제목을 입력하세요 (최대 80자)"
-              ></div>
-              <div
                 id="paperBody"
                 class="paper-body font-default"
                 contenteditable="true"
@@ -74,7 +68,6 @@
 
       <script>
         const params = new URLSearchParams(window.location.search);
-        const paperTitle = document.getElementById("paperTitle");
         const paperBody = document.getElementById("paperBody");
         const letterPaper = document.getElementById("letterPaper");
         const charCount = document.getElementById("charCount");
@@ -88,7 +81,6 @@
         const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
 
-        const MAX_TITLE = 80;
         const MAX_BODY = 1500;
 
         const stationeryThemes = {
@@ -120,7 +112,6 @@
         ];
 
         let lastBodyText = "";
-        let lastTitleText = "";
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
@@ -170,19 +161,16 @@
           letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
           if (theme.image) {
             letterPaper.classList.add("paper-photo");
-            letterPaper.style.setProperty("--paper-image", `url(${theme.image})`);
+            letterPaper.style.backgroundImage = `url("./${theme.image}")`;
           } else {
-            letterPaper.style.removeProperty("--paper-image");
+            letterPaper.style.backgroundImage = "";
           }
           stationeryLabel.textContent = theme.label;
         }
 
         function applyTypography() {
-          paperTitle.className = `paper-title font-${selectedFont}`;
           paperBody.className = `paper-body font-${selectedFont}`;
-          paperTitle.style.fontSize = `${Math.min(selectedFontSize + 6, 34)}px`;
           paperBody.style.fontSize = `${selectedFontSize}px`;
-          paperTitle.style.color = selectedColor;
           paperBody.style.color = selectedColor;
           paperBody.dataset.placeholder =
             selectedFont === "handwriting"
@@ -198,16 +186,6 @@
           const text = getPlainText(paperBody);
           charCount.textContent = `${text.length} / ${MAX_BODY}자`;
         }
-
-        paperTitle.addEventListener("input", () => {
-          let text = getPlainText(paperTitle);
-          if (text.length > MAX_TITLE) {
-            paperTitle.innerText = lastTitleText;
-            placeCursorEnd(paperTitle);
-          } else {
-            lastTitleText = text;
-          }
-        });
 
         paperBody.addEventListener("input", () => {
           let text = getPlainText(paperBody);
