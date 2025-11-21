@@ -28,13 +28,6 @@
             <div class="chip-group" id="fontChips"></div>
           </div>
           <div class="control-group">
-            <p class="group-label">
-              폰트 크기
-              <span id="fontSizeValue">20px</span>
-            </p>
-            <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
-          </div>
-          <div class="control-group">
             <p class="group-label">폰트 색상</p>
             <div class="color-palette" id="colorPalette"></div>
           </div>
@@ -74,8 +67,6 @@
         const toSummary = document.getElementById("toSummary");
         const stationeryLabel = document.getElementById("stationeryLabel");
         const fontChips = document.getElementById("fontChips");
-        const fontSizeRange = document.getElementById("fontSizeRange");
-        const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
 
         const MAX_BODY = 1500;
@@ -112,9 +103,9 @@
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
-        let selectedFontSize = Number(fontSizeRange.value);
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
+        const FIXED_FONT_SIZE = 17;
 
         function renderFontOptions() {
           fontChips.innerHTML = "";
@@ -168,7 +159,7 @@
 
         function applyTypography() {
           paperBody.className = `paper-body font-${selectedFont}`;
-          paperBody.style.fontSize = `${selectedFontSize}px`;
+          paperBody.style.fontSize = `${FIXED_FONT_SIZE}px`;
           paperBody.style.color = selectedColor;
           paperBody.dataset.placeholder =
             selectedFont === "handwriting"
@@ -194,12 +185,6 @@
             lastBodyText = text;
             updateCharCount();
           }
-        });
-
-        fontSizeRange.addEventListener("input", (event) => {
-          selectedFontSize = Number(event.target.value);
-          fontSizeValue.textContent = `${selectedFontSize}px`;
-          applyTypography();
         });
 
         function placeCursorEnd(el) {
