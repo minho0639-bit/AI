@@ -52,20 +52,14 @@
       const backToTargetButtons = [document.getElementById("backToTarget"), document.getElementById("backToTargetBottom")];
       const backHome = document.getElementById("backHome");
 
-      const stationeryOptions = [
-        {
-          id: "basic",
-          name: "기본 편지지",
-          desc: "가장 깔끔하게 연출되는 기본 디자인",
-          image: "assets/stationery/기본편지지_선택.png",
-        },
-        {
-          id: "bear",
-          name: "파란 곰돌이",
-          desc: "귀여운 파란 곰돌이와 하트 장식",
-          image: "assets/stationery/파란곰돌이편지지_선택.png",
-        },
-      ];
+        const stationeryOptions = [
+          {
+            id: "basic",
+            name: "기본 편지지",
+            desc: "가장 깔끔하게 연출되는 기본 디자인",
+            image: "assets/stationery/기본편지지_선택.png",
+          },
+        ];
 
       let selectedStationery = params.get("stationery") || null;
       if (selectedStationery && !stationeryOptions.find((opt) => opt.id === selectedStationery)) {

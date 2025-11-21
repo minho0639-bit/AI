@@ -30,25 +30,22 @@
           <div class="control-group">
             <p class="group-label">
               폰트 크기
-              <span id="fontSizeValue">20px</span>
+              <span id="fontSizeValue">16px</span>
             </p>
-            <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
+            <input type="range" id="fontSizeRange" min="16" max="16" value="16" disabled />
           </div>
           <div class="control-group">
             <p class="group-label">폰트 색상</p>
             <div class="color-palette" id="colorPalette"></div>
           </div>
+          <div class="control-group">
+            <p class="group-label">이모티콘</p>
+            <div class="emoji-palette" id="emojiPalette"></div>
+          </div>
         </section>
 
         <section class="compose-editor">
           <div class="write-panel">
-            <div class="paper-toolbar">
-              <div class="toolbar-info">
-                <span class="badge small">선택된 편지지</span>
-                <strong id="stationeryLabel">기본 편지지</strong>
-              </div>
-              <span id="charCount">0 / 1500자</span>
-            </div>
             <div class="letter-paper" id="letterPaper">
               <div
                 id="paperBody"
@@ -70,29 +67,24 @@
         const params = new URLSearchParams(window.location.search);
         const paperBody = document.getElementById("paperBody");
         const letterPaper = document.getElementById("letterPaper");
-        const charCount = document.getElementById("charCount");
         const backToSelect = document.getElementById("backToSelect");
         const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
         const toSummary = document.getElementById("toSummary");
-        const stationeryLabel = document.getElementById("stationeryLabel");
         const fontChips = document.getElementById("fontChips");
         const fontSizeRange = document.getElementById("fontSizeRange");
         const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
+        const emojiPalette = document.getElementById("emojiPalette");
 
         const MAX_BODY = 1500;
+        const DEFAULT_FONT_SIZE = 16;
+        const EMOJI_LIST = ["😊", "🥰", "🌟", "💌", "✨", "😭", "👍", "🙏", "🎉", "🍀"];
 
         const stationeryThemes = {
           basic: {
             label: "기본 편지지",
-            className: "paper-photo",
-            image: "assets/stationery/기본편지지(실제).JPG",
-          },
-          bear: {
-            label: "파란 곰돌이 편지지",
-            className: "paper-photo",
-            image: "assets/stationery/파란배경곰돌이(실제).JPG",
+            className: "paper-lined",
           },
         };
 
@@ -115,7 +107,7 @@
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
-        let selectedFontSize = Number(fontSizeRange.value);
+        let selectedFontSize = DEFAULT_FONT_SIZE;
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
 
@@ -124,9 +116,7 @@
           fontOptions.forEach((option) => {
             const button = document.createElement("button");
             button.type = "button";
-            button.className = `chip-option ${option.className} ${
-              option.id === selectedFont ? "active" : ""
-            }`;
+            button.className = `chip-option ${option.className} ${option.id === selectedFont ? "active" : ""}`;
             button.textContent = option.label;
             button.addEventListener("click", () => {
               selectedFont = option.id;
@@ -156,17 +146,22 @@
           });
         }
 
+        function renderEmojiPalette() {
+          emojiPalette.innerHTML = "";
+          EMOJI_LIST.forEach((symbol) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "emoji-button";
+            button.textContent = symbol;
+            button.addEventListener("click", () => insertEmoji(symbol));
+            emojiPalette.appendChild(button);
+          });
+        }
+
         function applyStationeryStyles() {
           const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
           letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
-          if (theme.image) {
-            letterPaper.classList.add("paper-photo");
-            const imageUrl = encodeURI(theme.image);
-            letterPaper.style.backgroundImage = `url("${imageUrl}")`;
-          } else {
-            letterPaper.style.backgroundImage = "";
-          }
-          stationeryLabel.textContent = theme.label;
+          letterPaper.style.backgroundImage = "";
         }
 
         function applyTypography() {
@@ -183,11 +178,6 @@
           return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
         }
 
-        function updateCharCount() {
-          const text = getPlainText(paperBody);
-          charCount.textContent = `${text.length} / ${MAX_BODY}자`;
-        }
-
         paperBody.addEventListener("input", () => {
           let text = getPlainText(paperBody);
           if (text.length > MAX_BODY) {
@@ -195,14 +185,7 @@
             placeCursorEnd(paperBody);
           } else {
             lastBodyText = text;
-            updateCharCount();
           }
-        });
-
-        fontSizeRange.addEventListener("input", (event) => {
-          selectedFontSize = Number(event.target.value);
-          fontSizeValue.textContent = `${selectedFontSize}px`;
-          applyTypography();
         });
 
         function placeCursorEnd(el) {
@@ -212,6 +195,33 @@
           const sel = window.getSelection();
           sel.removeAllRanges();
           sel.addRange(range);
+        }
+
+        function insertEmoji(symbol) {
+          const currentText = getPlainText(paperBody);
+          if (currentText.length + [...symbol].length > MAX_BODY) {
+            alert("1,500자 제한을 초과하여 이모티콘을 추가할 수 없습니다.");
+            return;
+          }
+
+          paperBody.focus();
+          const selection = window.getSelection();
+          let range = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
+
+          if (!range || !paperBody.contains(range.commonAncestorContainer)) {
+            range = document.createRange();
+            range.selectNodeContents(paperBody);
+            range.collapse(false);
+          }
+
+          range.deleteContents();
+          range.insertNode(document.createTextNode(symbol));
+          range.collapse(false);
+
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          lastBodyText = getPlainText(paperBody);
         }
 
         backToSelect.addEventListener("click", () => {
@@ -240,11 +250,14 @@
           alert("다음 단계(검수/결제)는 곧 연결됩니다.");
         });
 
+        fontSizeRange.value = DEFAULT_FONT_SIZE;
+        fontSizeValue.textContent = `${DEFAULT_FONT_SIZE}px`;
         renderFontOptions();
         renderColorPalette();
+        renderEmojiPalette();
         applyStationeryStyles();
         applyTypography();
-        updateCharCount();
+        lastBodyText = getPlainText(paperBody);
       </script>
   </body>
 </html>
