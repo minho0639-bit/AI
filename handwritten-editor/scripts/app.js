@@ -5,21 +5,31 @@ const paperOptions = [
     id: "cotton",
     label: "코튼 화이트",
     background: "var(--paper-cotton)",
-    texture: "repeating-linear-gradient(transparent 0 28px, rgba(47,27,12,0.08) 29px)",
+    texture: `
+      radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
+      radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.4), transparent),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2))
+    `,
   },
   {
     id: "craft",
     label: "크래프트",
     background: "var(--paper-craft)",
-    texture:
-      "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(47,27,12,0.04)), repeating-linear-gradient(transparent 0 24px, rgba(47,27,12,0.1) 25px)",
+    texture: `
+      linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(47, 27, 12, 0.04)),
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(47, 27, 12, 0.05))
+    `,
   },
   {
     id: "vintage",
     label: "빈티지",
     background: "var(--paper-vintage)",
-    texture:
-      "linear-gradient(180deg, rgba(235,209,154,0.2), rgba(255,255,255,0.6)), repeating-linear-gradient(transparent 0 36px, rgba(47,27,12,0.06) 37px)",
+    texture: `
+      linear-gradient(180deg, rgba(235, 209, 154, 0.25), rgba(255, 255, 255, 0.65)),
+      radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.4), transparent),
+      radial-gradient(circle at 80% 0%, rgba(255, 214, 153, 0.2), transparent)
+    `,
   },
 ];
 
@@ -157,6 +167,8 @@ function attachEvents() {
   refs.btnPreview.addEventListener("click", () => {
     refs.previewArea.innerText = state.content || "아직 작성된 내용이 없어요.";
     refs.previewArea.style.fontFamily = currentFont().stack;
+    refs.previewArea.style.fontSize =
+      getComputedStyle(refs.letterInput).fontSize;
     refs.previewArea.style.color = currentInk().value;
     refs.previewArea.style.lineHeight = state.lineHeight;
     refs.previewDialog.showModal();
@@ -176,8 +188,9 @@ function applyState() {
   refs.letterInput.style.lineHeight = state.lineHeight;
   refs.lineHeight.value = state.lineHeight;
   refs.paperLabel.textContent = currentPaper().label;
-  refs.paper.style.background = currentPaper().background;
-  refs.paper.style.backgroundImage = currentPaper().texture;
+  applyPaperTexture(refs.paper);
+  applyPaperTexture(refs.previewArea);
+  syncLineGap();
 }
 
 function currentPaper() {
@@ -209,4 +222,19 @@ function hydrateFromStorage() {
 
 function handleExport() {
   alert("실제 PNG 변환은 html2canvas 등으로 연결 예정입니다. 현재는 초안 상태예요!");
+}
+
+function applyPaperTexture(target) {
+  if (!target) return;
+  target.style.background = currentPaper().background;
+  target.style.backgroundImage = currentPaper().texture;
+}
+
+function syncLineGap() {
+  const fontSize = parseFloat(getComputedStyle(refs.letterInput).fontSize) || 28;
+  const gap = fontSize * state.lineHeight;
+  [refs.paper, refs.previewArea].forEach((target) => {
+    if (!target) return;
+    target.style.setProperty("--line-gap", `${gap}px`);
+  });
 }
