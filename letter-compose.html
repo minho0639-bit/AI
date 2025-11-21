@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 편지 작성</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="letter-compose.css" />
+  </head>
+  <body>
+      <header class="compose-nav">
+        <div class="brand">팬레터포스트</div>
+        <div class="nav-actions">
+          <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
+          <button type="button" class="ghost tiny" id="backHome">홈으로</button>
+        </div>
+      </header>
+
+      <main class="compose-main">
+        <section class="compose-controls" aria-label="서식 설정">
+          <div class="control-group">
+            <p class="group-label">폰트</p>
+            <div class="chip-group" id="fontChips"></div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">
+              폰트 크기
+              <span id="fontSizeValue">20px</span>
+            </p>
+            <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
+          </div>
+          <div class="control-group">
+            <p class="group-label">폰트 색상</p>
+            <div class="color-palette" id="colorPalette"></div>
+          </div>
+        </section>
+
+        <section class="compose-editor">
+          <div class="write-panel">
+            <div class="paper-toolbar">
+              <div class="toolbar-info">
+                <span class="badge small">선택된 편지지</span>
+                <strong id="stationeryLabel">기본 편지지</strong>
+              </div>
+              <span id="charCount">0 / 1500자</span>
+            </div>
+            <div class="letter-paper" id="letterPaper">
+              <div
+                id="paperBody"
+                class="paper-body font-default"
+                contenteditable="true"
+                data-placeholder="편지 내용을 입력하세요 (최대 1,500자)"
+              ></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="compose-actions">
+          <button type="button" class="ghost" id="saveDraft">임시 저장</button>
+          <button type="button" class="primary" id="toSummary">다음 단계</button>
+        </section>
+      </main>
+
+      <script>
+        const params = new URLSearchParams(window.location.search);
+        const paperBody = document.getElementById("paperBody");
+        const letterPaper = document.getElementById("letterPaper");
+        const charCount = document.getElementById("charCount");
+        const backToSelect = document.getElementById("backToSelect");
+        const backHome = document.getElementById("backHome");
+        const saveDraft = document.getElementById("saveDraft");
+        const toSummary = document.getElementById("toSummary");
+        const stationeryLabel = document.getElementById("stationeryLabel");
+        const fontChips = document.getElementById("fontChips");
+        const fontSizeRange = document.getElementById("fontSizeRange");
+        const fontSizeValue = document.getElementById("fontSizeValue");
+        const colorPalette = document.getElementById("colorPalette");
+
+        const MAX_BODY = 1500;
+
+        const stationeryThemes = {
+          basic: {
+            label: "기본 편지지",
+            className: "paper-photo",
+            image: "assets/stationery/기본편지지(실제).JPG",
+          },
+          bear: {
+            label: "파란 곰돌이 편지지",
+            className: "paper-photo",
+            image: "assets/stationery/파란배경곰돌이(실제).JPG",
+          },
+        };
+
+        const fontOptions = [
+          { id: "default", label: "Pretendard", className: "font-default" },
+          { id: "serif", label: "Cormorant", className: "font-serif" },
+          { id: "handwriting", label: "Nanum Pen", className: "font-handwriting" },
+        ];
+
+        const colorOptions = [
+          { id: "ink", label: "잉크 블랙", value: "#1b1c1f" },
+          { id: "navy", label: "네이비", value: "#1f3a93" },
+          { id: "rose", label: "로즈", value: "#d94b8c" },
+          { id: "forest", label: "포레스트", value: "#1f7a54" },
+          { id: "sunset", label: "선셋", value: "#ff7a45" },
+          { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
+        ];
+
+        let lastBodyText = "";
+        let selectedStationery = params.get("stationery") || "basic";
+        if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
+        let selectedFont = "default";
+        let selectedFontSize = Number(fontSizeRange.value);
+        let selectedColorId = colorOptions[0].id;
+        let selectedColor = colorOptions[0].value;
+
+        function renderFontOptions() {
+          fontChips.innerHTML = "";
+          fontOptions.forEach((option) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `chip-option ${option.className} ${
+              option.id === selectedFont ? "active" : ""
+            }`;
+            button.textContent = option.label;
+            button.addEventListener("click", () => {
+              selectedFont = option.id;
+              renderFontOptions();
+              applyTypography();
+            });
+            fontChips.appendChild(button);
+          });
+        }
+
+        function renderColorPalette() {
+          colorPalette.innerHTML = "";
+          colorOptions.forEach((option) => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = `color-swatch ${option.id === selectedColorId ? "active" : ""}`;
+            swatch.style.setProperty("--swatch-color", option.value);
+            swatch.setAttribute("aria-label", option.label);
+            swatch.innerHTML = "<span></span>";
+            swatch.addEventListener("click", () => {
+              selectedColorId = option.id;
+              selectedColor = option.value;
+              renderColorPalette();
+              applyTypography();
+            });
+            colorPalette.appendChild(swatch);
+          });
+        }
+
+        function applyStationeryStyles() {
+          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
+          letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
+          if (theme.image) {
+            letterPaper.classList.add("paper-photo");
+            const imageUrl = encodeURI(theme.image);
+            letterPaper.style.backgroundImage = `url("${imageUrl}")`;
+          } else {
+            letterPaper.style.backgroundImage = "";
+          }
+          stationeryLabel.textContent = theme.label;
+        }
+
+        function applyTypography() {
+          paperBody.className = `paper-body font-${selectedFont}`;
+          paperBody.style.fontSize = `${selectedFontSize}px`;
+          paperBody.style.color = selectedColor;
+          paperBody.dataset.placeholder =
+            selectedFont === "handwriting"
+              ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
+              : "편지 내용을 입력하세요 (최대 1,500자)";
+        }
+
+        function getPlainText(element) {
+          return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
+        }
+
+        function updateCharCount() {
+          const text = getPlainText(paperBody);
+          charCount.textContent = `${text.length} / ${MAX_BODY}자`;
+        }
+
+        paperBody.addEventListener("input", () => {
+          let text = getPlainText(paperBody);
+          if (text.length > MAX_BODY) {
+            paperBody.innerText = lastBodyText;
+            placeCursorEnd(paperBody);
+          } else {
+            lastBodyText = text;
+            updateCharCount();
+          }
+        });
+
+        fontSizeRange.addEventListener("input", (event) => {
+          selectedFontSize = Number(event.target.value);
+          fontSizeValue.textContent = `${selectedFontSize}px`;
+          applyTypography();
+        });
+
+        function placeCursorEnd(el) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        backToSelect.addEventListener("click", () => {
+          const category = params.get("category");
+          const categoryLabel = params.get("categoryLabel") || "";
+          if (category) {
+            const targetParams = new URLSearchParams({
+              category,
+              categoryLabel,
+            });
+            window.location.href = `/letter-target.html?${targetParams.toString()}`;
+          } else {
+            window.location.href = "/letter.html";
+          }
+        });
+
+        backHome.addEventListener("click", () => {
+          window.location.href = "/";
+        });
+
+        saveDraft.addEventListener("click", () => {
+          alert("임시 저장 기능은 곧 제공될 예정입니다.");
+        });
+
+        toSummary.addEventListener("click", () => {
+          alert("다음 단계(검수/결제)는 곧 연결됩니다.");
+        });
+
+        renderFontOptions();
+        renderColorPalette();
+        applyStationeryStyles();
+        applyTypography();
+        updateCharCount();
+      </script>
+  </body>
+</html>
