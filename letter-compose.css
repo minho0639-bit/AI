@@ -175,8 +175,8 @@ button:active {
 }
 
 .letter-paper.paper-photo::before {
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(1px);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(0.5px);
 }
 
 .paper-default {
