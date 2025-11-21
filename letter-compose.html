@@ -13,261 +13,278 @@
     <link rel="stylesheet" href="letter-compose.css" />
   </head>
   <body>
-    <header class="compose-nav">
-      <div class="brand">팬레터포스트</div>
-      <div class="nav-actions">
-        <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
-        <button type="button" class="ghost tiny" id="backHome">홈으로</button>
-      </div>
-    </header>
-
-    <main class="compose-main">
-      <section class="target-summary">
-        <p>보낼 대상</p>
-        <h1 id="targetName">선택된 대상이 없습니다</h1>
-        <p id="targetDetail" class="muted"></p>
-      </section>
-
-      <section class="stationery">
-        <div class="section-head">
-          <div>
-            <p class="badge">STEP 01</p>
-            <h2>편지지 선택</h2>
-            <p class="muted">원하는 분위기의 편지지를 선택해 주세요.</p>
-          </div>
+      <header class="compose-nav">
+        <div class="brand">팬레터포스트</div>
+        <div class="nav-actions">
+          <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
+          <button type="button" class="ghost tiny" id="backHome">홈으로</button>
         </div>
-        <div class="stationery-grid" id="stationeryGrid"></div>
-      </section>
+      </header>
 
-      <section class="font-picker">
-        <div class="section-head">
-          <div>
-            <p class="badge">STEP 02</p>
-            <h2>폰트 선택</h2>
-            <p class="muted">기본 또는 필기체 중 원하는 스타일을 고르세요.</p>
-          </div>
-        </div>
-        <div class="font-grid" id="fontGrid"></div>
-      </section>
+      <main class="compose-main">
+        <section class="target-summary">
+          <p>보낼 대상</p>
+          <h1 id="targetName">선택된 대상이 없습니다</h1>
+          <p id="targetDetail" class="muted"></p>
+        </section>
 
-      <section class="paper-section">
-        <div class="section-head">
-          <div>
-            <p class="badge">STEP 03</p>
-            <h2>편지 작성</h2>
-            <p class="muted">기본 편지지 위에서 바로 제목과 내용을 작성해 주세요.</p>
-          </div>
-        </div>
-        <div class="paper-wrapper">
-          <div class="paper-toolbar">
-            <span id="charCount">0 / 1500자</span>
-          </div>
-          <div class="letter-paper" id="letterPaper">
-            <div
-              id="paperTitle"
-              class="paper-title"
-              contenteditable="true"
-              data-placeholder="제목을 입력하세요 (최대 80자)"
-            ></div>
-            <div
-              id="paperBody"
-              class="paper-body"
-              contenteditable="true"
-              data-placeholder="편지 내용을 입력하세요 (최대 1,500자)"
-            ></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="compose-actions">
-        <button type="button" class="ghost" id="saveDraft">임시 저장</button>
-        <button type="button" class="primary" id="toSummary">다음 단계</button>
-      </section>
-    </main>
-
-    <script>
-      const params = new URLSearchParams(window.location.search);
-      const targetName = document.getElementById("targetName");
-      const targetDetail = document.getElementById("targetDetail");
-      const paperTitle = document.getElementById("paperTitle");
-      const paperBody = document.getElementById("paperBody");
-      const charCount = document.getElementById("charCount");
-      const backToSelect = document.getElementById("backToSelect");
-      const backHome = document.getElementById("backHome");
-      const saveDraft = document.getElementById("saveDraft");
-      const toSummary = document.getElementById("toSummary");
-
-      function setTargetSummary() {
-        const name = params.get("name");
-        const categoryLabel = params.get("categoryLabel");
-        const subcategoryLabel = params.get("subcategoryLabel");
-        const agency = params.get("agency");
-        const team = params.get("team");
-
-        if (name) {
-          targetName.textContent = name;
-          targetDetail.textContent = [categoryLabel, subcategoryLabel, agency, team]
-            .filter(Boolean)
-            .join(" · ");
-        } else {
-          targetName.textContent = "선택된 대상이 없습니다";
-          targetDetail.textContent = "대상을 먼저 선택해 주세요.";
-        }
-      }
-
-      setTargetSummary();
-
-      const MAX_TITLE = 80;
-      const MAX_BODY = 1500;
-      let lastBodyText = "";
-      let lastTitleText = "";
-      let selectedStationery = "default";
-      let selectedFont = "default";
-
-      const stationeryOptions = [
-        {
-          id: "default",
-          name: "기본 편지지",
-          desc: "흰색 배경 + 라인",
-          previewClass: "preview-default",
-        },
-        {
-          id: "christmas",
-          name: "크리스마스 편지지",
-          desc: "포근한 레드 & 장식",
-          previewClass: "preview-christmas",
-        },
-      ];
-
-      const fontOptions = [
-        { id: "default", name: "기본 폰트", className: "font-default" },
-        { id: "handwriting", name: "필기체", className: "font-handwriting" },
-      ];
-
-      function renderStationeryOptions() {
-        const grid = document.getElementById("stationeryGrid");
-        grid.innerHTML = "";
-        stationeryOptions.forEach((option) => {
-          const card = document.createElement("button");
-          card.type = "button";
-          card.className = `stationery-card ${option.previewClass} ${
-            option.id === selectedStationery ? "active" : ""
-          }`;
-          card.innerHTML = `
-            <div class="stationery-preview"></div>
-            <div>
-              <strong>${option.name}</strong>
-              <p>${option.desc}</p>
+        <section class="compose-workspace">
+          <div class="write-panel">
+            <div class="paper-toolbar">
+              <div class="toolbar-info">
+                <span class="badge small">선택된 편지지</span>
+                <strong id="stationeryLabel">미니멀 기본</strong>
+              </div>
+              <span id="charCount">0 / 1500자</span>
             </div>
-          `;
-          card.addEventListener("click", () => {
-            selectedStationery = option.id;
-            renderStationeryOptions();
-            applyPaperStyles();
+            <div class="letter-paper paper-default" id="letterPaper">
+              <div
+                id="paperTitle"
+                class="paper-title font-default"
+                contenteditable="true"
+                data-placeholder="제목을 입력하세요 (최대 80자)"
+              ></div>
+              <div
+                id="paperBody"
+                class="paper-body font-default"
+                contenteditable="true"
+                data-placeholder="편지 내용을 입력하세요 (최대 1,500자)"
+              ></div>
+            </div>
+          </div>
+
+          <aside class="control-panel">
+            <div class="control-group">
+              <p class="group-label">폰트</p>
+              <div class="chip-group" id="fontChips"></div>
+            </div>
+            <div class="control-group">
+              <p class="group-label">
+                폰트 크기
+                <span id="fontSizeValue">20px</span>
+              </p>
+              <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
+            </div>
+            <div class="control-group">
+              <p class="group-label">폰트 색상</p>
+              <div class="color-palette" id="colorPalette"></div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="compose-actions">
+          <button type="button" class="ghost" id="saveDraft">임시 저장</button>
+          <button type="button" class="primary" id="toSummary">다음 단계</button>
+        </section>
+      </main>
+
+      <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetName = document.getElementById("targetName");
+        const targetDetail = document.getElementById("targetDetail");
+        const paperTitle = document.getElementById("paperTitle");
+        const paperBody = document.getElementById("paperBody");
+        const letterPaper = document.getElementById("letterPaper");
+        const charCount = document.getElementById("charCount");
+        const backToSelect = document.getElementById("backToSelect");
+        const backHome = document.getElementById("backHome");
+        const saveDraft = document.getElementById("saveDraft");
+        const toSummary = document.getElementById("toSummary");
+        const stationeryLabel = document.getElementById("stationeryLabel");
+        const fontChips = document.getElementById("fontChips");
+        const fontSizeRange = document.getElementById("fontSizeRange");
+        const fontSizeValue = document.getElementById("fontSizeValue");
+        const colorPalette = document.getElementById("colorPalette");
+
+        const MAX_TITLE = 80;
+        const MAX_BODY = 1500;
+
+        const stationeryThemes = {
+          default: { label: "미니멀 기본", className: "paper-default" },
+          classic: { label: "클래식 크림", className: "paper-classic" },
+          blossom: { label: "블라썸 핑크", className: "paper-blossom" },
+          midnight: { label: "미드나잇 블루", className: "paper-midnight" },
+        };
+
+        const fontOptions = [
+          { id: "default", label: "Pretendard", className: "font-default" },
+          { id: "serif", label: "Cormorant", className: "font-serif" },
+          { id: "handwriting", label: "Nanum Pen", className: "font-handwriting" },
+        ];
+
+        const colorOptions = [
+          { id: "ink", label: "잉크 블랙", value: "#1b1c1f" },
+          { id: "navy", label: "네이비", value: "#1f3a93" },
+          { id: "rose", label: "로즈", value: "#d94b8c" },
+          { id: "forest", label: "포레스트", value: "#1f7a54" },
+          { id: "sunset", label: "선셋", value: "#ff7a45" },
+          { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
+        ];
+
+        let lastBodyText = "";
+        let lastTitleText = "";
+        let selectedStationery = params.get("stationery") || "default";
+        if (!stationeryThemes[selectedStationery]) selectedStationery = "default";
+        let selectedFont = "default";
+        let selectedFontSize = Number(fontSizeRange.value);
+        const defaultColorOption =
+          selectedStationery === "midnight"
+            ? colorOptions.find((option) => option.id === "cloud") || colorOptions[0]
+            : colorOptions[0];
+        let selectedColorId = defaultColorOption.id;
+        let selectedColor = defaultColorOption.value;
+
+        function setTargetSummary() {
+          const name = params.get("name");
+          const categoryLabel = params.get("categoryLabel");
+          const subcategoryLabel = params.get("subcategoryLabel");
+          const agency = params.get("agency");
+          const team = params.get("team");
+
+          if (name) {
+            targetName.textContent = name;
+            targetDetail.textContent = [categoryLabel, subcategoryLabel, agency, team]
+              .filter(Boolean)
+              .join(" · ");
+          } else {
+            targetName.textContent = "선택된 대상이 없습니다";
+            targetDetail.textContent = "대상을 먼저 선택해 주세요.";
+          }
+        }
+
+        function renderFontOptions() {
+          fontChips.innerHTML = "";
+          fontOptions.forEach((option) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `chip-option ${option.className} ${
+              option.id === selectedFont ? "active" : ""
+            }`;
+            button.textContent = option.label;
+            button.addEventListener("click", () => {
+              selectedFont = option.id;
+              renderFontOptions();
+              applyTypography();
+            });
+            fontChips.appendChild(button);
           });
-          grid.appendChild(card);
+        }
+
+        function renderColorPalette() {
+          colorPalette.innerHTML = "";
+          colorOptions.forEach((option) => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = `color-swatch ${option.id === selectedColorId ? "active" : ""}`;
+            swatch.style.setProperty("--swatch-color", option.value);
+            swatch.setAttribute("aria-label", option.label);
+            swatch.innerHTML = "<span></span>";
+            swatch.addEventListener("click", () => {
+              selectedColorId = option.id;
+              selectedColor = option.value;
+              renderColorPalette();
+              applyTypography();
+            });
+            colorPalette.appendChild(swatch);
+          });
+        }
+
+        function applyStationeryStyles() {
+          const theme = stationeryThemes[selectedStationery] || stationeryThemes.default;
+          letterPaper.className = `letter-paper ${theme.className}`;
+          stationeryLabel.textContent = theme.label;
+        }
+
+        function applyTypography() {
+          paperTitle.className = `paper-title font-${selectedFont}`;
+          paperBody.className = `paper-body font-${selectedFont}`;
+          paperTitle.style.fontSize = `${Math.min(selectedFontSize + 6, 34)}px`;
+          paperBody.style.fontSize = `${selectedFontSize}px`;
+          paperTitle.style.color = selectedColor;
+          paperBody.style.color = selectedColor;
+          paperBody.dataset.placeholder =
+            selectedFont === "handwriting"
+              ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
+              : "편지 내용을 입력하세요 (최대 1,500자)";
+        }
+
+        function getPlainText(element) {
+          return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
+        }
+
+        function updateCharCount() {
+          const text = getPlainText(paperBody);
+          charCount.textContent = `${text.length} / ${MAX_BODY}자`;
+        }
+
+        paperTitle.addEventListener("input", () => {
+          let text = getPlainText(paperTitle);
+          if (text.length > MAX_TITLE) {
+            paperTitle.innerText = lastTitleText;
+            placeCursorEnd(paperTitle);
+          } else {
+            lastTitleText = text;
+          }
         });
-      }
 
-      function renderFontOptions() {
-        const grid = document.getElementById("fontGrid");
-        grid.innerHTML = "";
-        fontOptions.forEach((option) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = `font-card ${option.className} ${
-            option.id === selectedFont ? "active" : ""
-          }`;
-          button.textContent = option.name;
-          button.addEventListener("click", () => {
-            selectedFont = option.id;
-            renderFontOptions();
-            applyPaperStyles();
-          });
-          grid.appendChild(button);
+        paperBody.addEventListener("input", () => {
+          let text = getPlainText(paperBody);
+          if (text.length > MAX_BODY) {
+            paperBody.innerText = lastBodyText;
+            placeCursorEnd(paperBody);
+          } else {
+            lastBodyText = text;
+            updateCharCount();
+          }
         });
-      }
 
-      function getPlainText(element) {
-        return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
-      }
+        fontSizeRange.addEventListener("input", (event) => {
+          selectedFontSize = Number(event.target.value);
+          fontSizeValue.textContent = `${selectedFontSize}px`;
+          applyTypography();
+        });
 
-      function updateCharCount() {
-        const text = getPlainText(paperBody);
-        charCount.textContent = `${text.length} / ${MAX_BODY}자`;
-      }
-
-      paperTitle.addEventListener("input", () => {
-        let text = getPlainText(paperTitle);
-        if (text.length > MAX_TITLE) {
-          paperTitle.innerText = lastTitleText;
-          placeCursorEnd(paperTitle);
-        } else {
-          lastTitleText = text;
+        function placeCursorEnd(el) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
-      });
 
-      paperBody.addEventListener("input", () => {
-        let text = getPlainText(paperBody);
-        if (text.length > MAX_BODY) {
-          paperBody.innerText = lastBodyText;
-          placeCursorEnd(paperBody);
-        } else {
-          lastBodyText = text;
-          updateCharCount();
-        }
-      });
+        backToSelect.addEventListener("click", () => {
+          const category = params.get("category");
+          const categoryLabel = params.get("categoryLabel") || "";
+          if (category) {
+            const targetParams = new URLSearchParams({
+              category,
+              categoryLabel,
+            });
+            window.location.href = `/letter-target.html?${targetParams.toString()}`;
+          } else {
+            window.location.href = "/letter.html";
+          }
+        });
 
-      function placeCursorEnd(el) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
+        backHome.addEventListener("click", () => {
+          window.location.href = "/";
+        });
 
-      backToSelect.addEventListener("click", () => {
-        const category = params.get("category");
-        const categoryLabel = params.get("categoryLabel") || "";
-        if (category) {
-          const targetParams = new URLSearchParams({
-            category,
-            categoryLabel,
-          });
-          window.location.href = `/letter-target.html?${targetParams.toString()}`;
-        } else {
-          window.location.href = "/letter.html";
-        }
-      });
+        saveDraft.addEventListener("click", () => {
+          alert("임시 저장 기능은 곧 제공될 예정입니다.");
+        });
 
-      backHome.addEventListener("click", () => {
-        window.location.href = "/";
-      });
+        toSummary.addEventListener("click", () => {
+          alert("다음 단계(검수/결제)는 곧 연결됩니다.");
+        });
 
-      saveDraft.addEventListener("click", () => {
-        alert("임시 저장 기능은 곧 제공될 예정입니다.");
-      });
-
-      toSummary.addEventListener("click", () => {
-        alert("다음 단계(검수/결제)는 곧 연결됩니다.");
-      });
-
-      function applyPaperStyles() {
-        const wrapper = document.getElementById("letterPaper");
-        wrapper.className = `letter-paper paper-${selectedStationery} font-${selectedFont}`;
-        paperTitle.className = `paper-title font-${selectedFont}`;
-        paperBody.className = `paper-body font-${selectedFont}`;
-        paperBody.dataset.placeholder =
-          selectedFont === "handwriting"
-            ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
-            : "편지 내용을 입력하세요 (최대 1,500자)";
-      }
-
-      renderStationeryOptions();
-      renderFontOptions();
-      applyPaperStyles();
-      updateCharCount();
-    </script>
+        setTargetSummary();
+        renderFontOptions();
+        renderColorPalette();
+        applyStationeryStyles();
+        applyTypography();
+        updateCharCount();
+      </script>
   </body>
 </html>

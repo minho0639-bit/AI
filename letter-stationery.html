@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 편지지 선택</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="letter-stationery.css" />
+  </head>
+  <body>
+    <header class="stationery-nav">
+      <div class="brand">팬레터포스트</div>
+      <div class="nav-actions">
+        <button type="button" class="ghost tiny" id="backToTarget">대상 다시 선택</button>
+        <button type="button" class="ghost tiny" id="backHome">홈으로</button>
+      </div>
+    </header>
+
+    <main class="stationery-main">
+      <section class="target-summary">
+        <p>보낼 대상</p>
+        <h1 id="targetName">선택된 대상이 없습니다</h1>
+        <p id="targetDetail" class="muted">대상을 먼저 선택해 주세요.</p>
+      </section>
+
+      <section class="stationery-section">
+        <div class="section-head">
+          <p class="badge">STEP 01</p>
+          <h2>편지지 선택</h2>
+          <p class="muted">원하는 분위기를 골라 편지 작성 페이지에 적용해 주세요.</p>
+        </div>
+        <div class="stationery-grid" id="stationeryGrid"></div>
+      </section>
+
+      <section class="stationery-actions">
+        <button type="button" class="ghost" id="backToTargetBottom">대상 다시 선택</button>
+        <button type="button" class="primary" id="goToCompose" disabled>편지 작성으로 이동</button>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const targetName = document.getElementById("targetName");
+      const targetDetail = document.getElementById("targetDetail");
+      const stationeryGrid = document.getElementById("stationeryGrid");
+      const goToCompose = document.getElementById("goToCompose");
+      const backToTargetButtons = [document.getElementById("backToTarget"), document.getElementById("backToTargetBottom")];
+      const backHome = document.getElementById("backHome");
+
+      const stationeryOptions = [
+        {
+          id: "default",
+          name: "미니멀 기본",
+          desc: "담백한 아이보리와 얇은 라인",
+          previewClass: "preview-default",
+        },
+        {
+          id: "classic",
+          name: "클래식 크림",
+          desc: "따뜻한 크림톤과 골드 포인트",
+          previewClass: "preview-classic",
+        },
+        {
+          id: "blossom",
+          name: "블라썸 핑크",
+          desc: "포근한 핑크 그러데이션",
+          previewClass: "preview-blossom",
+        },
+        {
+          id: "midnight",
+          name: "미드나잇 블루",
+          desc: "짙은 네이비에 별빛 포인트",
+          previewClass: "preview-midnight",
+        },
+      ];
+
+      let selectedStationery = null;
+
+      function setTargetSummary() {
+        const name = params.get("name");
+        const categoryLabel = params.get("categoryLabel");
+        const subcategoryLabel = params.get("subcategoryLabel");
+        const agency = params.get("agency");
+        const team = params.get("team");
+
+        if (name) {
+          targetName.textContent = name;
+          targetDetail.textContent = [categoryLabel, subcategoryLabel, agency, team]
+            .filter(Boolean)
+            .join(" · ");
+        }
+      }
+
+      function renderStationeryOptions() {
+        stationeryGrid.innerHTML = "";
+        stationeryOptions.forEach((option) => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = `stationery-card ${option.previewClass} ${
+            option.id === selectedStationery ? "active" : ""
+          }`;
+          card.innerHTML = `
+            <div class="stationery-preview ${option.previewClass}"></div>
+            <div>
+              <strong>${option.name}</strong>
+              <p>${option.desc}</p>
+            </div>
+          `;
+          card.addEventListener("click", () => {
+            selectedStationery = option.id;
+            goToCompose.disabled = false;
+            renderStationeryOptions();
+          });
+          stationeryGrid.appendChild(card);
+        });
+      }
+
+      function goToLetterCompose() {
+        if (!selectedStationery) return;
+        const composeParams = new URLSearchParams(params);
+        composeParams.set("stationery", selectedStationery);
+        window.location.href = `/letter-compose.html?${composeParams.toString()}`;
+      }
+
+      backToTargetButtons.forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const category = params.get("category");
+          const categoryLabel = params.get("categoryLabel");
+          if (!category) {
+            window.location.href = "/letter.html";
+            return;
+          }
+          const targetParams = new URLSearchParams({
+            category,
+            categoryLabel: categoryLabel || "",
+          });
+          window.location.href = `/letter-target.html?${targetParams.toString()}`;
+        })
+      );
+
+      backHome.addEventListener("click", () => {
+        window.location.href = "/";
+      });
+
+      goToCompose.addEventListener("click", goToLetterCompose);
+
+      setTargetSummary();
+      renderStationeryOptions();
+    </script>
+  </body>
+</html>

@@ -339,24 +339,24 @@
         nameSelect.disabled = false;
       });
 
-      nameSelect.addEventListener("change", () => {
-        selectedName = nameSelect.value || null;
-        updateSelectionPreview();
-      });
-
-      nextButton.addEventListener("click", () => {
-        if (nextButton.disabled) return;
-        const params = new URLSearchParams({
-          category: categoryKey,
-          categoryLabel: selectedCategoryData.label,
-          subcategory: selectedSubcategory,
-          subcategoryLabel: selectedCategoryData.subcategories[selectedSubcategory].label,
-          agency: selectedAgency,
-          team: selectedTeam,
-          name: selectedName,
+        nameSelect.addEventListener("change", () => {
+          selectedName = nameSelect.value || null;
+          updateSelectionPreview();
         });
-        window.location.href = `/letter-compose.html?${params.toString()}`;
-      });
+
+        nextButton.addEventListener("click", () => {
+          if (nextButton.disabled) return;
+          const params = new URLSearchParams({
+            category: categoryKey,
+            categoryLabel: selectedCategoryData.label,
+            subcategory: selectedSubcategory,
+            subcategoryLabel: selectedCategoryData.subcategories[selectedSubcategory].label,
+            agency: selectedAgency,
+            team: selectedTeam,
+            name: selectedName,
+          });
+          window.location.href = `/letter-stationery.html?${params.toString()}`;
+        });
 
       setupSubcategories();
     </script>
