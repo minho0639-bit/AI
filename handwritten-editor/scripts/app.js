@@ -150,6 +150,7 @@ function attachEvents() {
   refs.letterInput.addEventListener("input", () => {
     state.content = refs.letterInput.value;
     persist();
+    autoResizeTextarea();
   });
 
   refs.fontSelect.addEventListener("change", (event) => {
@@ -166,11 +167,6 @@ function attachEvents() {
 
   refs.btnPreview.addEventListener("click", () => {
     refs.previewArea.innerText = state.content || "아직 작성된 내용이 없어요.";
-    refs.previewArea.style.fontFamily = currentFont().stack;
-    refs.previewArea.style.fontSize =
-      getComputedStyle(refs.letterInput).fontSize;
-    refs.previewArea.style.color = currentInk().value;
-    refs.previewArea.style.lineHeight = state.lineHeight;
     refs.previewDialog.showModal();
   });
 
@@ -185,12 +181,12 @@ function applyState() {
   refs.letterInput.value = state.content;
   refs.letterInput.style.fontFamily = currentFont().stack;
   refs.letterInput.style.color = currentInk().value;
-  refs.letterInput.style.lineHeight = state.lineHeight;
   refs.lineHeight.value = state.lineHeight;
   refs.paperLabel.textContent = currentPaper().label;
   applyPaperTexture(refs.paper);
   applyPaperTexture(refs.previewArea);
-  syncLineGap();
+  applyTypography();
+  autoResizeTextarea();
 }
 
 function currentPaper() {
@@ -230,9 +226,36 @@ function applyPaperTexture(target) {
   target.style.backgroundImage = currentPaper().texture;
 }
 
-function syncLineGap() {
-  const fontSize = parseFloat(getComputedStyle(refs.letterInput).fontSize) || 28;
-  const gap = fontSize * state.lineHeight;
+function applyTypography() {
+  const fontSize = getFontSizePx();
+  const gapPx = getLineGapPx(fontSize);
+  refs.letterInput.style.lineHeight = `${gapPx}px`;
+  refs.previewArea.style.fontFamily = currentFont().stack;
+  refs.previewArea.style.fontSize = `${fontSize}px`;
+  refs.previewArea.style.color = currentInk().value;
+  refs.previewArea.style.lineHeight = `${gapPx}px`;
+  syncLineGap(gapPx);
+}
+
+function autoResizeTextarea() {
+  if (!refs.letterInput) return;
+  const minHeight = 420;
+  refs.letterInput.style.height = "auto";
+  const nextHeight = Math.max(refs.letterInput.scrollHeight, minHeight);
+  refs.letterInput.style.height = `${nextHeight}px`;
+}
+
+function getFontSizePx() {
+  const fontSize = parseFloat(getComputedStyle(refs.letterInput).fontSize);
+  return Number.isNaN(fontSize) ? 28 : fontSize;
+}
+
+function getLineGapPx(fontSize = getFontSizePx()) {
+  return fontSize * state.lineHeight;
+}
+
+function syncLineGap(forcedGapPx) {
+  const gap = forcedGapPx ?? getLineGapPx();
   [refs.paper, refs.previewArea].forEach((target) => {
     if (!target) return;
     target.style.setProperty("--line-gap", `${gap}px`);
