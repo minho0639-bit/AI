@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>손편지 에디터 초안</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Homemade+Apple&family=Song+Myung&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Fan Letter Post · Prototype</p>
+          <h1>손편지 에디터</h1>
+        </div>
+        <div class="header-actions">
+          <button class="ghost" id="btn-preview">미리보기</button>
+          <button class="primary" id="btn-export">PNG 내보내기</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="letter-board">
+          <div class="paper-simulator" id="paper">
+            <textarea
+              id="letter-input"
+              placeholder="여기에 마음을 적어 보세요..."
+              spellcheck="false"
+            ></textarea>
+            <div class="corner-stamp">♡</div>
+          </div>
+        </section>
+
+        <section class="control-panel">
+          <div class="panel-group">
+            <div class="panel-header">
+              <h2>용지</h2>
+              <span id="paper-label"></span>
+            </div>
+            <div class="swatches" id="paper-swatches"></div>
+          </div>
+
+          <div class="panel-group">
+            <div class="panel-header">
+              <h2>잉크 & 폰트</h2>
+            </div>
+            <div class="control-field">
+              <label for="font-select">폰트</label>
+              <select id="font-select"></select>
+            </div>
+            <div class="control-field">
+              <label for="ink-color">잉크 색</label>
+              <div class="swatches" id="ink-swatches"></div>
+            </div>
+            <div class="control-field">
+              <label for="line-height">줄 간격</label>
+              <input
+                type="range"
+                id="line-height"
+                min="1.2"
+                max="2"
+                step="0.1"
+                value="1.4"
+              />
+            </div>
+          </div>
+
+          <div class="panel-group">
+            <div class="panel-header">
+              <h2>장식</h2>
+            </div>
+            <div class="sticker-list" id="sticker-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="sticker-chip">
+      <button class="sticker-chip"></button>
+    </template>
+
+    <dialog id="preview-dialog">
+      <div class="preview-frame">
+        <button class="ghost close" id="btn-close-preview">닫기</button>
+        <div class="paper-simulator preview" id="preview-area"></div>
+      </div>
+    </dialog>
+
+    <script src="./scripts/app.js" type="module"></script>
+  </body>
+</html>
