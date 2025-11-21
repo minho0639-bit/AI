@@ -31,6 +31,22 @@
             <p class="group-label">폰트 색상</p>
             <div class="color-palette" id="colorPalette"></div>
           </div>
+          <div class="control-group">
+            <p class="group-label">이모티콘</p>
+            <div class="emoji-toolbar" id="emojiToolbar">
+              <button
+                type="button"
+                class="icon-button"
+                id="emojiToggle"
+                aria-expanded="false"
+                aria-controls="emojiPopover"
+                title="이모티콘 추가"
+              >
+                😊
+              </button>
+              <div class="emoji-popover" id="emojiPopover" hidden></div>
+            </div>
+          </div>
         </section>
 
         <section class="compose-editor">
@@ -68,6 +84,9 @@
         const stationeryLabel = document.getElementById("stationeryLabel");
         const fontChips = document.getElementById("fontChips");
         const colorPalette = document.getElementById("colorPalette");
+        const emojiToolbar = document.getElementById("emojiToolbar");
+        const emojiToggle = document.getElementById("emojiToggle");
+        const emojiPopover = document.getElementById("emojiPopover");
 
         const MAX_BODY = 1500;
 
@@ -98,13 +117,13 @@
           { id: "sunset", label: "선셋", value: "#ff7a45" },
           { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
         ];
+        const emojiOptions = ["😊", "😍", "🥰", "✨", "🌸", "🎉", "💌", "⭐", "🐻"];
 
         let lastBodyText = "";
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
         let selectedColorId = colorOptions[0].id;
-        let selectedColor = colorOptions[0].value;
         const FIXED_FONT_SIZE = 17;
 
         function renderFontOptions() {
@@ -134,15 +153,20 @@
             swatch.style.setProperty("--swatch-color", option.value);
             swatch.setAttribute("aria-label", option.label);
             swatch.innerHTML = "<span></span>";
-            swatch.addEventListener("click", () => {
-              selectedColorId = option.id;
-              selectedColor = option.value;
-              renderColorPalette();
-              applyTypography();
-            });
+              swatch.addEventListener("click", () => {
+                selectedColorId = option.id;
+                applyColorToSelection(option.value);
+                renderColorPalette();
+              });
             colorPalette.appendChild(swatch);
           });
         }
+          
+          function applyColorToSelection(color) {
+            paperBody.focus();
+            document.execCommand("styleWithCSS", false, true);
+            document.execCommand("foreColor", false, color);
+          }
 
         function applyStationeryStyles() {
           const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
@@ -160,7 +184,6 @@
         function applyTypography() {
           paperBody.className = `paper-body font-${selectedFont}`;
           paperBody.style.fontSize = `${FIXED_FONT_SIZE}px`;
-          paperBody.style.color = selectedColor;
           paperBody.dataset.placeholder =
             selectedFont === "handwriting"
               ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
@@ -196,6 +219,52 @@
           sel.addRange(range);
         }
 
+        function insertEmoji(emoji) {
+          paperBody.focus();
+          document.execCommand("insertText", false, emoji);
+          updateCharCount();
+        }
+
+        function renderEmojiOptions() {
+          emojiPopover.innerHTML = "";
+          emojiOptions.forEach((emoji) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "emoji-option";
+            btn.textContent = emoji;
+            btn.addEventListener("click", () => {
+              insertEmoji(emoji);
+              toggleEmojiPopover(false);
+            });
+            emojiPopover.appendChild(btn);
+          });
+        }
+
+        function toggleEmojiPopover(forceState) {
+          const isOpen = forceState !== undefined ? forceState : emojiPopover.hasAttribute("hidden");
+          if (isOpen) {
+            emojiPopover.removeAttribute("hidden");
+            emojiPopover.classList.add("open");
+            emojiToggle.setAttribute("aria-expanded", "true");
+          } else {
+            emojiPopover.setAttribute("hidden", "");
+            emojiPopover.classList.remove("open");
+            emojiToggle.setAttribute("aria-expanded", "false");
+          }
+        }
+
+        emojiToggle.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const shouldOpen = emojiPopover.hasAttribute("hidden");
+          toggleEmojiPopover(shouldOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!emojiToolbar.contains(event.target)) {
+            toggleEmojiPopover(false);
+          }
+        });
+
         backToSelect.addEventListener("click", () => {
           const category = params.get("category");
           const categoryLabel = params.get("categoryLabel") || "";
@@ -224,6 +293,7 @@
 
         renderFontOptions();
         renderColorPalette();
+        renderEmojiOptions();
         applyStationeryStyles();
         applyTypography();
         updateCharCount();
