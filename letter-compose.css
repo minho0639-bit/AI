@@ -151,19 +151,19 @@ button:active {
 
 .letter-paper {
   border-radius: 28px;
-  padding: clamp(20px, 4vw, 32px);
-  width: min(14cm, 100%);
-  aspect-ratio: 14 / 17;
+  padding: clamp(24px, 4vw, 40px);
+  width: min(100%, 720px);
+  min-height: 820px;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: #fffdf7;
   display: flex;
   flex-direction: column;
-  gap: clamp(16px, 2.5vw, 24px);
+  gap: clamp(18px, 2.5vw, 26px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
   background-size: contain;
-  background-position: center;
+  background-position: center top;
   background-repeat: no-repeat;
 }
 
