@@ -150,7 +150,7 @@ button:active {
 }
 
 .stationery-preview {
-  height: 180px;
+  height: 150px;
   border-radius: 22px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   overflow: hidden;
