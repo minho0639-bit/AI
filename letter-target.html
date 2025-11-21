@@ -94,7 +94,6 @@
               idol: {
                 label: "아이돌",
                 icon: "🎤",
-                tagline: "퍼포먼스 중심 팬덤",
                 accent: "#ff4d8d",
                 background: "linear-gradient(135deg, #fff5f9, #ffe3ef)",
                 iconBg: "rgba(255, 77, 141, 0.18)",
@@ -117,7 +116,6 @@
               singer: {
                 label: "가수",
                 icon: "🎧",
-                tagline: "감성 보컬리스트",
                 accent: "#7b5cff",
                 background: "linear-gradient(135deg, #f3f0ff, #e3dbff)",
                 iconBg: "rgba(123, 92, 255, 0.2)",
@@ -130,7 +128,6 @@
               actor: {
                 label: "배우",
                 icon: "🎬",
-                tagline: "스크린과 브라운관의 주역",
                 accent: "#ff9f43",
                 background: "linear-gradient(135deg, #fff5eb, #ffe2c8)",
                 iconBg: "rgba(255, 159, 67, 0.22)",
@@ -143,7 +140,6 @@
               model: {
                 label: "모델",
                 icon: "👗",
-                tagline: "런웨이 & 화보 아이콘",
                 accent: "#00c6ae",
                 background: "linear-gradient(135deg, #e8fffb, #d3fff4)",
                 iconBg: "rgba(0, 198, 174, 0.18)",
@@ -161,7 +157,6 @@
               football: {
                 label: "축구",
                 icon: "⚽",
-                tagline: "그라운드의 슈퍼스타",
                 accent: "#00b894",
                 background: "linear-gradient(135deg, #ecfff9, #d3ffee)",
                 iconBg: "rgba(0, 184, 148, 0.2)",
@@ -180,7 +175,6 @@
               baseball: {
                 label: "야구",
                 icon: "⚾",
-                tagline: "구장을 가르는 한 방",
                 accent: "#ff6b6b",
                 background: "linear-gradient(135deg, #fff0f0, #ffdada)",
                 iconBg: "rgba(255, 107, 107, 0.2)",
@@ -198,7 +192,6 @@
               esports: {
                 label: "e스포츠",
                 icon: "🎮",
-                tagline: "디지털 아레나의 히어로",
                 accent: "#00a8ff",
                 background: "linear-gradient(135deg, #eef6ff, #d8ecff)",
                 iconBg: "rgba(0, 168, 255, 0.2)",
@@ -262,46 +255,45 @@
         }
       }
 
-      function setupSubcategories() {
-        const subcategories = selectedCategoryData.subcategories;
-        subcategoryChips.innerHTML = "";
-        Object.entries(subcategories).forEach(([key, value]) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "chip";
-          button.dataset.subcategory = key;
-            const descMarkup = value.tagline ? `<span class="chip-desc">${value.tagline}</span>` : "";
+        function setupSubcategories() {
+          const subcategories = selectedCategoryData.subcategories;
+          subcategoryChips.innerHTML = "";
+          Object.entries(subcategories).forEach(([key, value]) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "chip";
+            button.dataset.subcategory = key;
             button.innerHTML = `
               <span class="chip-icon" aria-hidden="true">${value.icon || "✨"}</span>
               <span class="chip-details">
                 <span class="chip-label">${value.label}</span>
-                ${descMarkup}
               </span>
             `;
             button.style.setProperty("--chip-accent", value.accent || "var(--primary)");
             button.style.setProperty("--chip-bg", value.background || "#fff");
             button.style.setProperty("--chip-icon-bg", value.iconBg || "rgba(17, 17, 17, 0.08)");
             button.style.setProperty("--chip-shadow", value.shadow || "rgba(17, 17, 17, 0.05)");
-          button.addEventListener("click", () => {
-            document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
-            button.classList.add("active");
-            selectedSubcategory = key;
-            resetSelections("subcategory");
+            button.addEventListener("click", () => {
+              document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
+              button.classList.add("active");
+              selectedSubcategory = key;
+              resetSelections("subcategory");
 
-            const agencies = subcategories[key].agencies;
-            agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-            Object.keys(agencies).forEach((agency) => {
-              const option = document.createElement("option");
-              option.value = agency;
-              option.textContent = agency;
-              agencySelect.appendChild(option);
+              const agencies = subcategories[key].agencies;
+              agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
+              Object.keys(agencies).forEach((agency) => {
+                const option = document.createElement("option");
+                option.value = agency;
+                option.textContent = agency;
+                agencySelect.appendChild(option);
+              });
+              agencySelect.disabled = false;
+              detailsSection.classList.add("visible");
+              detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
             });
-            agencySelect.disabled = false;
-            detailsSection.classList.add("visible");
+            subcategoryChips.appendChild(button);
           });
-          subcategoryChips.appendChild(button);
-        });
-      }
+        }
 
       agencySelect.addEventListener("change", () => {
         selectedAgency = agencySelect.value || null;

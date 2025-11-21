@@ -22,13 +22,25 @@
       </header>
 
       <main class="compose-main">
-        <section class="target-summary">
-          <p>보낼 대상</p>
-          <h1 id="targetName">선택된 대상이 없습니다</h1>
-          <p id="targetDetail" class="muted"></p>
+        <section class="compose-controls" aria-label="서식 설정">
+          <div class="control-group">
+            <p class="group-label">폰트</p>
+            <div class="chip-group" id="fontChips"></div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">
+              폰트 크기
+              <span id="fontSizeValue">20px</span>
+            </p>
+            <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
+          </div>
+          <div class="control-group">
+            <p class="group-label">폰트 색상</p>
+            <div class="color-palette" id="colorPalette"></div>
+          </div>
         </section>
 
-        <section class="compose-workspace">
+        <section class="compose-editor">
           <div class="write-panel">
             <div class="paper-toolbar">
               <div class="toolbar-info">
@@ -52,24 +64,6 @@
               ></div>
             </div>
           </div>
-
-          <aside class="control-panel">
-            <div class="control-group">
-              <p class="group-label">폰트</p>
-              <div class="chip-group" id="fontChips"></div>
-            </div>
-            <div class="control-group">
-              <p class="group-label">
-                폰트 크기
-                <span id="fontSizeValue">20px</span>
-              </p>
-              <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
-            </div>
-            <div class="control-group">
-              <p class="group-label">폰트 색상</p>
-              <div class="color-palette" id="colorPalette"></div>
-            </div>
-          </aside>
         </section>
 
         <section class="compose-actions">
@@ -80,8 +74,6 @@
 
       <script>
         const params = new URLSearchParams(window.location.search);
-        const targetName = document.getElementById("targetName");
-        const targetDetail = document.getElementById("targetDetail");
         const paperTitle = document.getElementById("paperTitle");
         const paperBody = document.getElementById("paperBody");
         const letterPaper = document.getElementById("letterPaper");
@@ -135,24 +127,6 @@
         let selectedFontSize = Number(fontSizeRange.value);
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
-
-        function setTargetSummary() {
-          const name = params.get("name");
-          const categoryLabel = params.get("categoryLabel");
-          const subcategoryLabel = params.get("subcategoryLabel");
-          const agency = params.get("agency");
-          const team = params.get("team");
-
-          if (name) {
-            targetName.textContent = name;
-            targetDetail.textContent = [categoryLabel, subcategoryLabel, agency, team]
-              .filter(Boolean)
-              .join(" · ");
-          } else {
-            targetName.textContent = "선택된 대상이 없습니다";
-            targetDetail.textContent = "대상을 먼저 선택해 주세요.";
-          }
-        }
 
         function renderFontOptions() {
           fontChips.innerHTML = "";
@@ -287,7 +261,6 @@
           alert("다음 단계(검수/결제)는 곧 연결됩니다.");
         });
 
-        setTargetSummary();
         renderFontOptions();
         renderColorPalette();
         applyStationeryStyles();

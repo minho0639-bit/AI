@@ -100,11 +100,18 @@ button:active {
   color: var(--muted);
 }
 
-.compose-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
+.compose-controls {
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  align-items: flex-start;
+}
+
+.compose-editor {
+  margin-top: 24px;
 }
 
 .write-panel {
@@ -251,18 +258,6 @@ button:active {
   letter-spacing: 0.02em;
 }
 
-.control-panel {
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  background: var(--card);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  position: sticky;
-  top: 24px;
-}
-
 .control-group {
   display: flex;
   flex-direction: column;
@@ -355,10 +350,7 @@ button:active {
   body {
     padding-bottom: 40px;
   }
-  .compose-workspace {
-    grid-template-columns: 1fr;
-  }
-  .control-panel {
+  .compose-controls {
     position: static;
   }
   .compose-actions {
