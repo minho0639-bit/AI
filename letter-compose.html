@@ -30,13 +30,17 @@
           <div class="control-group">
             <p class="group-label">
               폰트 크기
-              <span id="fontSizeValue">20px</span>
+              <span id="fontSizeValue">16px</span>
             </p>
-            <input type="range" id="fontSizeRange" min="16" max="28" value="20" />
+            <input type="range" id="fontSizeRange" min="16" max="16" value="16" disabled />
           </div>
           <div class="control-group">
             <p class="group-label">폰트 색상</p>
             <div class="color-palette" id="colorPalette"></div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">이모티콘</p>
+            <div class="emoji-palette" id="emojiPalette"></div>
           </div>
         </section>
 
@@ -71,8 +75,11 @@
         const fontSizeRange = document.getElementById("fontSizeRange");
         const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
+        const emojiPalette = document.getElementById("emojiPalette");
 
         const MAX_BODY = 1500;
+        const DEFAULT_FONT_SIZE = 16;
+        const EMOJI_LIST = ["😊", "🥰", "🌟", "💌", "✨", "😭", "👍", "🙏", "🎉", "🍀"];
 
         const stationeryThemes = {
           basic: {
@@ -100,7 +107,7 @@
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
-        let selectedFontSize = Number(fontSizeRange.value);
+        let selectedFontSize = DEFAULT_FONT_SIZE;
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
 
@@ -139,6 +146,18 @@
           });
         }
 
+        function renderEmojiPalette() {
+          emojiPalette.innerHTML = "";
+          EMOJI_LIST.forEach((symbol) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "emoji-button";
+            button.textContent = symbol;
+            button.addEventListener("click", () => insertEmoji(symbol));
+            emojiPalette.appendChild(button);
+          });
+        }
+
         function applyStationeryStyles() {
           const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
           letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
@@ -169,12 +188,6 @@
           }
         });
 
-        fontSizeRange.addEventListener("input", (event) => {
-          selectedFontSize = Number(event.target.value);
-          fontSizeValue.textContent = `${selectedFontSize}px`;
-          applyTypography();
-        });
-
         function placeCursorEnd(el) {
           const range = document.createRange();
           range.selectNodeContents(el);
@@ -182,6 +195,33 @@
           const sel = window.getSelection();
           sel.removeAllRanges();
           sel.addRange(range);
+        }
+
+        function insertEmoji(symbol) {
+          const currentText = getPlainText(paperBody);
+          if (currentText.length + [...symbol].length > MAX_BODY) {
+            alert("1,500자 제한을 초과하여 이모티콘을 추가할 수 없습니다.");
+            return;
+          }
+
+          paperBody.focus();
+          const selection = window.getSelection();
+          let range = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
+
+          if (!range || !paperBody.contains(range.commonAncestorContainer)) {
+            range = document.createRange();
+            range.selectNodeContents(paperBody);
+            range.collapse(false);
+          }
+
+          range.deleteContents();
+          range.insertNode(document.createTextNode(symbol));
+          range.collapse(false);
+
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          lastBodyText = getPlainText(paperBody);
         }
 
         backToSelect.addEventListener("click", () => {
@@ -210,10 +250,14 @@
           alert("다음 단계(검수/결제)는 곧 연결됩니다.");
         });
 
+        fontSizeRange.value = DEFAULT_FONT_SIZE;
+        fontSizeValue.textContent = `${DEFAULT_FONT_SIZE}px`;
         renderFontOptions();
         renderColorPalette();
+        renderEmojiPalette();
         applyStationeryStyles();
         applyTypography();
+        lastBodyText = getPlainText(paperBody);
       </script>
   </body>
 </html>
