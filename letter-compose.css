@@ -151,14 +151,14 @@ button:active {
 
 .letter-paper {
   border-radius: 28px;
-  padding: clamp(24px, 4vw, 40px);
-  width: min(100%, 720px);
-  min-height: 820px;
+  padding: 30px 34px;
+  width: min(100%, 14cm);
+  height: min(17cm, calc((100vw - 64px) * (17 / 14)));
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: #fffdf7;
   display: flex;
   flex-direction: column;
-  gap: clamp(18px, 2.5vw, 26px);
+  gap: clamp(16px, 2vw, 24px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
