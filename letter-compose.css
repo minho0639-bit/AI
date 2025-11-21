@@ -115,10 +115,12 @@ button:active {
 }
 
 .write-panel {
-  border: 1px solid var(--border);
-  border-radius: 32px;
-  background: var(--card);
-  padding: 28px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .paper-toolbar {

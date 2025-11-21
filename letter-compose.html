@@ -42,13 +42,6 @@
 
         <section class="compose-editor">
           <div class="write-panel">
-            <div class="paper-toolbar">
-              <div class="toolbar-info">
-                <span class="badge small">선택된 편지지</span>
-                <strong id="stationeryLabel">기본 편지지</strong>
-              </div>
-              <span id="charCount">0 / 1500자</span>
-            </div>
             <div class="letter-paper" id="letterPaper">
               <div
                 id="paperBody"
@@ -70,12 +63,10 @@
         const params = new URLSearchParams(window.location.search);
         const paperBody = document.getElementById("paperBody");
         const letterPaper = document.getElementById("letterPaper");
-        const charCount = document.getElementById("charCount");
         const backToSelect = document.getElementById("backToSelect");
         const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
         const toSummary = document.getElementById("toSummary");
-        const stationeryLabel = document.getElementById("stationeryLabel");
         const fontChips = document.getElementById("fontChips");
         const fontSizeRange = document.getElementById("fontSizeRange");
         const fontSizeValue = document.getElementById("fontSizeValue");
@@ -124,9 +115,7 @@
           fontOptions.forEach((option) => {
             const button = document.createElement("button");
             button.type = "button";
-            button.className = `chip-option ${option.className} ${
-              option.id === selectedFont ? "active" : ""
-            }`;
+            button.className = `chip-option ${option.className} ${option.id === selectedFont ? "active" : ""}`;
             button.textContent = option.label;
             button.addEventListener("click", () => {
               selectedFont = option.id;
@@ -166,7 +155,6 @@
           } else {
             letterPaper.style.backgroundImage = "";
           }
-          stationeryLabel.textContent = theme.label;
         }
 
         function applyTypography() {
@@ -183,11 +171,6 @@
           return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
         }
 
-        function updateCharCount() {
-          const text = getPlainText(paperBody);
-          charCount.textContent = `${text.length} / ${MAX_BODY}자`;
-        }
-
         paperBody.addEventListener("input", () => {
           let text = getPlainText(paperBody);
           if (text.length > MAX_BODY) {
@@ -195,7 +178,6 @@
             placeCursorEnd(paperBody);
           } else {
             lastBodyText = text;
-            updateCharCount();
           }
         });
 
@@ -244,7 +226,6 @@
         renderColorPalette();
         applyStationeryStyles();
         applyTypography();
-        updateCharCount();
       </script>
   </body>
 </html>
