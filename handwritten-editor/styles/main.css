@@ -1,0 +1,251 @@
+:root {
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+    system-ui;
+  color: #2f1b0c;
+  background: #f6f1eb;
+  --border-soft: rgba(47, 27, 12, 0.08);
+  --shadow-paper: 0 28px 60px rgba(33, 22, 9, 0.12);
+  --paper-craft: #f3d9b3;
+  --paper-cotton: #fffef7;
+  --paper-vintage: #f7f2df;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0;
+  color: rgba(47, 27, 12, 0.6);
+}
+
+h1 {
+  margin: 4px 0 0;
+  font-size: 2.75rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+.primary {
+  background: #2f1b0c;
+  color: white;
+  box-shadow: 0 12px 24px rgba(47, 27, 12, 0.2);
+}
+
+.ghost {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: #2f1b0c;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.letter-board {
+  background: white;
+  border-radius: 40px;
+  padding: 40px;
+  box-shadow: var(--shadow-paper);
+}
+
+.paper-simulator {
+  position: relative;
+  border-radius: 32px;
+  background: var(--paper-cotton);
+  min-height: 600px;
+  padding: 48px 48px 64px;
+  box-shadow: inset 0 0 0 1px rgba(47, 27, 12, 0.12),
+    0 48px 80px rgba(47, 27, 12, 0.2);
+  background-image: repeating-linear-gradient(
+      rgba(47, 27, 12, 0.08) 0,
+      rgba(47, 27, 12, 0.08) 1px,
+      transparent 1px,
+      transparent 32px
+    ),
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.4), transparent),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.8),
+      rgba(255, 255, 255, 0.2)
+    );
+}
+
+textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: "Nanum Pen Script", "Homemade Apple", cursive;
+  font-size: 28px;
+  line-height: 1.4;
+  color: #2b1f17;
+}
+
+textarea:focus {
+  outline: none;
+}
+
+.corner-stamp {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.panel-group {
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.swatch.is-selected {
+  border-color: #2f1b0c;
+}
+
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+select,
+input[type="range"] {
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  padding: 8px 10px;
+  font-size: 1rem;
+}
+
+.sticker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sticker-chip {
+  border-radius: 14px;
+  border: 1px dashed rgba(47, 27, 12, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 6px 12px;
+  font-family: "Nanum Pen Script", cursive;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.sticker-chip.is-active {
+  border-style: solid;
+  background: rgba(47, 27, 12, 0.08);
+}
+
+dialog {
+  border: none;
+  border-radius: 24px;
+  padding: 0;
+}
+
+.preview-frame {
+  padding: 24px;
+}
+
+.preview-frame .paper-simulator {
+  width: 480px;
+  margin-top: 12px;
+}
+
+.close {
+  margin-left: auto;
+  display: block;
+}
+
+@media (max-width: 1024px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .control-panel {
+    order: -1;
+  }
+}
