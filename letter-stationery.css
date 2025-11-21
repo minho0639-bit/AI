@@ -150,35 +150,17 @@ button:active {
 }
 
 .stationery-preview {
-  height: 160px;
+  height: 180px;
   border-radius: 22px;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  position: relative;
+  border: 1px solid rgba(17, 17, 17, 0.08);
   overflow: hidden;
 }
 
-.stationery-preview::after {
-  content: "";
-  position: absolute;
-  inset: 18px;
-  border-radius: 16px;
-  border: 1px dashed rgba(17, 17, 17, 0.08);
-}
-
-.preview-default {
-  background: linear-gradient(135deg, #fffdf7, #f7f3eb);
-}
-
-.preview-classic {
-  background: linear-gradient(135deg, #fef7f0, #f4e2d8);
-}
-
-.preview-blossom {
-  background: linear-gradient(135deg, #fff0f7, #fbe3ef);
-}
-
-.preview-midnight {
-  background: linear-gradient(135deg, #101728, #1f2d4a);
+.stationery-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .stationery-actions {

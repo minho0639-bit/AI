@@ -33,11 +33,11 @@
             <div class="paper-toolbar">
               <div class="toolbar-info">
                 <span class="badge small">선택된 편지지</span>
-                <strong id="stationeryLabel">미니멀 기본</strong>
+                <strong id="stationeryLabel">기본 편지지</strong>
               </div>
               <span id="charCount">0 / 1500자</span>
             </div>
-            <div class="letter-paper paper-default" id="letterPaper">
+            <div class="letter-paper" id="letterPaper">
               <div
                 id="paperTitle"
                 class="paper-title font-default"
@@ -100,10 +100,16 @@
         const MAX_BODY = 1500;
 
         const stationeryThemes = {
-          default: { label: "미니멀 기본", className: "paper-default" },
-          classic: { label: "클래식 크림", className: "paper-classic" },
-          blossom: { label: "블라썸 핑크", className: "paper-blossom" },
-          midnight: { label: "미드나잇 블루", className: "paper-midnight" },
+          basic: {
+            label: "기본 편지지",
+            className: "paper-photo",
+            image: "assets/stationery/기본편지지_선택.png",
+          },
+          bear: {
+            label: "파란 곰돌이 편지지",
+            className: "paper-photo",
+            image: "assets/stationery/파란곰돌이편지지_선택.png",
+          },
         };
 
         const fontOptions = [
@@ -123,16 +129,12 @@
 
         let lastBodyText = "";
         let lastTitleText = "";
-        let selectedStationery = params.get("stationery") || "default";
-        if (!stationeryThemes[selectedStationery]) selectedStationery = "default";
+        let selectedStationery = params.get("stationery") || "basic";
+        if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
         let selectedFontSize = Number(fontSizeRange.value);
-        const defaultColorOption =
-          selectedStationery === "midnight"
-            ? colorOptions.find((option) => option.id === "cloud") || colorOptions[0]
-            : colorOptions[0];
-        let selectedColorId = defaultColorOption.id;
-        let selectedColor = defaultColorOption.value;
+        let selectedColorId = colorOptions[0].id;
+        let selectedColor = colorOptions[0].value;
 
         function setTargetSummary() {
           const name = params.get("name");
@@ -190,8 +192,14 @@
         }
 
         function applyStationeryStyles() {
-          const theme = stationeryThemes[selectedStationery] || stationeryThemes.default;
-          letterPaper.className = `letter-paper ${theme.className}`;
+          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
+          letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
+          if (theme.image) {
+            letterPaper.classList.add("paper-photo");
+            letterPaper.style.setProperty("--paper-image", `url(${theme.image})`);
+          } else {
+            letterPaper.style.removeProperty("--paper-image");
+          }
           stationeryLabel.textContent = theme.label;
         }
 
