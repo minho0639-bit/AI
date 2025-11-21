@@ -161,7 +161,8 @@
           letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
           if (theme.image) {
             letterPaper.classList.add("paper-photo");
-            letterPaper.style.backgroundImage = `url("./${theme.image}")`;
+            const imageUrl = encodeURI(theme.image);
+            letterPaper.style.backgroundImage = `url("${imageUrl}")`;
           } else {
             letterPaper.style.backgroundImage = "";
           }
