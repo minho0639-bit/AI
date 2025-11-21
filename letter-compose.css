@@ -114,7 +114,7 @@ button:active {
   margin-top: 24px;
   display: flex;
   justify-content: center;
-  padding: 16px 0 8px;
+  padding: 16px;
   overflow-x: auto;
 }
 
@@ -122,14 +122,15 @@ button:active {
   border: 1px solid var(--border);
   border-radius: 32px;
   background: var(--card);
-  padding: 28px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  width: max-content;
 }
 
-.paper-meta {
+.paper-footer {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -139,12 +140,12 @@ button:active {
   gap: 12px;
 }
 
-.meta-label {
+.paper-footer .meta-label {
   font-weight: 600;
   color: var(--text);
 }
 
-.meta-count {
+.paper-footer .meta-count {
   font-variant-numeric: tabular-nums;
 }
 
@@ -355,11 +356,12 @@ button:active {
     position: static;
   }
   .write-panel {
-    padding: 20px;
+    padding: 16px;
   }
   .letter-paper {
-    transform: scale(0.85);
-    transform-origin: top center;
+    transform: scale(calc((100vw - 48px) / 529px));
+    transform-origin: top left;
+    min-width: 14cm;
   }
   .compose-actions {
     flex-direction: column;
