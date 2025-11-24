@@ -160,8 +160,9 @@ button:active {
   flex: 0 0 auto;
   border-radius: 28px;
   padding: 32px 28px;
-  width: min(14cm, 100%);
-  max-width: 100%;
+  width: 14cm;
+  min-width: 14cm;
+  max-width: 14cm;
   height: 17cm;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: #fffdf7;
