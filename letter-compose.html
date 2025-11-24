@@ -458,7 +458,26 @@
             alert(`부적절한 표현("${detectedWord}")이 포함되어 있어 다음 단계로 이동할 수 없습니다. 내용을 수정해 주세요.`);
             return;
           }
-          alert("다음 단계(검수/결제)는 곧 연결됩니다.");
+          const fullText = getAllBodyText();
+          if (!fullText) {
+            alert("먼저 편지 내용을 작성해 주세요.");
+            return;
+          }
+          const orderPayload = {
+            text: fullText,
+            characters: getTotalCharacterCount(),
+            pages: paperBodies.length,
+            font: selectedFont,
+            color: selectedColor,
+            stationery: selectedStationery,
+            createdAt: Date.now(),
+          };
+          try {
+            sessionStorage.setItem("fanletterDraft", JSON.stringify(orderPayload));
+          } catch (error) {
+            console.error("세션 저장 중 오류:", error);
+          }
+          window.location.href = "/letter-payment.html";
         });
 
         fontSizeRange.value = DEFAULT_FONT_SIZE;

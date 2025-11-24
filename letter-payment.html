@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 결제</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="letter-payment.css" />
+    <script src="https://cdn.portone.io/v2/browser-sdk.js" defer></script>
+  </head>
+  <body>
+    <header class="payment-nav">
+      <div class="brand">팬레터포스트</div>
+      <div class="nav-actions">
+        <button type="button" class="ghost tiny" id="backToCompose">편지 수정</button>
+        <button type="button" class="ghost tiny" id="backHome">홈으로</button>
+      </div>
+    </header>
+
+    <main class="payment-main">
+      <section class="order-summary" aria-live="polite">
+        <div class="summary-header">
+          <p class="badge">STEP 2</p>
+          <h1>결제 · 검수 요청</h1>
+          <p class="muted">작성한 편지를 확인하고 결제를 완료해 주세요.</p>
+        </div>
+        <div class="summary-body" id="summaryBody">
+          <p class="muted">편지 정보를 불러오는 중입니다...</p>
+        </div>
+      </section>
+
+      <section class="payment-panel">
+        <div class="price-card">
+          <div class="price-row">
+            <span>기본 요금</span>
+            <strong id="baseAmount">2,000원</strong>
+          </div>
+          <div class="price-row subtle">
+            <span>추가 요금</span>
+            <span id="extraAmount">0원</span>
+          </div>
+          <div class="price-row total">
+            <span>결제 예정 금액</span>
+            <span id="totalAmount">2,000원</span>
+          </div>
+        </div>
+
+        <div class="payment-actions">
+          <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
+          <button type="button" class="primary" id="requestPayment">결제하기</button>
+        </div>
+        <p class="note">
+          · 포트원을 통해 안전하게 결제가 처리됩니다.<br />
+          · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const PAYMENT_CONFIG = Object.freeze({
+        storeId: "store-fdfeeba3-514f-479a-9c5e-8199d5dc1a96",
+        channelKey: "channel-key-b6f6f16b-b6c1-4eaa-93db-2385758d4665",
+        baseAmount: 2000,
+      });
+
+      const summaryBody = document.getElementById("summaryBody");
+      const baseAmountEl = document.getElementById("baseAmount");
+      const totalAmountEl = document.getElementById("totalAmount");
+      const extraAmountEl = document.getElementById("extraAmount");
+      const requestPayment = document.getElementById("requestPayment");
+      const downloadDraft = document.getElementById("downloadDraft");
+      const backToCompose = document.getElementById("backToCompose");
+      const backHome = document.getElementById("backHome");
+
+      let draftData = null;
+
+      function formatCurrency(value) {
+        return `${value.toLocaleString("ko-KR")}원`;
+      }
+
+      function loadDraft() {
+        try {
+          const raw = sessionStorage.getItem("fanletterDraft");
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (error) {
+          console.error("편지 데이터를 불러오지 못했습니다:", error);
+          return null;
+        }
+      }
+
+      function renderSummary(data) {
+        if (!data) {
+          summaryBody.innerHTML = `
+            <div class="empty-state">
+              <p>불러올 편지 데이터가 없습니다.</p>
+              <button type="button" class="ghost" id="goWriteAgain">편지 다시 작성</button>
+            </div>
+          `;
+          document
+            .getElementById("goWriteAgain")
+            ?.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
+          requestPayment.disabled = true;
+          downloadDraft.disabled = true;
+          return;
+        }
+
+        const preview = data.text.length > 140 ? `${data.text.slice(0, 140)}…` : data.text;
+        summaryBody.innerHTML = `
+          <ul class="summary-grid">
+            <li>
+              <span class="label">작성 분량</span>
+              <strong>${data.pages}장 · ${data.characters}자</strong>
+            </li>
+            <li>
+              <span class="label">선택 서체</span>
+              <strong>${data.font}</strong>
+            </li>
+            <li>
+              <span class="label">글자 색상</span>
+              <strong>${data.color}</strong>
+            </li>
+            <li>
+              <span class="label">편지지</span>
+              <strong>${data.stationery}</strong>
+            </li>
+          </ul>
+          <div class="preview">
+            <p class="label">내용 미리보기</p>
+            <p class="preview-body">${preview.replace(/\n/g, "<br>")}</p>
+          </div>
+        `;
+      }
+
+      function setAmounts(base, extra = 0) {
+        baseAmountEl.textContent = formatCurrency(base);
+        extraAmountEl.textContent = formatCurrency(extra);
+        totalAmountEl.textContent = formatCurrency(base + extra);
+      }
+
+      function downloadLetter(data) {
+        const blob = new Blob([data.text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const timestamp = new Date().toISOString().split("T")[0];
+        link.href = url;
+        link.download = `fanletter-${timestamp}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function handlePayment() {
+        if (!draftData) {
+          alert("편지 데이터가 없어 결제를 진행할 수 없습니다.");
+          return;
+        }
+        if (!window.PortOne) {
+          alert("결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          return;
+        }
+
+        const orderId = `order_${Date.now()}`;
+
+        try {
+          requestPayment.disabled = true;
+          requestPayment.textContent = "결제 처리 중...";
+
+          const paymentResult = await PortOne.requestPayment({
+            storeId: PAYMENT_CONFIG.storeId,
+            channelKey: PAYMENT_CONFIG.channelKey,
+            paymentId: orderId,
+            orderName: "팬레터 기본 요금",
+            totalAmount: PAYMENT_CONFIG.baseAmount,
+            currency: "KRW",
+            payMethod: {
+              card: {},
+            },
+            customer: {
+              customerId: `customer_${Date.now()}`,
+            },
+            redirectUrl: `${window.location.origin}/`,
+          });
+
+          console.log("PortOne 응답", paymentResult);
+
+          if (paymentResult.status === "PAID") {
+            alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
+            sessionStorage.removeItem("fanletterDraft");
+          } else {
+            alert("결제가 완료되지 않았습니다. 다시 시도해 주세요.");
+          }
+        } catch (error) {
+          console.error(error);
+          alert("결제 도중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+          requestPayment.disabled = false;
+          requestPayment.textContent = "결제하기";
+        }
+      }
+
+      requestPayment.addEventListener("click", handlePayment);
+      downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
+      backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
+      backHome.addEventListener("click", () => (window.location.href = "/"));
+
+      draftData = loadDraft();
+      renderSummary(draftData);
+      setAmounts(PAYMENT_CONFIG.baseAmount, 0);
+    </script>
+  </body>
+</html>
