@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fanletter Admin</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Fanletter Post 관리자</h1>
+      <div class="actions">
+        <button id="refresh-btn" class="secondary" disabled>데이터 새로고침</button>
+        <button id="logout-btn" class="secondary" disabled>로그아웃</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="login-section" class="card login-card">
+        <h2>관리자 로그인</h2>
+        <form id="admin-login-form">
+          <label for="admin-email">이메일</label>
+          <input type="email" id="admin-email" name="email" placeholder="admin@example.com" required />
+
+          <label for="admin-password">비밀번호</label>
+          <input type="password" id="admin-password" name="password" placeholder="비밀번호" required />
+
+          <button type="submit" id="admin-login-button">로그인</button>
+          <div id="login-status" class="status-text"></div>
+        </form>
+      </section>
+
+      <section id="dashboard" class="dashboard">
+        <div class="panel toolbar">
+          <span id="welcome-text"></span>
+          <div>
+            <button id="refresh-btn-secondary">데이터 새로고침</button>
+            <button id="logout-btn-secondary" class="secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>주문 현황</h2>
+            <span id="orders-status" class="panel-status">-</span>
+          </div>
+          <div class="overflow-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>회원</th>
+                  <th>수령인</th>
+                  <th>편지 상태</th>
+                  <th>결제</th>
+                  <th>배송</th>
+                  <th>작성일</th>
+                </tr>
+              </thead>
+              <tbody id="orders-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>수령인 관리</h2>
+            <span id="recipients-status" class="panel-status">-</span>
+          </div>
+          <div class="overflow-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>이름</th>
+                  <th>분류</th>
+                  <th>소속사</th>
+                  <th>그룹</th>
+                  <th>상태</th>
+                  <th>업데이트</th>
+                </tr>
+              </thead>
+              <tbody id="recipients-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>회원 목록</h2>
+            <span id="users-status" class="panel-status">-</span>
+          </div>
+          <div class="overflow-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>회원 정보</th>
+                  <th>연락처</th>
+                  <th>권한</th>
+                  <th>마케팅 수신</th>
+                  <th>가입일</th>
+                </tr>
+              </thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const loginSection = document.getElementById("login-section");
+      const dashboardSection = document.getElementById("dashboard");
+      const loginForm = document.getElementById("admin-login-form");
+      const loginStatus = document.getElementById("login-status");
+      const refreshButtons = [document.getElementById("refresh-btn"), document.getElementById("refresh-btn-secondary")].filter(Boolean);
+      const logoutButtons = [document.getElementById("logout-btn"), document.getElementById("logout-btn-secondary")].filter(Boolean);
+      const welcomeText = document.getElementById("welcome-text");
+
+      const ordersStatus = document.getElementById("orders-status");
+      const recipientsStatus = document.getElementById("recipients-status");
+      const usersStatus = document.getElementById("users-status");
+
+      const ordersBody = document.getElementById("orders-body");
+      const recipientsBody = document.getElementById("recipients-body");
+      const usersBody = document.getElementById("users-body");
+
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleAdminLogin(new FormData(loginForm));
+      });
+
+      refreshButtons.forEach((button) =>
+        button.addEventListener("click", () => {
+          loadAdminData();
+        })
+      );
+      logoutButtons.forEach((button) =>
+        button.addEventListener("click", async () => {
+          await fetch("/api/logout", { method: "POST" });
+          toggleDashboard(false);
+        })
+      );
+
+      document.addEventListener("DOMContentLoaded", initAdminPage);
+
+      async function initAdminPage() {
+        const isAdmin = await checkAdminSession();
+        toggleDashboard(isAdmin);
+        if (isAdmin) {
+          loadAdminData();
+        }
+      }
+
+      async function checkAdminSession() {
+        try {
+          const response = await fetch("/api/admin/session");
+          return response.ok;
+        } catch (error) {
+          console.error(error);
+          return false;
+        }
+      }
+
+      async function handleAdminLogin(formData) {
+        loginStatus.textContent = "로그인 중...";
+        loginStatus.classList.remove("error");
+        const payload = Object.fromEntries(formData.entries());
+        try {
+          const response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "로그인에 실패했습니다.");
+          }
+          loginStatus.textContent = "로그인 성공! 데이터를 불러오는 중...";
+          toggleDashboard(true);
+          loadAdminData();
+        } catch (error) {
+          loginStatus.textContent = error.message;
+          loginStatus.classList.add("error");
+        }
+      }
+
+      function toggleDashboard(isLoggedIn) {
+        if (isLoggedIn) {
+          loginSection.classList.add("hidden");
+          dashboardSection.classList.add("active");
+          refreshButtons.forEach((btn) => (btn.disabled = false));
+          logoutButtons.forEach((btn) => (btn.disabled = false));
+          welcomeText.textContent = "관리자 계정으로 접속 중";
+        } else {
+          loginSection.classList.remove("hidden");
+          dashboardSection.classList.remove("active");
+          refreshButtons.forEach((btn) => (btn.disabled = true));
+          logoutButtons.forEach((btn) => (btn.disabled = true));
+          loginStatus.textContent = "";
+          loginForm.reset();
+        }
+      }
+
+      async function loadAdminData() {
+        ordersStatus.textContent = "불러오는 중...";
+        recipientsStatus.textContent = "불러오는 중...";
+        usersStatus.textContent = "불러오는 중...";
+        try {
+          const [orders, recipients, users] = await Promise.all([
+            fetchJson("/api/admin/orders"),
+            fetchJson("/api/admin/recipients"),
+            fetchJson("/api/admin/users"),
+          ]);
+          renderOrders(orders);
+          renderRecipients(recipients);
+          renderUsers(users);
+          ordersStatus.textContent = `${orders.length}건`;
+          recipientsStatus.textContent = `${recipients.length}명`;
+          usersStatus.textContent = `${users.length}명`;
+        } catch (error) {
+          console.error(error);
+          const message = error.message || "데이터를 불러오지 못했습니다.";
+          ordersStatus.textContent = message;
+          recipientsStatus.textContent = message;
+          usersStatus.textContent = message;
+        }
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "요청에 실패했습니다.");
+        }
+        return response.json();
+      }
+
+      function renderOrders(orders) {
+        ordersBody.innerHTML = orders
+          .map((order) => {
+            const paymentAmount = formatAmount(order.payment_amount);
+            return `
+              <tr>
+                <td>#${order.id}</td>
+                <td>
+                  <div>${order.user_name || "-"}</div>
+                  <div class="text-muted">${order.user_email || "-"}</div>
+                </td>
+                <td>
+                  <div>${order.recipient_name || "-"}</div>
+                  <div class="text-muted">${order.recipient_group || ""}</div>
+                </td>
+                <td>
+                  <div class="badge">${order.status}</div>
+                  <div class="text-muted">${formatDate(order.submitted_at)}</div>
+                </td>
+                <td>
+                  <div>${order.payment_status || "-"}</div>
+                  <div class="text-muted">${order.payment_method || ""} ${paymentAmount}</div>
+                </td>
+                <td>
+                  <div>${order.shipment_status || "-"}</div>
+                  <div class="text-muted">${[order.carrier, order.tracking_code].filter(Boolean).join(" ")}</div>
+                </td>
+                <td>${formatDate(order.created_at)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function renderRecipients(recipients) {
+        recipientsBody.innerHTML = recipients
+          .map(
+            (recipient) => `
+            <tr>
+              <td>#${recipient.id}</td>
+              <td>${recipient.name}</td>
+              <td>
+                <div>${recipient.category || "-"}</div>
+                <div class="text-muted">${recipient.subcategory || ""}</div>
+              </td>
+              <td>${recipient.agency || "-"}</td>
+              <td>${recipient.group_name || "-"}</td>
+              <td>${recipient.is_active ? "활성" : "비활성"}</td>
+              <td>${formatDate(recipient.updated_at)}</td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function renderUsers(users) {
+        usersBody.innerHTML = users
+          .map(
+            (user) => `
+            <tr>
+              <td>#${user.id}</td>
+              <td>
+                <div>${user.name || "-"}</div>
+                <div class="text-muted">${user.email}</div>
+              </td>
+              <td>${user.phone || "-"}</td>
+              <td>${user.is_admin ? "관리자" : "일반"}</td>
+              <td>${user.marketing_consent ? "동의" : "미동의"}</td>
+              <td>${formatDate(user.created_at)}</td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function formatDate(value) {
+        if (!value) return "-";
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return "-";
+        return date.toLocaleString("ko-KR", { hour12: false });
+      }
+
+      function formatAmount(value) {
+        if (!value && value !== 0) return "";
+        const numberValue = Number(value);
+        if (Number.isNaN(numberValue)) {
+          return "";
+        }
+        return numberValue.toLocaleString("ko-KR") + "원";
+      }
+    </script>
+  </body>
+</html>
