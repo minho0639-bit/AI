@@ -102,6 +102,13 @@ button:active {
   gap: 12px;
 }
 
+.buyer-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .buyer-form h2 {
   margin: 0;
   font-size: 1.2rem;
@@ -132,6 +139,18 @@ button:active {
 .form-grid input:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+.buyer-form[data-locked="true"] input {
+  background: #f6f5f2;
+  color: var(--muted);
+}
+
+.buyer-profile-notice {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .process-panel {

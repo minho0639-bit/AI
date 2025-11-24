@@ -35,9 +35,13 @@
       </section>
 
       <section class="payment-panel">
-        <div class="buyer-form">
-          <h2>구매자 정보</h2>
+        <div class="buyer-form" id="buyerForm" data-locked="false">
+          <div class="buyer-form__header">
+            <h2>구매자 정보</h2>
+            <button type="button" class="ghost tiny" id="editBuyerInfo" hidden>정보 수정</button>
+          </div>
           <p class="muted small">결제자 이름과 이메일은 결제 내역 및 영수증 발송에 사용됩니다.</p>
+          <p class="buyer-profile-notice" id="buyerProfileNotice" hidden></p>
           <div class="form-grid">
             <label>
               <span>이름</span>
@@ -187,6 +191,9 @@
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
       const backHome = document.getElementById("backHome");
+      const buyerForm = document.getElementById("buyerForm");
+      const buyerProfileNotice = document.getElementById("buyerProfileNotice");
+      const editBuyerInfoBtn = document.getElementById("editBuyerInfo");
       const buyerNameInput = document.getElementById("buyerName");
       const buyerEmailInput = document.getElementById("buyerEmail");
       const buyerPhoneInput = document.getElementById("buyerPhone");
@@ -197,7 +204,10 @@
       const modalAmount = document.getElementById("modalAmount");
       const modalOrderId = document.getElementById("modalOrderId");
 
+      const BUYER_PROFILE_KEY = "fanletterProfile";
+
       let draftData = null;
+      let storedBuyerProfile = null;
 
       function formatCurrency(value) {
         return `${value.toLocaleString("ko-KR")}원`;
@@ -350,6 +360,62 @@
         return true;
       }
 
+      function saveBuyerProfile(info) {
+        const payload = { name: info.name || "", email: info.email, phone: info.phone || "" };
+        storedBuyerProfile = payload;
+        try {
+          sessionStorage.setItem(BUYER_PROFILE_KEY, JSON.stringify(payload));
+        } catch (error) {
+          console.warn("구매자 정보 저장 실패:", error);
+        }
+      }
+
+      function loadBuyerProfile() {
+        if (storedBuyerProfile) return storedBuyerProfile;
+        const sources = [
+          () => sessionStorage.getItem(BUYER_PROFILE_KEY),
+          () => localStorage.getItem(BUYER_PROFILE_KEY),
+        ];
+        for (const getSource of sources) {
+          try {
+            const raw = getSource();
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.email) {
+              storedBuyerProfile = parsed;
+              return parsed;
+            }
+          } catch (error) {
+            console.warn("구매자 정보 불러오기 실패:", error);
+          }
+        }
+        return null;
+      }
+
+      function applyBuyerProfile(profile) {
+        if (!profile || !profile.email) return;
+        buyerNameInput.value = profile.name || "";
+        buyerEmailInput.value = profile.email;
+        buyerPhoneInput.value = profile.phone || "";
+        [buyerNameInput, buyerEmailInput, buyerPhoneInput].forEach((input) => {
+          input.disabled = true;
+        });
+        buyerForm.dataset.locked = "true";
+        buyerProfileNotice.hidden = false;
+        buyerProfileNotice.textContent = `${profile.name || "회원"}님의 프로필 정보를 사용 중입니다.`;
+        editBuyerInfoBtn.hidden = false;
+      }
+
+      function unlockBuyerForm() {
+        buyerForm.dataset.locked = "false";
+        buyerProfileNotice.hidden = true;
+        editBuyerInfoBtn.hidden = true;
+        [buyerNameInput, buyerEmailInput, buyerPhoneInput].forEach((input) => {
+          input.disabled = false;
+        });
+        buyerNameInput.focus();
+      }
+
       async function handlePayment() {
         if (isProcessingPayment) return;
         if (!draftData) {
@@ -364,6 +430,9 @@
 
         const buyerInfo = getBuyerInfo();
         if (!validateBuyerInfo(buyerInfo)) return;
+        if (!buyerForm || buyerForm.dataset.locked !== "true") {
+          saveBuyerProfile(buyerInfo);
+        }
 
         const orderId = `order_${Date.now()}`;
         const paymentAmount = PAYMENT_CONFIG.baseAmount;
@@ -429,6 +498,7 @@
       downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
       backHome.addEventListener("click", () => (window.location.href = "/"));
+      editBuyerInfoBtn.addEventListener("click", unlockBuyerForm);
       closePaymentModal.addEventListener("click", closeModal);
       cancelMockPayment.addEventListener("click", closeModal);
       confirmMockPayment.addEventListener("click", mockPaymentSuccess);
@@ -439,6 +509,10 @@
       draftData = loadDraft();
       renderSummary(draftData);
       setAmounts(PAYMENT_CONFIG.baseAmount, 0);
+      const existingProfile = loadBuyerProfile();
+      if (existingProfile) {
+        applyBuyerProfile(existingProfile);
+      }
     </script>
   </body>
 </html>
