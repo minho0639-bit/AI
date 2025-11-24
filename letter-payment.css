@@ -83,6 +83,14 @@ button:active {
   padding: 28px;
 }
 
+.order-summary {
+  grid-column: 1 / 2;
+}
+
+.payment-panel {
+  grid-column: 2 / 3;
+}
+
 .process-panel {
   grid-column: 1 / -1;
 }
@@ -141,13 +149,15 @@ button:active {
 }
 
 .preview-paper {
-  width: min(320px, 100%);
-  height: 420px;
+  width: min(14cm, 100%);
+  min-width: 260px;
+  max-width: 14cm;
+  height: 17cm;
   border-radius: 0;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: #fff;
   position: relative;
-  padding: 32px 28px;
+  padding: 2cm;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
@@ -211,10 +221,11 @@ button:active {
 .preview-paper-body {
   position: relative;
   z-index: 1;
-  line-height: 1.7;
+  line-height: 2;
   height: 100%;
   overflow: hidden;
   white-space: pre-wrap;
+  color: inherit;
 }
 
 .preview-paper-body.font-default {
@@ -334,9 +345,14 @@ button:active {
   .payment-main {
     grid-template-columns: 1fr;
   }
+  .order-summary,
+  .payment-panel {
+    grid-column: 1 / -1;
+  }
   .preview-paper {
     width: 100%;
-    height: 380px;
+    height: auto;
+    min-height: 420px;
   }
 }
 
@@ -355,5 +371,11 @@ button:active {
   }
   .process-steps li {
     flex-direction: row;
+  }
+  .preview-paper {
+    padding: 24px 16px;
+  }
+  .preview-paper::after {
+    inset: 32px 16px;
   }
 }

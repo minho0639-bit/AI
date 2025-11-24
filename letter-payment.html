@@ -34,14 +34,40 @@
         </div>
       </section>
 
+      <section class="payment-panel">
+        <div class="price-card">
+          <div class="price-row">
+            <span>기본 요금</span>
+            <strong id="baseAmount">2,000원</strong>
+          </div>
+          <div class="price-row subtle">
+            <span>추가 요금</span>
+            <span id="extraAmount">0원</span>
+          </div>
+          <div class="price-row total">
+            <span>결제 예정 금액</span>
+            <span id="totalAmount">2,000원</span>
+          </div>
+        </div>
+
+        <div class="payment-actions">
+          <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
+          <button type="button" class="primary" id="requestPayment">결제하기</button>
+        </div>
+        <p class="note">
+          · 포트원을 통해 안전하게 결제가 처리됩니다.<br />
+          · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
+        </p>
+      </section>
+
       <section class="process-panel">
         <h2>우편 배송 프로세스</h2>
         <ol class="process-steps">
           <li>
             <span class="step-index">1</span>
             <div>
-              <h3>내용 검수 · 교열</h3>
-              <p>전문 에디터가 맞춤법과 표현을 확인해 전달력을 높입니다.</p>
+              <h3>내용 확인</h3>
+              <p>작성 의도를 훼손하지 않고 전달 가능 여부만 빠르게 점검합니다.</p>
             </div>
           </li>
           <li>
@@ -68,31 +94,6 @@
         </ol>
       </section>
 
-      <section class="payment-panel">
-        <div class="price-card">
-          <div class="price-row">
-            <span>기본 요금</span>
-            <strong id="baseAmount">2,000원</strong>
-          </div>
-          <div class="price-row subtle">
-            <span>추가 요금</span>
-            <span id="extraAmount">0원</span>
-          </div>
-          <div class="price-row total">
-            <span>결제 예정 금액</span>
-            <span id="totalAmount">2,000원</span>
-          </div>
-        </div>
-
-        <div class="payment-actions">
-          <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
-          <button type="button" class="primary" id="requestPayment">결제하기</button>
-        </div>
-        <p class="note">
-          · 포트원을 통해 안전하게 결제가 처리됩니다.<br />
-          · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
-        </p>
-      </section>
     </main>
 
     <script>
