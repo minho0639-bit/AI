@@ -245,6 +245,7 @@
           body.addEventListener("click", () => {
             activeBody = body;
           });
+          body.addEventListener("keydown", (event) => handleBodyKeydown(event, body));
           body.addEventListener("input", () => handleBodyInput(body));
           page.appendChild(body);
           paperStack.appendChild(page);
@@ -267,6 +268,26 @@
           }
           enforceLineLimit(body);
           cleanupEmptyPages();
+        }
+
+        function handleBodyKeydown(event, body) {
+          if (event.key !== "Enter") return;
+          const text = getPlainText(body);
+          const lines = text.split("\n");
+          const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
+          const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
+          if (effectiveCount < MAX_LINES_PER_PAGE) {
+            return;
+          }
+          event.preventDefault();
+          let nextBody = getNextBody(body);
+          if (!nextBody) {
+            nextBody = createPaperPage();
+          }
+          if (!nextBody) return;
+          activeBody = nextBody;
+          nextBody.focus();
+          placeCursorEnd(nextBody);
         }
 
         function getTotalCharacterCount() {
