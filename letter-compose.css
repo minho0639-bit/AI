@@ -462,7 +462,43 @@ button:active {
 
 .compose-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 20px;
+  background: var(--card);
+}
+
+.fee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.fee-label {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.fee-amount {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.fee-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.action-buttons {
+  display: flex;
   gap: 12px;
 }
 
@@ -475,6 +511,11 @@ button:active {
   }
   .compose-actions {
     flex-direction: column;
+    align-items: stretch;
+  }
+  .action-buttons {
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
 
@@ -492,5 +533,12 @@ button:active {
   .letter-paper {
     padding: 2cm;
     border-radius: 0;
+  }
+  .action-buttons {
+    width: 100%;
+    flex-direction: column;
+  }
+  .action-buttons button {
+    width: 100%;
   }
 }

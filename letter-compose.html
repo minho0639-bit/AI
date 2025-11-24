@@ -54,8 +54,15 @@
         </section>
 
         <section class="compose-actions">
-          <button type="button" class="ghost" id="saveDraft">임시 저장</button>
-          <button type="button" class="primary" id="toSummary">다음 단계</button>
+          <div class="fee-info" aria-live="polite">
+            <p class="fee-label">예상 요금</p>
+            <p class="fee-amount"><strong>2,000원</strong></p>
+            <p class="fee-note">편지지 종류에 따라 추가 요금이 붙을 수 있어요.</p>
+          </div>
+          <div class="action-buttons">
+            <button type="button" class="ghost" id="saveDraft">임시 저장</button>
+            <button type="button" class="primary" id="toSummary">다음 단계</button>
+          </div>
         </section>
       </main>
 
@@ -107,6 +114,19 @@
           "🙏",
           "💪",
           "🙌",
+        ];
+        const FORBIDDEN_WORDS = [
+          "씨발",
+          "좆",
+          "개새끼",
+          "병신",
+          "꺼져",
+          "좆같",
+          "좇같",
+          "fuck",
+          "shit",
+          "bitch",
+          "asshole",
         ];
 
         const stationeryThemes = {
@@ -364,6 +384,17 @@
           sel.addRange(range);
         }
 
+        function getAllBodyText() {
+          return paperBodies.map((body) => getPlainText(body)).join("\n").trim();
+        }
+
+        function hasForbiddenContent() {
+          const text = getAllBodyText();
+          if (!text) return null;
+          const normalized = text.toLowerCase();
+          return FORBIDDEN_WORDS.find((word) => normalized.includes(word.toLowerCase())) || null;
+        }
+
         function insertEmoji(symbol) {
           const target = activeBody || paperBodies[0];
           if (!target) return;
@@ -429,6 +460,11 @@
         });
 
         toSummary.addEventListener("click", () => {
+          const detectedWord = hasForbiddenContent();
+          if (detectedWord) {
+            alert(`부적절한 표현("${detectedWord}")이 포함되어 있어 다음 단계로 이동할 수 없습니다. 내용을 수정해 주세요.`);
+            return;
+          }
           alert("다음 단계(검수/결제)는 곧 연결됩니다.");
         });
 
