@@ -158,7 +158,7 @@ button:active {
 
 .letter-paper {
   flex: 0 0 auto;
-  border-radius: 28px;
+  border-radius: 0;
   padding: 2cm;
   width: 14cm;
   min-width: 14cm;
@@ -207,7 +207,7 @@ button:active {
   content: "";
   position: absolute;
   inset: 2cm;
-  border-radius: 12px;
+  border-radius: 0;
   background: repeating-linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.08),
@@ -397,12 +397,10 @@ button:active {
 .emoji-palette {
   position: absolute;
   top: calc(100% + 8px);
-  left: 50%;
-  transform: translate(-50%, -4px);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
+  left: 0;
+  transform: translateY(-4px);
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
   gap: 8px;
   padding: 16px;
   border: 1px solid var(--border);
@@ -421,7 +419,7 @@ button:active {
 .emoji-palette.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .emoji-button {
@@ -485,6 +483,6 @@ button:active {
   }
   .letter-paper {
     padding: 2cm;
-    border-radius: 20px;
+    border-radius: 0;
   }
 }
