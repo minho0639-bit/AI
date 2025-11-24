@@ -38,9 +38,12 @@
             <p class="group-label">폰트 색상</p>
             <div class="color-palette" id="colorPalette"></div>
           </div>
-          <div class="control-group">
+          <div class="control-group emoji-group">
             <p class="group-label">이모티콘</p>
-            <div class="emoji-palette" id="emojiPalette"></div>
+            <button type="button" class="emoji-toggle" id="emojiToggle" aria-expanded="false">
+              이모티콘 선택
+            </button>
+            <div class="emoji-palette" id="emojiPalette" aria-hidden="true"></div>
           </div>
         </section>
 
@@ -76,10 +79,42 @@
         const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
         const emojiPalette = document.getElementById("emojiPalette");
+        const emojiToggle = document.getElementById("emojiToggle");
 
         const MAX_BODY = 1500;
         const DEFAULT_FONT_SIZE = 16;
-        const EMOJI_LIST = ["😊", "🥰", "🌟", "💌", "✨", "😭", "👍", "🙏", "🎉", "🍀"];
+        const EMOJI_LIST = [
+          "😊",
+          "🥰",
+          "😍",
+          "🤩",
+          "😘",
+          "😄",
+          "😁",
+          "😢",
+          "😭",
+          "🥹",
+          "😉",
+          "🤗",
+          "😎",
+          "🌟",
+          "💖",
+          "💘",
+          "💌",
+          "✨",
+          "🪽",
+          "🎉",
+          "🎀",
+          "🎶",
+          "🍀",
+          "🌈",
+          "🌸",
+          "🔥",
+          "👍",
+          "🙏",
+          "💪",
+          "🫶",
+        ];
 
         const stationeryThemes = {
           basic: {
@@ -153,9 +188,21 @@
             button.type = "button";
             button.className = "emoji-button";
             button.textContent = symbol;
-            button.addEventListener("click", () => insertEmoji(symbol));
+            button.addEventListener("click", (event) => {
+              event.stopPropagation();
+              insertEmoji(symbol);
+              setEmojiPaletteState(false);
+            });
             emojiPalette.appendChild(button);
           });
+        }
+
+        function setEmojiPaletteState(isOpen) {
+          if (!emojiPalette || !emojiToggle) return;
+          emojiPalette.classList.toggle("visible", isOpen);
+          emojiToggle.classList.toggle("active", isOpen);
+          emojiToggle.setAttribute("aria-expanded", String(isOpen));
+          emojiPalette.setAttribute("aria-hidden", String(!isOpen));
         }
 
         function applyStationeryStyles() {
@@ -224,6 +271,19 @@
           lastBodyText = getPlainText(paperBody);
         }
 
+        emojiToggle?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const willOpen = !emojiPalette.classList.contains("visible");
+          setEmojiPaletteState(willOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!emojiPalette || !emojiToggle) return;
+          if (!emojiPalette.classList.contains("visible")) return;
+          if (emojiPalette.contains(event.target) || emojiToggle.contains(event.target)) return;
+          setEmojiPaletteState(false);
+        });
+
         backToSelect.addEventListener("click", () => {
           const category = params.get("category");
           const categoryLabel = params.get("categoryLabel") || "";
@@ -255,6 +315,7 @@
         renderFontOptions();
         renderColorPalette();
         renderEmojiPalette();
+        setEmojiPaletteState(false);
         applyStationeryStyles();
         applyTypography();
         lastBodyText = getPlainText(paperBody);

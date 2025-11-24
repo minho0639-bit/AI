@@ -159,7 +159,7 @@ button:active {
 .letter-paper {
   flex: 0 0 auto;
   border-radius: 28px;
-  padding: 32px 28px;
+  padding: 2cm;
   width: 14cm;
   min-width: 14cm;
   max-width: 14cm;
@@ -360,16 +360,64 @@ button:active {
   transform: translateY(-2px);
 }
 
+.emoji-group {
+  position: relative;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.emoji-toggle {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.emoji-toggle.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
+}
+
 .emoji-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(320px, 80vw);
+  z-index: 10;
+}
+
+.emoji-palette.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .emoji-button {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 8px 12px;
+  width: 40px;
+  height: 40px;
   font-size: 1.2rem;
   background: #fff;
   cursor: pointer;
@@ -425,7 +473,7 @@ button:active {
     justify-content: flex-start;
   }
   .letter-paper {
-    padding: 24px 20px;
+    padding: 2cm;
     border-radius: 20px;
   }
 }
