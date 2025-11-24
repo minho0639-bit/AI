@@ -146,11 +146,13 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-x: auto;
+  scrollbar-gutter: stable;
 }
 
 .preview-paper {
-  width: min(14cm, 100%);
-  min-width: 260px;
+  width: 14cm;
+  min-width: 14cm;
   max-width: 14cm;
   height: 17cm;
   border-radius: 0;
@@ -417,11 +419,6 @@ button:active {
   .payment-panel {
     grid-column: 1 / -1;
   }
-  .preview-paper {
-    width: 100%;
-    height: auto;
-    min-height: 420px;
-  }
 }
 
 @media (max-width: 600px) {
@@ -439,11 +436,5 @@ button:active {
   }
   .process-steps li {
     flex-direction: row;
-  }
-  .preview-paper {
-    padding: 24px 16px;
-  }
-  .preview-paper::after {
-    inset: 32px 16px;
   }
 }
