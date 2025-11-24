@@ -305,7 +305,10 @@
         closeModal();
       }
 
+      let isProcessingPayment = false;
+
       async function handlePayment() {
+        if (isProcessingPayment) return;
         if (!draftData) {
           alert("편지 데이터가 없어 결제를 진행할 수 없습니다.");
           return;
@@ -317,26 +320,24 @@
         }
 
         const orderId = `order_${Date.now()}`;
-        openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
-        return;
+        const paymentAmount = PAYMENT_CONFIG.baseAmount;
 
-        // 실제 PortOne 연동 예시 (주석)
-        /*
-        if (!window.PortOne) {
-          openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
+        if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
+          openPaymentModal(orderId, paymentAmount);
           return;
         }
 
         try {
+          isProcessingPayment = true;
           requestPayment.disabled = true;
-          requestPayment.textContent = "결제 처리 중...";
+          requestPayment.textContent = "결제창 호출 중...";
 
           const paymentResult = await PortOne.requestPayment({
             storeId: PAYMENT_CONFIG.storeId,
             channelKey: PAYMENT_CONFIG.channelKey,
             paymentId: orderId,
             orderName: "팬레터 기본 요금",
-            totalAmount: PAYMENT_CONFIG.baseAmount,
+            totalAmount: paymentAmount,
             currency: "KRW",
             payMethod: {
               card: {},
@@ -344,7 +345,7 @@
             customer: {
               customerId: `customer_${Date.now()}`,
             },
-            redirectUrl: `${window.location.origin}/`,
+            redirectUrl: `${window.location.origin}/letter-payment-complete.html`,
           });
 
           console.log("PortOne 응답", paymentResult);
@@ -352,17 +353,21 @@
           if (paymentResult.status === "PAID") {
             alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
             sessionStorage.removeItem("fanletterDraft");
+          } else if (paymentResult.status === "READY") {
+            alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
+          } else if (paymentResult.status === "VIRTUAL_ACCOUNT_ISSUED") {
+            alert("가상계좌가 발급되었습니다. 안내된 계좌로 입금해 주세요.");
           } else {
             alert("결제가 완료되지 않았습니다. 다시 시도해 주세요.");
           }
         } catch (error) {
           console.error(error);
-          openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
+          alert("결제 도중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         } finally {
+          isProcessingPayment = false;
           requestPayment.disabled = false;
           requestPayment.textContent = "결제하기";
         }
-        */
       }
 
       requestPayment.addEventListener("click", handlePayment);
