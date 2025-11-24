@@ -293,6 +293,74 @@ button:active {
   margin-bottom: 12px;
 }
 
+.payment-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999;
+}
+
+.payment-modal.visible {
+  display: flex;
+}
+
+.payment-modal__dialog {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payment-modal__dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-summary {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-summary li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.mock-card {
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fffefc;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
 .process-panel h2 {
   margin: 0 0 20px;
   font-size: 1.4rem;

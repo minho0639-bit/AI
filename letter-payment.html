@@ -96,6 +96,36 @@
 
     </main>
 
+    <section class="payment-modal" id="paymentModal" aria-hidden="true">
+      <div class="payment-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mockPaymentTitle">
+        <header>
+          <h2 id="mockPaymentTitle">결제 시뮬레이터</h2>
+          <button type="button" class="ghost tiny" id="closePaymentModal" aria-label="닫기">닫기</button>
+        </header>
+        <p class="muted small">
+          실제 PortOne 결제 연동 전에 미리보기 용으로 제공되는 테스트 창입니다.
+        </p>
+        <ul class="modal-summary">
+          <li>
+            <span>결제 금액</span>
+            <strong id="modalAmount">2,000원</strong>
+          </li>
+          <li>
+            <span>주문 번호</span>
+            <strong id="modalOrderId">-</strong>
+          </li>
+        </ul>
+        <div class="mock-card">
+          <p>테스트 카드 정보</p>
+          <p class="muted small">4242 4242 4242 4242 · 12/34 · CVC 123</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost" id="cancelMockPayment">취소</button>
+          <button type="button" class="primary" id="confirmMockPayment">결제 완료 처리</button>
+        </div>
+      </div>
+    </section>
+
     <script>
       const PAYMENT_CONFIG = Object.freeze({
         storeId: "store-fdfeeba3-514f-479a-9c5e-8199d5dc1a96",
@@ -139,6 +169,12 @@
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
       const backHome = document.getElementById("backHome");
+      const paymentModal = document.getElementById("paymentModal");
+      const closePaymentModal = document.getElementById("closePaymentModal");
+      const cancelMockPayment = document.getElementById("cancelMockPayment");
+      const confirmMockPayment = document.getElementById("confirmMockPayment");
+      const modalAmount = document.getElementById("modalAmount");
+      const modalOrderId = document.getElementById("modalOrderId");
 
       let draftData = null;
 
@@ -251,6 +287,24 @@
         URL.revokeObjectURL(url);
       }
 
+      function openPaymentModal(orderId, amount) {
+        modalOrderId.textContent = orderId;
+        modalAmount.textContent = formatCurrency(amount);
+        paymentModal.classList.add("visible");
+        paymentModal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeModal() {
+        paymentModal.classList.remove("visible");
+        paymentModal.setAttribute("aria-hidden", "true");
+      }
+
+      function mockPaymentSuccess() {
+        alert("결제가 완료되었습니다! (테스트 모드)");
+        sessionStorage.removeItem("fanletterDraft");
+        closeModal();
+      }
+
       async function handlePayment() {
         if (!draftData) {
           alert("편지 데이터가 없어 결제를 진행할 수 없습니다.");
@@ -262,12 +316,16 @@
           return;
         }
 
+        const orderId = `order_${Date.now()}`;
+        openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
+        return;
+
+        // 실제 PortOne 연동 예시 (주석)
+        /*
         if (!window.PortOne) {
-          alert("결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
           return;
         }
-
-        const orderId = `order_${Date.now()}`;
 
         try {
           requestPayment.disabled = true;
@@ -299,17 +357,24 @@
           }
         } catch (error) {
           console.error(error);
-          alert("결제 도중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+          openPaymentModal(orderId, PAYMENT_CONFIG.baseAmount);
         } finally {
           requestPayment.disabled = false;
           requestPayment.textContent = "결제하기";
         }
+        */
       }
 
       requestPayment.addEventListener("click", handlePayment);
       downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
       backHome.addEventListener("click", () => (window.location.href = "/"));
+      closePaymentModal.addEventListener("click", closeModal);
+      cancelMockPayment.addEventListener("click", closeModal);
+      confirmMockPayment.addEventListener("click", mockPaymentSuccess);
+      paymentModal.addEventListener("click", (event) => {
+        if (event.target === paymentModal) closeModal();
+      });
 
       draftData = loadDraft();
       renderSummary(draftData);
