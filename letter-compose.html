@@ -110,16 +110,24 @@
         ];
         const FORBIDDEN_WORDS = [
           "씨발",
+          "시발",
+          "씨팔",
           "좆",
+          "좇",
           "개새끼",
+          "개새",
           "병신",
+          "븅신",
           "꺼져",
+          "닥쳐",
+          "존나",
           "좆같",
           "좇같",
           "fuck",
           "shit",
           "bitch",
           "asshole",
+          "bastard",
         ];
 
         const stationeryThemes = {
@@ -381,11 +389,24 @@
           return paperBodies.map((body) => getPlainText(body)).join("\n").trim();
         }
 
+        const FORBIDDEN_REGEXES = FORBIDDEN_WORDS.map((word) => {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const loose = escaped
+            .split("")
+            .map((char) => (/[a-z0-9]/i.test(char) ? char : `${char}`))
+            .join("\\s*");
+          return { word, pattern: new RegExp(loose, "i") };
+        });
+
         function hasForbiddenContent() {
           const text = getAllBodyText();
           if (!text) return null;
-          const normalized = text.toLowerCase();
-          return FORBIDDEN_WORDS.find((word) => normalized.includes(word.toLowerCase())) || null;
+          for (const { word, pattern } of FORBIDDEN_REGEXES) {
+            if (pattern.test(text)) {
+              return word;
+            }
+          }
+          return null;
         }
 
         function insertEmoji(symbol) {

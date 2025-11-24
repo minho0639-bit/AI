@@ -34,6 +34,40 @@
         </div>
       </section>
 
+      <section class="process-panel">
+        <h2>우편 배송 프로세스</h2>
+        <ol class="process-steps">
+          <li>
+            <span class="step-index">1</span>
+            <div>
+              <h3>내용 검수 · 교열</h3>
+              <p>전문 에디터가 맞춤법과 표현을 확인해 전달력을 높입니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">2</span>
+            <div>
+              <h3>디지털 인쇄</h3>
+              <p>선택한 편지지에 맞춰 고품질 프린팅으로 출력합니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">3</span>
+            <div>
+              <h3>봉투 · 도장</h3>
+              <p>전용 봉투에 봉합하고 수취인 정보를 기입합니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">4</span>
+            <div>
+              <h3>우편 발송</h3>
+              <p>우체국 집배 과정을 거쳐 지정한 주소로 전달됩니다.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
       <section class="payment-panel">
         <div class="price-card">
           <div class="price-row">
@@ -67,6 +101,34 @@
         channelKey: "channel-key-b6f6f16b-b6c1-4eaa-93db-2385758d4665",
         baseAmount: 2000,
       });
+      const STATIONERY_CLASS_MAP = {
+        basic: "paper-lined",
+        classic: "paper-classic",
+        blossom: "paper-blossom",
+        midnight: "paper-midnight",
+        default: "paper-lined",
+      };
+      const FORBIDDEN_WORDS = [
+        "씨발",
+        "시발",
+        "씨팔",
+        "좆",
+        "좇",
+        "개새끼",
+        "개새",
+        "병신",
+        "븅신",
+        "꺼져",
+        "닥쳐",
+        "존나",
+        "좆같",
+        "좇같",
+        "fuck",
+        "shit",
+        "bitch",
+        "asshole",
+        "bastard",
+      ];
 
       const summaryBody = document.getElementById("summaryBody");
       const baseAmountEl = document.getElementById("baseAmount");
@@ -94,6 +156,34 @@
         }
       }
 
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      const FORBIDDEN_REGEXES = FORBIDDEN_WORDS.map((word) => {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const loose = escaped
+          .split("")
+          .map((char) => (/[a-z0-9]/i.test(char) ? char : `${char}`))
+          .join("\\s*");
+        return { word, pattern: new RegExp(loose, "i") };
+      });
+
+      function detectForbiddenWord(text) {
+        if (!text) return null;
+        for (const { word, pattern } of FORBIDDEN_REGEXES) {
+          if (pattern.test(text)) {
+            return word;
+          }
+        }
+        return null;
+      }
+
       function renderSummary(data) {
         if (!data) {
           summaryBody.innerHTML = `
@@ -110,7 +200,9 @@
           return;
         }
 
-        const preview = data.text.length > 140 ? `${data.text.slice(0, 140)}…` : data.text;
+        const preview = data.text.length > 400 ? `${data.text.slice(0, 400)}…` : data.text;
+        const stationeryClass = STATIONERY_CLASS_MAP[data.stationery] || STATIONERY_CLASS_MAP.default;
+        const previewHtml = escapeHtml(preview).replace(/\n/g, "<br>");
         summaryBody.innerHTML = `
           <ul class="summary-grid">
             <li>
@@ -132,7 +224,9 @@
           </ul>
           <div class="preview">
             <p class="label">내용 미리보기</p>
-            <p class="preview-body">${preview.replace(/\n/g, "<br>")}</p>
+            <div class="preview-paper ${stationeryClass}">
+              <div class="preview-paper-body font-${data.font || "default"}">${previewHtml}</div>
+            </div>
           </div>
         `;
       }
@@ -161,6 +255,12 @@
           alert("편지 데이터가 없어 결제를 진행할 수 없습니다.");
           return;
         }
+        const detectedWord = detectForbiddenWord(draftData.text);
+        if (detectedWord) {
+          alert(`부적절한 표현("${detectedWord}")이 포함되어 있어 결제를 진행할 수 없습니다. 편지를 수정해 주세요.`);
+          return;
+        }
+
         if (!window.PortOne) {
           alert("결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
           return;
