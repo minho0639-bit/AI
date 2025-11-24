@@ -49,14 +49,7 @@
 
         <section class="compose-editor">
           <div class="write-panel">
-            <div class="letter-paper" id="letterPaper">
-              <div
-                id="paperBody"
-                class="paper-body font-default"
-                contenteditable="true"
-                data-placeholder="편지 내용을 입력하세요 (최대 1,500자)"
-              ></div>
-            </div>
+            <div class="paper-stack" id="paperStack" aria-live="polite"></div>
           </div>
         </section>
 
@@ -68,8 +61,7 @@
 
       <script>
         const params = new URLSearchParams(window.location.search);
-        const paperBody = document.getElementById("paperBody");
-        const letterPaper = document.getElementById("letterPaper");
+        const paperStack = document.getElementById("paperStack");
         const backToSelect = document.getElementById("backToSelect");
         const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
@@ -82,6 +74,7 @@
         const emojiToggle = document.getElementById("emojiToggle");
 
         const MAX_BODY = 1500;
+        const MAX_LINES_PER_PAGE = 15;
         const DEFAULT_FONT_SIZE = 16;
         const EMOJI_LIST = [
           "😊",
@@ -138,7 +131,8 @@
           { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
         ];
 
-        let lastBodyText = "";
+        let paperBodies = [];
+        let activeBody = null;
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
@@ -205,35 +199,136 @@
           emojiPalette.setAttribute("aria-hidden", String(!isOpen));
         }
 
-        function applyStationeryStyles() {
-          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
-          letterPaper.className = `letter-paper ${theme.className || ""}`.trim();
-          letterPaper.style.backgroundImage = "";
+        function getPlaceholderText() {
+          return selectedFont === "handwriting"
+            ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
+            : "편지 내용을 입력하세요.";
+        }
+
+        function applyTypographyToBody(body) {
+          body.className = `paper-body font-${selectedFont}`;
+          body.style.fontSize = `${selectedFontSize}px`;
+          body.style.color = selectedColor;
+          body.dataset.placeholder = getPlaceholderText();
         }
 
         function applyTypography() {
-          paperBody.className = `paper-body font-${selectedFont}`;
-          paperBody.style.fontSize = `${selectedFontSize}px`;
-          paperBody.style.color = selectedColor;
-          paperBody.dataset.placeholder =
-            selectedFont === "handwriting"
-              ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
-              : "편지 내용을 입력하세요 (최대 1,500자)";
+          paperBodies.forEach((body) => applyTypographyToBody(body));
+        }
+
+        function applyStationeryStyles() {
+          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
+          paperBodies.forEach((body) => {
+            const page = body.closest(".letter-paper");
+            if (page) {
+              page.className = `letter-paper ${theme.className || ""}`.trim();
+              page.style.backgroundImage = "";
+            }
+          });
         }
 
         function getPlainText(element) {
-          return element.innerText.replace(/\r?\n/g, "\n").trimEnd();
+          return element.innerText.replace(/\r?\n/g, "\n");
         }
 
-        paperBody.addEventListener("input", () => {
-          let text = getPlainText(paperBody);
-          if (text.length > MAX_BODY) {
-            paperBody.innerText = lastBodyText;
-            placeCursorEnd(paperBody);
-          } else {
-            lastBodyText = text;
+        function createPaperPage(initialText = "") {
+          if (!paperStack) return null;
+          const page = document.createElement("div");
+          page.className = "letter-paper";
+          const body = document.createElement("div");
+          body.className = "paper-body";
+          body.contentEditable = "true";
+          body.dataset.placeholder = getPlaceholderText();
+          body.addEventListener("focus", () => {
+            activeBody = body;
+          });
+          body.addEventListener("click", () => {
+            activeBody = body;
+          });
+          body.addEventListener("input", () => handleBodyInput(body));
+          page.appendChild(body);
+          paperStack.appendChild(page);
+          paperBodies.push(body);
+          applyTypographyToBody(body);
+          applyStationeryStyles();
+          if (initialText) {
+            body.innerText = initialText;
           }
-        });
+          if (!activeBody) {
+            activeBody = body;
+          }
+          return body;
+        }
+
+        function handleBodyInput(body) {
+          activeBody = body;
+          if (!enforceCharacterLimit(body)) {
+            return;
+          }
+          enforceLineLimit(body);
+          cleanupEmptyPages();
+        }
+
+        function getTotalCharacterCount() {
+          return paperBodies.reduce((sum, body) => sum + getPlainText(body).length, 0);
+        }
+
+        function enforceCharacterLimit(body) {
+          const total = getTotalCharacterCount();
+          if (total <= MAX_BODY) {
+            return true;
+          }
+          const overflow = total - MAX_BODY;
+          const text = getPlainText(body);
+          body.innerText = text.slice(0, Math.max(0, text.length - overflow));
+          alert("1,500자 제한을 초과하여 더 입력할 수 없습니다.");
+          placeCursorEnd(body);
+          return false;
+        }
+
+        function getNextBody(body) {
+          const index = paperBodies.indexOf(body);
+          if (index === -1) return null;
+          return paperBodies[index + 1] || null;
+        }
+
+        function enforceLineLimit(body) {
+          const text = getPlainText(body);
+          if (!text) return;
+          const lines = text.split("\n");
+          if (lines.length <= MAX_LINES_PER_PAGE) {
+            return;
+          }
+
+          const allowedLines = lines.slice(0, MAX_LINES_PER_PAGE);
+          const overflowLines = lines.slice(MAX_LINES_PER_PAGE);
+          body.innerText = allowedLines.join("\n");
+
+          let nextBody = getNextBody(body);
+          if (!nextBody) {
+            nextBody = createPaperPage();
+          }
+          const existingText = getPlainText(nextBody);
+          nextBody.innerText = overflowLines.join("\n") + (existingText ? `\n${existingText}` : "");
+          placeCursorEnd(nextBody);
+          enforceLineLimit(nextBody);
+        }
+
+        function cleanupEmptyPages() {
+          for (let i = paperBodies.length - 1; i > 0; i--) {
+            const body = paperBodies[i];
+            if (getPlainText(body).trim().length === 0) {
+              const page = body.closest(".letter-paper");
+              paperBodies.splice(i, 1);
+              if (activeBody === body) {
+                activeBody = paperBodies[i - 1] || paperBodies[0] || null;
+              }
+              page?.remove();
+            } else {
+              break;
+            }
+          }
+        }
 
         function placeCursorEnd(el) {
           const range = document.createRange();
@@ -245,19 +340,20 @@
         }
 
         function insertEmoji(symbol) {
-          const currentText = getPlainText(paperBody);
-          if (currentText.length + [...symbol].length > MAX_BODY) {
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          if (getTotalCharacterCount() + [...symbol].length > MAX_BODY) {
             alert("1,500자 제한을 초과하여 이모티콘을 추가할 수 없습니다.");
             return;
           }
 
-          paperBody.focus();
+          target.focus();
           const selection = window.getSelection();
           let range = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
 
-          if (!range || !paperBody.contains(range.commonAncestorContainer)) {
+          if (!range || !target.contains(range.commonAncestorContainer)) {
             range = document.createRange();
-            range.selectNodeContents(paperBody);
+            range.selectNodeContents(target);
             range.collapse(false);
           }
 
@@ -268,7 +364,8 @@
           selection.removeAllRanges();
           selection.addRange(range);
 
-          lastBodyText = getPlainText(paperBody);
+          enforceLineLimit(target);
+          cleanupEmptyPages();
         }
 
         emojiToggle?.addEventListener("click", (event) => {
@@ -316,9 +413,9 @@
         renderColorPalette();
         renderEmojiPalette();
         setEmojiPaletteState(false);
+        createPaperPage();
         applyStationeryStyles();
         applyTypography();
-        lastBodyText = getPlainText(paperBody);
       </script>
   </body>
 </html>

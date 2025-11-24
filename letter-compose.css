@@ -126,6 +126,14 @@ button:active {
   scrollbar-gutter: stable;
 }
 
+.paper-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  align-items: center;
+}
+
 .write-panel::-webkit-scrollbar {
   height: 6px;
 }
