@@ -126,6 +126,14 @@ button:active {
   scrollbar-gutter: stable;
 }
 
+.paper-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  align-items: center;
+}
+
 .write-panel::-webkit-scrollbar {
   height: 6px;
 }
@@ -158,13 +166,14 @@ button:active {
 
 .letter-paper {
   flex: 0 0 auto;
-  border-radius: 28px;
-  padding: 32px 28px;
-  width: min(14cm, 100%);
-  max-width: 100%;
+  border-radius: 0;
+  padding: 2cm;
+  width: 14cm;
+  min-width: 14cm;
+  max-width: 14cm;
   height: 17cm;
   border: 1px solid rgba(17, 17, 17, 0.12);
-  background: #fffdf7;
+  background: #fff;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -196,17 +205,26 @@ button:active {
 }
 
 .letter-paper.paper-lined {
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.08),
-      rgba(0, 0, 0, 0.08) 1px,
-      transparent 1px,
-      transparent 32px
-    ),
-    #fff;
+  background: #fff;
   border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.letter-paper.paper-lined::after {
+  content: "";
+  position: absolute;
+  inset: 2cm;
+  border-radius: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.08),
+    rgba(0, 0, 0, 0.08) 1px,
+    transparent 1px,
+    transparent 32px
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .paper-default {
@@ -359,16 +377,64 @@ button:active {
   transform: translateY(-2px);
 }
 
+.emoji-group {
+  position: relative;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.emoji-toggle {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.emoji-toggle.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
+}
+
 .emoji-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  transform: translateY(-4px);
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(320px, 80vw);
+  z-index: 10;
+}
+
+.emoji-palette.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .emoji-button {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 8px 12px;
+  width: 40px;
+  height: 40px;
   font-size: 1.2rem;
   background: #fff;
   cursor: pointer;
@@ -424,7 +490,10 @@ button:active {
     justify-content: flex-start;
   }
   .letter-paper {
-    padding: 24px 20px;
-    border-radius: 20px;
+    padding: 2cm;
+    border-radius: 0;
+  }
+  .compose-actions button {
+    width: 100%;
   }
 }
