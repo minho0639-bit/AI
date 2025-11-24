@@ -395,8 +395,11 @@
             buyer: {
               email: buyerInfo.email,
               name: buyerInfo.name || "팬레터 고객",
-              phoneNumber: buyerInfo.phone || undefined,
+              tel: buyerInfo.phone || undefined,
             },
+            buyerEmail: buyerInfo.email,
+            buyerName: buyerInfo.name || "팬레터 고객",
+            buyerTel: buyerInfo.phone || undefined,
             redirectUrl: `${window.location.origin}/letter-payment-complete.html`,
           });
 
