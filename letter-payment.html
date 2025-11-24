@@ -35,6 +35,24 @@
       </section>
 
       <section class="payment-panel">
+        <div class="buyer-form">
+          <h2>구매자 정보</h2>
+          <p class="muted small">결제자 이름과 이메일은 결제 내역 및 영수증 발송에 사용됩니다.</p>
+          <div class="form-grid">
+            <label>
+              <span>이름</span>
+              <input type="text" id="buyerName" placeholder="홍길동" />
+            </label>
+            <label>
+              <span>이메일 *</span>
+              <input type="email" id="buyerEmail" placeholder="fanletter@example.com" required />
+            </label>
+            <label>
+              <span>연락처</span>
+              <input type="tel" id="buyerPhone" placeholder="01012345678" />
+            </label>
+          </div>
+        </div>
         <div class="price-card">
           <div class="price-row">
             <span>기본 요금</span>
@@ -169,6 +187,9 @@
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
       const backHome = document.getElementById("backHome");
+      const buyerNameInput = document.getElementById("buyerName");
+      const buyerEmailInput = document.getElementById("buyerEmail");
+      const buyerPhoneInput = document.getElementById("buyerPhone");
       const paymentModal = document.getElementById("paymentModal");
       const closePaymentModal = document.getElementById("closePaymentModal");
       const cancelMockPayment = document.getElementById("cancelMockPayment");
@@ -307,6 +328,28 @@
 
       let isProcessingPayment = false;
 
+      function getBuyerInfo() {
+        const name = buyerNameInput.value.trim();
+        const email = buyerEmailInput.value.trim();
+        const phone = buyerPhoneInput.value.trim();
+        return { name, email, phone };
+      }
+
+      function validateBuyerInfo(info) {
+        if (!info.email) {
+          alert("결제자 이메일을 입력해 주세요.");
+          buyerEmailInput.focus();
+          return false;
+        }
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(info.email)) {
+          alert("올바른 이메일 주소를 입력해 주세요.");
+          buyerEmailInput.focus();
+          return false;
+        }
+        return true;
+      }
+
       async function handlePayment() {
         if (isProcessingPayment) return;
         if (!draftData) {
@@ -318,6 +361,9 @@
           alert(`부적절한 표현("${detectedWord}")이 포함되어 있어 결제를 진행할 수 없습니다. 편지를 수정해 주세요.`);
           return;
         }
+
+        const buyerInfo = getBuyerInfo();
+        if (!validateBuyerInfo(buyerInfo)) return;
 
         const orderId = `order_${Date.now()}`;
         const paymentAmount = PAYMENT_CONFIG.baseAmount;
@@ -342,6 +388,9 @@
             payMethod: "CARD",
             customer: {
               customerId: `customer_${Date.now()}`,
+              customerName: buyerInfo.name || "팬레터 고객",
+              customerEmail: buyerInfo.email,
+              customerPhone: buyerInfo.phone || undefined,
             },
             redirectUrl: `${window.location.origin}/letter-payment-complete.html`,
           });

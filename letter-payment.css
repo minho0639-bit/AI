@@ -91,6 +91,49 @@ button:active {
   grid-column: 2 / 3;
 }
 
+.buyer-form {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 20px;
+  background: #fffefc;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buyer-form h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.form-grid input {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.form-grid input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
 .process-panel {
   grid-column: 1 / -1;
 }
