@@ -86,7 +86,7 @@
           "😁",
           "😢",
           "😭",
-          "🥹",
+          "😌",
           "😉",
           "🤗",
           "😎",
@@ -95,7 +95,7 @@
           "💘",
           "💌",
           "✨",
-          "🪽",
+          "💫",
           "🎉",
           "🎀",
           "🎶",
@@ -106,7 +106,7 @@
           "👍",
           "🙏",
           "💪",
-          "🫶",
+          "🙌",
         ];
 
         const stationeryThemes = {
@@ -310,6 +310,8 @@
           }
           const existingText = getPlainText(nextBody);
           nextBody.innerText = overflowLines.join("\n") + (existingText ? `\n${existingText}` : "");
+          activeBody = nextBody;
+          nextBody.focus();
           placeCursorEnd(nextBody);
           enforceLineLimit(nextBody);
         }
