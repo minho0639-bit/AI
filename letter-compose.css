@@ -197,7 +197,17 @@ button:active {
 }
 
 .letter-paper.paper-lined {
-  background: #fff;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.08),
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 32px
+    )
+      content-box;
+  background-clip: padding-box, content-box;
   border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
@@ -393,6 +403,8 @@ button:active {
   pointer-events: none;
   transform: translate(-50%, -4px);
   justify-items: center;
+  justify-content: center;
+  align-content: center;
   transition: opacity 0.2s ease, transform 0.2s ease;
   width: max-content;
   min-width: 220px;
