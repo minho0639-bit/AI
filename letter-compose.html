@@ -296,7 +296,12 @@
           const text = getPlainText(body);
           if (!text) return;
           const lines = text.split("\n");
-          if (lines.length <= MAX_LINES_PER_PAGE) {
+          const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
+          const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
+          if (effectiveCount < MAX_LINES_PER_PAGE) {
+            return;
+          }
+          if (effectiveCount === MAX_LINES_PER_PAGE && hasTrailingBlank) {
             return;
           }
 
