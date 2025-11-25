@@ -31,81 +31,140 @@
       </section>
 
       <section id="dashboard" class="dashboard">
-        <div class="panel toolbar">
-          <span id="welcome-text"></span>
-          <div>
-            <button id="refresh-btn-secondary">데이터 새로고침</button>
-            <button id="logout-btn-secondary" class="secondary">로그아웃</button>
-          </div>
+        <p id="welcome-text" class="text-muted"></p>
+
+        <nav class="admin-tabs" role="tablist">
+          <button class="tab-button active" data-tab="orders">주문 현황</button>
+          <button class="tab-button" data-tab="recipients">수령인 관리</button>
+          <button class="tab-button" data-tab="users">회원 목록</button>
+        </nav>
+
+        <div class="tab-panel active" data-panel="orders">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>주문 현황</h2>
+              <span id="orders-status" class="panel-status">-</span>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>회원</th>
+                    <th>수령인</th>
+                    <th>편지 상태</th>
+                    <th>결제</th>
+                    <th>배송</th>
+                    <th>작성일</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-body"></tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
-        <section class="panel">
-          <div class="panel-header">
-            <h2>주문 현황</h2>
-            <span id="orders-status" class="panel-status">-</span>
-          </div>
-          <div class="overflow-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>회원</th>
-                  <th>수령인</th>
-                  <th>편지 상태</th>
-                  <th>결제</th>
-                  <th>배송</th>
-                  <th>작성일</th>
-                </tr>
-              </thead>
-              <tbody id="orders-body"></tbody>
-            </table>
-          </div>
-        </section>
+        <div class="tab-panel" data-panel="recipients">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>수령인 관리</h2>
+              <span id="recipients-status" class="panel-status">-</span>
+            </div>
 
-        <section class="panel">
-          <div class="panel-header">
-            <h2>수령인 관리</h2>
-            <span id="recipients-status" class="panel-status">-</span>
-          </div>
-          <div class="overflow-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>이름</th>
-                  <th>분류</th>
-                  <th>소속사</th>
-                  <th>그룹</th>
-                  <th>상태</th>
-                  <th>업데이트</th>
-                </tr>
-              </thead>
-              <tbody id="recipients-body"></tbody>
-            </table>
-          </div>
-        </section>
+            <div class="form-card">
+              <strong>수령인 추가</strong>
+              <form id="recipient-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="recipient-name">이름 *</label>
+                    <input type="text" id="recipient-name" name="name" placeholder="예) 김연아" required />
+                  </div>
+                  <div class="field">
+                    <label for="recipient-category">대분류 *</label>
+                    <select id="recipient-category" name="categoryId" required>
+                      <option value="">불러오는 중...</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-subcategory">중분류</label>
+                    <select id="recipient-subcategory" name="subcategoryId" disabled>
+                      <option value="">대분류를 먼저 선택해 주세요</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-agency">소속사</label>
+                    <select id="recipient-agency" name="agencyId">
+                      <option value="">선택</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-group">그룹</label>
+                    <select id="recipient-group" name="groupId">
+                      <option value="">선택</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-status-select">상태</label>
+                    <select id="recipient-status-select" name="isActive">
+                      <option value="1">활성</option>
+                      <option value="0">비활성</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="recipient-notes">비고</label>
+                  <textarea id="recipient-notes" name="notes" placeholder="메모를 입력하세요"></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">수령인 추가</button>
+                  <div id="recipient-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
 
-        <section class="panel">
-          <div class="panel-header">
-            <h2>회원 목록</h2>
-            <span id="users-status" class="panel-status">-</span>
-          </div>
-          <div class="overflow-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>회원 정보</th>
-                  <th>연락처</th>
-                  <th>권한</th>
-                  <th>마케팅 수신</th>
-                  <th>가입일</th>
-                </tr>
-              </thead>
-              <tbody id="users-body"></tbody>
-            </table>
-          </div>
-        </section>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>분류</th>
+                    <th>소속사</th>
+                    <th>그룹</th>
+                    <th>상태</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="recipients-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="users">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>회원 목록</h2>
+              <span id="users-status" class="panel-status">-</span>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>회원 정보</th>
+                    <th>연락처</th>
+                    <th>권한</th>
+                    <th>마케팅 수신</th>
+                    <th>가입일</th>
+                  </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
 
@@ -114,9 +173,11 @@
       const dashboardSection = document.getElementById("dashboard");
       const loginForm = document.getElementById("admin-login-form");
       const loginStatus = document.getElementById("login-status");
-      const refreshButtons = [document.getElementById("refresh-btn"), document.getElementById("refresh-btn-secondary")].filter(Boolean);
-      const logoutButtons = [document.getElementById("logout-btn"), document.getElementById("logout-btn-secondary")].filter(Boolean);
+      const refreshButtons = [document.getElementById("refresh-btn")].filter(Boolean);
+      const logoutButtons = [document.getElementById("logout-btn")].filter(Boolean);
       const welcomeText = document.getElementById("welcome-text");
+      const tabButtons = document.querySelectorAll(".tab-button");
+      const tabPanels = document.querySelectorAll(".tab-panel");
 
       const ordersStatus = document.getElementById("orders-status");
       const recipientsStatus = document.getElementById("recipients-status");
@@ -126,6 +187,24 @@
       const recipientsBody = document.getElementById("recipients-body");
       const usersBody = document.getElementById("users-body");
 
+      const recipientForm = document.getElementById("recipient-form");
+      const recipientFormStatus = document.getElementById("recipient-form-status");
+      const recipientCategorySelect = document.getElementById("recipient-category");
+      const recipientSubcategorySelect = document.getElementById("recipient-subcategory");
+      const recipientAgencySelect = document.getElementById("recipient-agency");
+      const recipientGroupSelect = document.getElementById("recipient-group");
+      const recipientStatusSelect = document.getElementById("recipient-status-select");
+
+      const state = {
+        metaLoaded: false,
+        meta: {
+          categories: [],
+          subcategories: [],
+          agencies: [],
+          groups: [],
+        },
+      };
+
       loginForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await handleAdminLogin(new FormData(loginForm));
@@ -133,7 +212,7 @@
 
       refreshButtons.forEach((button) =>
         button.addEventListener("click", () => {
-          loadAdminData();
+          loadAdminData({ refreshMeta: true });
         })
       );
       logoutButtons.forEach((button) =>
@@ -143,13 +222,45 @@
         })
       );
 
+      tabButtons.forEach((button) =>
+        button.addEventListener("click", () => activateTab(button.dataset.tab))
+      );
+
+      recipientCategorySelect.addEventListener("change", () => {
+        updateSubcategoryOptions();
+      });
+      recipientAgencySelect.addEventListener("change", () => {
+        updateGroupOptions();
+      });
+
+      recipientForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleRecipientCreate(new FormData(recipientForm));
+      });
+
+      recipientsBody.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-recipient-delete]");
+        if (!deleteBtn) return;
+        const recipientId = deleteBtn.dataset.recipientDelete;
+        const targetName = deleteBtn.dataset.recipientName || "";
+        const confirmed = window.confirm(`${targetName} 수령인을 삭제할까요?`);
+        if (!confirmed) return;
+        try {
+          await deleteRecipient(recipientId);
+          await loadRecipientsOnly();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
       document.addEventListener("DOMContentLoaded", initAdminPage);
 
       async function initAdminPage() {
         const isAdmin = await checkAdminSession();
         toggleDashboard(isAdmin);
         if (isAdmin) {
-          loadAdminData();
+          await ensureRecipientMetaLoaded();
+          await loadAdminData();
         }
       }
 
@@ -165,7 +276,7 @@
 
       async function handleAdminLogin(formData) {
         loginStatus.textContent = "로그인 중...";
-        loginStatus.classList.remove("error");
+        loginStatus.classList.remove("error", "success");
         const payload = Object.fromEntries(formData.entries());
         try {
           const response = await fetch("/api/admin/login", {
@@ -178,8 +289,10 @@
             throw new Error(errorBody.message || "로그인에 실패했습니다.");
           }
           loginStatus.textContent = "로그인 성공! 데이터를 불러오는 중...";
+          loginStatus.classList.add("success");
           toggleDashboard(true);
-          loadAdminData();
+          await ensureRecipientMetaLoaded(true);
+          await loadAdminData();
         } catch (error) {
           loginStatus.textContent = error.message;
           loginStatus.classList.add("error");
@@ -192,7 +305,8 @@
           dashboardSection.classList.add("active");
           refreshButtons.forEach((btn) => (btn.disabled = false));
           logoutButtons.forEach((btn) => (btn.disabled = false));
-          welcomeText.textContent = "관리자 계정으로 접속 중";
+          welcomeText.textContent = "관리자 계정으로 접속 중 - 메뉴에서 원하는 영역을 선택하세요.";
+          activateTab("orders");
         } else {
           loginSection.classList.remove("hidden");
           dashboardSection.classList.remove("active");
@@ -200,14 +314,26 @@
           logoutButtons.forEach((btn) => (btn.disabled = true));
           loginStatus.textContent = "";
           loginForm.reset();
+          state.metaLoaded = false;
         }
       }
 
-      async function loadAdminData() {
+      function activateTab(tabName) {
+        tabButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.tab === tabName);
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.panel === tabName);
+        });
+      }
+
+      async function loadAdminData(options = {}) {
+        const { refreshMeta = false } = options;
         ordersStatus.textContent = "불러오는 중...";
         recipientsStatus.textContent = "불러오는 중...";
         usersStatus.textContent = "불러오는 중...";
         try {
+          await ensureRecipientMetaLoaded(refreshMeta);
           const [orders, recipients, users] = await Promise.all([
             fetchJson("/api/admin/orders"),
             fetchJson("/api/admin/recipients"),
@@ -225,6 +351,113 @@
           ordersStatus.textContent = message;
           recipientsStatus.textContent = message;
           usersStatus.textContent = message;
+        }
+      }
+
+      async function loadRecipientsOnly() {
+        recipientsStatus.textContent = "불러오는 중...";
+        try {
+          const recipients = await fetchJson("/api/admin/recipients");
+          renderRecipients(recipients);
+          recipientsStatus.textContent = `${recipients.length}명`;
+        } catch (error) {
+          recipientsStatus.textContent = error.message || "수령인을 불러오지 못했습니다.";
+        }
+      }
+
+      async function ensureRecipientMetaLoaded(force = false) {
+        if (state.metaLoaded && !force) return;
+        try {
+          state.meta = await fetchJson("/api/admin/recipient-meta");
+          state.metaLoaded = true;
+          hydrateRecipientForm();
+        } catch (error) {
+          console.error(error);
+          throw new Error("수령인 분류 정보를 불러오지 못했습니다.");
+        }
+      }
+
+      function hydrateRecipientForm() {
+        populateSelect(recipientCategorySelect, state.meta.categories, "대분류 선택");
+        updateSubcategoryOptions();
+        populateSelect(recipientAgencySelect, state.meta.agencies, "선택");
+        updateGroupOptions();
+      }
+
+      function populateSelect(selectEl, items, placeholder) {
+        const options = [`<option value="">${placeholder}</option>`]
+          .concat(items.map((item) => `<option value="${item.id}">${item.name}</option>`));
+        selectEl.innerHTML = options.join("");
+        selectEl.disabled = false;
+      }
+
+      function updateSubcategoryOptions() {
+        const categoryId = Number(recipientCategorySelect.value);
+        const filtered = state.meta.subcategories.filter(
+          (subcat) => !categoryId || subcat.category_id === categoryId
+        );
+        const placeholder = categoryId ? "중분류 선택" : "대분류를 먼저 선택해 주세요";
+        const options = [`<option value="">${placeholder}</option>`].concat(
+          filtered.map((item) => `<option value="${item.id}">${item.name}</option>`)
+        );
+        recipientSubcategorySelect.innerHTML = options.join("");
+        recipientSubcategorySelect.disabled = !categoryId;
+        recipientSubcategorySelect.value = "";
+      }
+
+      function updateGroupOptions() {
+        const agencyId = Number(recipientAgencySelect.value);
+        const filtered = state.meta.groups.filter(
+          (group) => !agencyId || group.agency_id === agencyId
+        );
+        const options = [`<option value="">선택</option>`].concat(
+          filtered.map((item) => `<option value="${item.id}">${item.name}</option>`)
+        );
+        recipientGroupSelect.innerHTML = options.join("");
+      }
+
+      async function handleRecipientCreate(formData) {
+        recipientFormStatus.textContent = "추가 중...";
+        recipientFormStatus.classList.remove("error", "success");
+        const payload = {
+          name: formData.get("name"),
+          categoryId: formData.get("categoryId"),
+          subcategoryId: formData.get("subcategoryId") || null,
+          agencyId: formData.get("agencyId") || null,
+          groupId: formData.get("groupId") || null,
+          isActive: formData.get("isActive") === "1",
+          notes: formData.get("notes") || null,
+        };
+        try {
+          const response = await fetch("/api/admin/recipients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
+          }
+          recipientForm.reset();
+          updateSubcategoryOptions();
+          updateGroupOptions();
+          recipientStatusSelect.value = "1";
+          recipientFormStatus.textContent = "수령인을 추가했습니다.";
+          recipientFormStatus.classList.add("success");
+          await loadRecipientsOnly();
+        } catch (error) {
+          recipientFormStatus.textContent = error.message;
+          recipientFormStatus.classList.add("error");
+        }
+      }
+
+      async function deleteRecipient(recipientId) {
+        const response = await fetch(`/api/admin/recipients/${recipientId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
         }
       }
 
@@ -286,6 +519,18 @@
               <td>${recipient.group_name || "-"}</td>
               <td>${recipient.is_active ? "활성" : "비활성"}</td>
               <td>${formatDate(recipient.updated_at)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-recipient-delete="${recipient.id}"
+                    data-recipient-name="${recipient.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
             </tr>
           `
           )

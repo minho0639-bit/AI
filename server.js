@@ -188,6 +188,25 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   }
 });
 
+app.get("/api/admin/recipient-meta", requireAdmin, async (req, res) => {
+  try {
+    const [categories] = await pool.query(
+      "SELECT id, name FROM recipient_categories ORDER BY name ASC"
+    );
+    const [subcategories] = await pool.query(
+      "SELECT id, category_id, name FROM recipient_subcategories ORDER BY name ASC"
+    );
+    const [agencies] = await pool.query("SELECT id, name FROM agencies ORDER BY name ASC");
+    const [groups] = await pool.query(
+      "SELECT id, name, agency_id FROM recipient_groups ORDER BY name ASC"
+    );
+    res.json({ categories, subcategories, agencies, groups });
+  } catch (error) {
+    console.error("admin recipient meta fetch error:", error);
+    res.status(500).json({ message: "수령인 분류 정보를 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
 app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 200, 500);
   try {
@@ -214,6 +233,70 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("admin recipients fetch error:", error);
     res.status(500).json({ message: "수령인 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
+  const { name, categoryId, subcategoryId, agencyId, groupId, isActive, notes } = req.body;
+  if (!name || !categoryId) {
+    return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
+  }
+  try {
+    const payload = [
+      name.trim(),
+      Number(categoryId),
+      subcategoryId ? Number(subcategoryId) : null,
+      agencyId ? Number(agencyId) : null,
+      groupId ? Number(groupId) : null,
+      typeof isActive === "boolean" ? (isActive ? 1 : 0) : 1,
+      notes || null,
+    ];
+    const [result] = await pool.query(
+      `INSERT INTO recipients
+       (name, category_id, subcategory_id, agency_id, group_id, is_active, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      payload
+    );
+    const insertedId = result.insertId;
+    const [rows] = await pool.query(
+      `SELECT
+         r.id,
+         r.name,
+         rc.name AS category,
+         rs.name AS subcategory,
+         a.name AS agency,
+         rg.name AS group_name,
+         r.is_active,
+         r.updated_at
+       FROM recipients r
+       LEFT JOIN recipient_categories rc ON rc.id = r.category_id
+       LEFT JOIN recipient_subcategories rs ON rs.id = r.subcategory_id
+       LEFT JOIN agencies a ON a.id = r.agency_id
+       LEFT JOIN recipient_groups rg ON rg.id = r.group_id
+       WHERE r.id = ?`,
+      [insertedId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("admin recipient create error:", error);
+    res.status(500).json({ message: "수령인을 추가하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.delete("/api/admin/recipients/:id", requireAdmin, async (req, res) => {
+  const recipientId = Number(req.params.id);
+  if (!recipientId) {
+    return res.status(400).json({ message: "잘못된 수령인 ID입니다." });
+  }
+  try {
+    const [result] = await pool.query("DELETE FROM recipients WHERE id = ?", [recipientId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "수령인을 찾을 수 없습니다." });
+    }
+    res.json({ message: "수령인을 삭제했습니다." });
+  } catch (error) {
+    console.error("admin recipient delete error:", error);
+    res.status(500).json({ message: "수령인을 삭제하는 중 오류가 발생했습니다." });
   }
 });
 

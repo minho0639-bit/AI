@@ -110,6 +110,39 @@ input[type="password"] {
   display: flex;
 }
 
+.admin-tabs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.tab-button {
+  border: 1px solid #d1d5db;
+  color: #1f2933;
+  background: #fff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+
+.tab-button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 8px 14px rgba(37, 99, 235, 0.2);
+}
+
+.tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tab-panel.active {
+  display: flex;
+}
+
 .panel {
   background: #fff;
   border-radius: 16px;
@@ -164,6 +197,12 @@ tbody tr:hover {
   font-size: 13px;
 }
 
+.table-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -199,12 +238,75 @@ tbody tr:hover {
   display: none !important;
 }
 
-.toolbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
 .overflow-table {
   overflow-x: auto;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px dashed #c7cdd6;
+  border-radius: 16px;
+  padding: 16px;
+  background: #f9fafb;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.form-grid .field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-card textarea {
+  min-height: 80px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+  margin-bottom: 0;
+  background: #fff;
+  appearance: none;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 12px;
+}
+
+.status-text.success {
+  color: #059669;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #c7d2fe;
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 6px;
 }
