@@ -15,6 +15,16 @@ const KAKAO_REDIRECT_URI =
   process.env.KAKAO_REDIRECT_URI || `http://localhost:${PORT}/auth/kakao/callback`;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const DEFAULT_RECIPIENT_TAXONOMY = [
+  {
+    name: "엔터테인먼트",
+    subcategories: ["아이돌", "가수", "배우", "모델"],
+  },
+  {
+    name: "스포츠",
+    subcategories: ["축구", "야구", "e스포츠"],
+  },
+];
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
@@ -26,8 +36,8 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-ensureAdminUser().catch((error) => {
-  console.error("Failed to ensure admin user:", error);
+initializeBootstrapTasks().catch((error) => {
+  console.error("Startup bootstrap failed:", error);
 });
 
 app.use(cors());
@@ -191,16 +201,12 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 app.get("/api/admin/recipient-meta", requireAdmin, async (req, res) => {
   try {
     const [categories] = await pool.query(
-      "SELECT id, name FROM recipient_categories ORDER BY name ASC"
+      "SELECT id, name FROM recipient_categories ORDER BY id ASC"
     );
     const [subcategories] = await pool.query(
-      "SELECT id, category_id, name FROM recipient_subcategories ORDER BY name ASC"
+      "SELECT id, category_id, name FROM recipient_subcategories ORDER BY id ASC"
     );
-    const [agencies] = await pool.query("SELECT id, name FROM agencies ORDER BY name ASC");
-    const [groups] = await pool.query(
-      "SELECT id, name, agency_id FROM recipient_groups ORDER BY name ASC"
-    );
-    res.json({ categories, subcategories, agencies, groups });
+    res.json({ categories, subcategories });
   } catch (error) {
     console.error("admin recipient meta fetch error:", error);
     res.status(500).json({ message: "수령인 분류 정보를 불러오는 중 오류가 발생했습니다." });
@@ -237,17 +243,22 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
-  const { name, categoryId, subcategoryId, agencyId, groupId, isActive, notes } = req.body;
-  if (!name || !categoryId) {
+  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, notes } = req.body;
+  if (!name?.trim() || !categoryId) {
     return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
   }
+  if (!subcategoryId) {
+    return res.status(400).json({ message: "중분류를 선택해 주세요." });
+  }
   try {
+    const agencyId = await findOrCreateAgency(agencyName);
+    const groupId = await findOrCreateGroup(groupName, agencyId);
     const payload = [
       name.trim(),
       Number(categoryId),
       subcategoryId ? Number(subcategoryId) : null,
-      agencyId ? Number(agencyId) : null,
-      groupId ? Number(groupId) : null,
+      agencyId,
+      groupId,
       typeof isActive === "boolean" ? (isActive ? 1 : 0) : 1,
       notes || null,
     ];
@@ -297,6 +308,48 @@ app.delete("/api/admin/recipients/:id", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("admin recipient delete error:", error);
     res.status(500).json({ message: "수령인을 삭제하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.get("/api/recipients/categories", async (req, res) => {
+  try {
+    const [categories] = await pool.query(
+      "SELECT id, name FROM recipient_categories ORDER BY id ASC"
+    );
+    const [subcategories] = await pool.query(
+      "SELECT id, category_id, name FROM recipient_subcategories ORDER BY id ASC"
+    );
+    res.json({ categories, subcategories });
+  } catch (error) {
+    console.error("public recipient categories error:", error);
+    res.status(500).json({ message: "수령인 분류 정보를 불러오지 못했습니다." });
+  }
+});
+
+app.get("/api/recipients/by-subcategory/:subcategoryId", async (req, res) => {
+  const subcategoryId = Number(req.params.subcategoryId);
+  if (!subcategoryId) {
+    return res.status(400).json({ message: "잘못된 중분류 ID입니다." });
+  }
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         r.id,
+         r.name,
+         r.is_active,
+         COALESCE(a.name, "") AS agency,
+         COALESCE(rg.name, "") AS group_name
+       FROM recipients r
+       LEFT JOIN agencies a ON a.id = r.agency_id
+       LEFT JOIN recipient_groups rg ON rg.id = r.group_id
+       WHERE r.subcategory_id = ? AND r.is_active = 1
+       ORDER BY r.name ASC`,
+      [subcategoryId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("public recipients fetch error:", error);
+    res.status(500).json({ message: "수령인 데이터를 불러오지 못했습니다." });
   }
 });
 
@@ -466,6 +519,11 @@ async function getUserById(userId) {
   return rows[0];
 }
 
+async function initializeBootstrapTasks() {
+  await ensureAdminUser();
+  await ensureRecipientTaxonomy();
+}
+
 async function ensureAdminUser() {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
     console.warn("ADMIN_EMAIL 또는 ADMIN_PASSWORD 환경 변수가 설정되지 않았습니다.");
@@ -483,20 +541,82 @@ async function ensureAdminUser() {
       [ADMIN_EMAIL, passwordHash, "관리자"]
     );
     console.log("초기 관리자 계정을 생성했습니다.");
-    return;
-  }
+  } else {
+    const adminRecord = rows[0];
+    if (!adminRecord.is_admin) {
+      await pool.query("UPDATE users SET is_admin = 1 WHERE id = ?", [adminRecord.id]);
+    }
 
-  const adminRecord = rows[0];
-  if (!adminRecord.is_admin) {
-    await pool.query("UPDATE users SET is_admin = 1 WHERE id = ?", [adminRecord.id]);
+    const passwordMatches = await bcrypt.compare(ADMIN_PASSWORD, adminRecord.password_hash);
+    if (!passwordMatches) {
+      const newHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+      await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [newHash, adminRecord.id]);
+      console.log("환경 변수에 맞춰 관리자 비밀번호를 갱신했습니다.");
+    }
   }
+}
 
-  const passwordMatches = await bcrypt.compare(ADMIN_PASSWORD, adminRecord.password_hash);
-  if (!passwordMatches) {
-    const newHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-    await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [newHash, adminRecord.id]);
-    console.log("환경 변수에 맞춰 관리자 비밀번호를 갱신했습니다.");
+async function ensureRecipientTaxonomy() {
+  for (const category of DEFAULT_RECIPIENT_TAXONOMY) {
+    const [existingCategories] = await pool.query(
+      "SELECT id FROM recipient_categories WHERE name = ?",
+      [category.name]
+    );
+    let categoryId;
+    if (existingCategories.length === 0) {
+      const [insertResult] = await pool.query(
+        "INSERT INTO recipient_categories (name) VALUES (?)",
+        [category.name]
+      );
+      categoryId = insertResult.insertId;
+    } else {
+      categoryId = existingCategories[0].id;
+    }
+
+    for (const subcategoryName of category.subcategories) {
+      const [existingSub] = await pool.query(
+        "SELECT id FROM recipient_subcategories WHERE name = ? AND category_id = ?",
+        [subcategoryName, categoryId]
+      );
+      if (existingSub.length === 0) {
+        await pool.query(
+          "INSERT INTO recipient_subcategories (category_id, name) VALUES (?, ?)",
+          [categoryId, subcategoryName]
+        );
+      }
+    }
   }
+}
+
+async function findOrCreateAgency(name) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const [rows] = await pool.query("SELECT id FROM agencies WHERE name = ?", [trimmed]);
+  if (rows.length > 0) {
+    return rows[0].id;
+  }
+  const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [trimmed]);
+  return result.insertId;
+}
+
+async function findOrCreateGroup(name, agencyId) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const params = agencyId ? [trimmed, agencyId] : [trimmed];
+  const query = agencyId
+    ? "SELECT id FROM recipient_groups WHERE name = ? AND agency_id = ?"
+    : "SELECT id FROM recipient_groups WHERE name = ? AND agency_id IS NULL";
+  const [rows] = await pool.query(query, params);
+  if (rows.length > 0) {
+    return rows[0].id;
+  }
+  const [result] = await pool.query(
+    "INSERT INTO recipient_groups (name, agency_id) VALUES (?, ?)",
+    [trimmed, agencyId || null]
+  );
+  return result.insertId;
 }
 
 app.listen(PORT, () => {

@@ -87,21 +87,17 @@
                   </div>
                   <div class="field">
                     <label for="recipient-subcategory">중분류</label>
-                    <select id="recipient-subcategory" name="subcategoryId" disabled>
+                    <select id="recipient-subcategory" name="subcategoryId" disabled required>
                       <option value="">대분류를 먼저 선택해 주세요</option>
                     </select>
                   </div>
                   <div class="field">
                     <label for="recipient-agency">소속사</label>
-                    <select id="recipient-agency" name="agencyId">
-                      <option value="">선택</option>
-                    </select>
+                    <input type="text" id="recipient-agency" name="agencyName" placeholder="예) HYBE" />
                   </div>
                   <div class="field">
-                    <label for="recipient-group">그룹</label>
-                    <select id="recipient-group" name="groupId">
-                      <option value="">선택</option>
-                    </select>
+                    <label for="recipient-group">그룹 / 팀</label>
+                    <input type="text" id="recipient-group" name="groupName" placeholder="예) 뉴진스" />
                   </div>
                   <div class="field">
                     <label for="recipient-status-select">상태</label>
@@ -191,8 +187,8 @@
       const recipientFormStatus = document.getElementById("recipient-form-status");
       const recipientCategorySelect = document.getElementById("recipient-category");
       const recipientSubcategorySelect = document.getElementById("recipient-subcategory");
-      const recipientAgencySelect = document.getElementById("recipient-agency");
-      const recipientGroupSelect = document.getElementById("recipient-group");
+      const recipientAgencyInput = document.getElementById("recipient-agency");
+      const recipientGroupInput = document.getElementById("recipient-group");
       const recipientStatusSelect = document.getElementById("recipient-status-select");
 
       const state = {
@@ -200,8 +196,6 @@
         meta: {
           categories: [],
           subcategories: [],
-          agencies: [],
-          groups: [],
         },
       };
 
@@ -228,9 +222,6 @@
 
       recipientCategorySelect.addEventListener("change", () => {
         updateSubcategoryOptions();
-      });
-      recipientAgencySelect.addEventListener("change", () => {
-        updateGroupOptions();
       });
 
       recipientForm.addEventListener("submit", async (event) => {
@@ -380,8 +371,6 @@
       function hydrateRecipientForm() {
         populateSelect(recipientCategorySelect, state.meta.categories, "대분류 선택");
         updateSubcategoryOptions();
-        populateSelect(recipientAgencySelect, state.meta.agencies, "선택");
-        updateGroupOptions();
       }
 
       function populateSelect(selectEl, items, placeholder) {
@@ -405,17 +394,6 @@
         recipientSubcategorySelect.value = "";
       }
 
-      function updateGroupOptions() {
-        const agencyId = Number(recipientAgencySelect.value);
-        const filtered = state.meta.groups.filter(
-          (group) => !agencyId || group.agency_id === agencyId
-        );
-        const options = [`<option value="">선택</option>`].concat(
-          filtered.map((item) => `<option value="${item.id}">${item.name}</option>`)
-        );
-        recipientGroupSelect.innerHTML = options.join("");
-      }
-
       async function handleRecipientCreate(formData) {
         recipientFormStatus.textContent = "추가 중...";
         recipientFormStatus.classList.remove("error", "success");
@@ -423,8 +401,8 @@
           name: formData.get("name"),
           categoryId: formData.get("categoryId"),
           subcategoryId: formData.get("subcategoryId") || null,
-          agencyId: formData.get("agencyId") || null,
-          groupId: formData.get("groupId") || null,
+          agencyName: formData.get("agencyName") || null,
+          groupName: formData.get("groupName") || null,
           isActive: formData.get("isActive") === "1",
           notes: formData.get("notes") || null,
         };
@@ -439,8 +417,8 @@
             throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
           }
           recipientForm.reset();
+          recipientCategorySelect.value = "";
           updateSubcategoryOptions();
-          updateGroupOptions();
           recipientStatusSelect.value = "1";
           recipientFormStatus.textContent = "수령인을 추가했습니다.";
           recipientFormStatus.classList.add("success");

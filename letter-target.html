@@ -63,8 +63,74 @@
     </main>
 
     <script>
+      const CATEGORY_PRESETS = {
+        entertainment: { label: "엔터테인먼트" },
+        sports: { label: "스포츠" },
+      };
+
+      const SUBCATEGORY_PRESETS = {
+        아이돌: {
+          icon: "🎤",
+          accent: "#ff4d8d",
+          background: "linear-gradient(135deg, #fff5f9, #ffe3ef)",
+          iconBg: "rgba(255, 77, 141, 0.18)",
+          shadow: "rgba(255, 77, 141, 0.25)",
+        },
+        가수: {
+          icon: "🎧",
+          accent: "#7b5cff",
+          background: "linear-gradient(135deg, #f3f0ff, #e3dbff)",
+          iconBg: "rgba(123, 92, 255, 0.2)",
+          shadow: "rgba(123, 92, 255, 0.2)",
+        },
+        배우: {
+          icon: "🎬",
+          accent: "#ff9f43",
+          background: "linear-gradient(135deg, #fff5eb, #ffe2c8)",
+          iconBg: "rgba(255, 159, 67, 0.22)",
+          shadow: "rgba(255, 159, 67, 0.22)",
+        },
+        모델: {
+          icon: "👗",
+          accent: "#00c6ae",
+          background: "linear-gradient(135deg, #e8fffb, #d3fff4)",
+          iconBg: "rgba(0, 198, 174, 0.18)",
+          shadow: "rgba(0, 198, 174, 0.25)",
+        },
+        축구: {
+          icon: "⚽",
+          accent: "#00b894",
+          background: "linear-gradient(135deg, #ecfff9, #d3ffee)",
+          iconBg: "rgba(0, 184, 148, 0.2)",
+          shadow: "rgba(0, 184, 148, 0.2)",
+        },
+        야구: {
+          icon: "⚾",
+          accent: "#ff6b6b",
+          background: "linear-gradient(135deg, #fff0f0, #ffdada)",
+          iconBg: "rgba(255, 107, 107, 0.2)",
+          shadow: "rgba(255, 107, 107, 0.2)",
+        },
+        e스포츠: {
+          icon: "🎮",
+          accent: "#00a8ff",
+          background: "linear-gradient(135deg, #eef6ff, #d8ecff)",
+          iconBg: "rgba(0, 168, 255, 0.2)",
+          shadow: "rgba(0, 168, 255, 0.2)",
+        },
+      };
+
+      const FALLBACK_STYLE = {
+        icon: "✨",
+        accent: "#2563eb",
+        background: "linear-gradient(135deg, #eef2ff, #e0e7ff)",
+        iconBg: "rgba(37, 99, 235, 0.12)",
+        shadow: "rgba(37, 99, 235, 0.18)",
+      };
+
       const params = new URLSearchParams(window.location.search);
       const categoryKey = params.get("category");
+      const categoryPreset = CATEGORY_PRESETS[categoryKey];
       const categoryLabelFromParam = params.get("categoryLabel");
 
       const pageTitle = document.getElementById("pageTitle");
@@ -79,150 +145,257 @@
       const selectionPreview = document.getElementById("selectionPreview");
       const nextButton = document.getElementById("nextStep");
 
+      if (!categoryPreset) {
+        window.location.replace("/letter.html");
+      }
+
       backToCategory.addEventListener("click", () => {
         window.location.href = "/letter.html";
       });
 
-      if (!categoryKey) {
-        window.location.replace("/letter.html");
+      const state = {
+        taxonomy: { categories: [], subcategories: [] },
+        selectedCategory: null,
+        subcategories: [],
+        selectedSubcategory: null,
+        recipients: [],
+        selectedAgency: null,
+        selectedGroup: null,
+        selectedRecipient: null,
+      };
+
+      document.addEventListener("DOMContentLoaded", init);
+
+      async function init() {
+        try {
+          await loadTaxonomy();
+          resolveCategory();
+          setupSubcategories();
+        } catch (error) {
+          alert("대상 정보를 불러오지 못했습니다. 다시 시도해 주세요.");
+          window.location.replace("/letter.html");
+        }
       }
 
-        const categoryData = {
-          entertainment: {
-            label: "엔터테인먼트",
-            subcategories: {
-              idol: {
-                label: "아이돌",
-                icon: "🎤",
-                accent: "#ff4d8d",
-                background: "linear-gradient(135deg, #fff5f9, #ffe3ef)",
-                iconBg: "rgba(255, 77, 141, 0.18)",
-                shadow: "rgba(255, 77, 141, 0.25)",
-                agencies: {
-                  HYBE: {
-                    teams: {
-                      "뉴진스": ["민지", "하니", "다니엘", "해린", "혜인"],
-                      "세븐틴": ["에스쿱스", "정한", "조슈아", "준", "호시"],
-                    },
-                  },
-                  "SM엔터테인먼트": {
-                    teams: {
-                      "에스파": ["카리나", "윈터", "지젤", "닝닝"],
-                      "NCT 127": ["태일", "쟈니", "태용", "유타", "재현"],
-                    },
-                  },
-                },
-              },
-              singer: {
-                label: "가수",
-                icon: "🎧",
-                accent: "#7b5cff",
-                background: "linear-gradient(135deg, #f3f0ff, #e3dbff)",
-                iconBg: "rgba(123, 92, 255, 0.2)",
-                shadow: "rgba(123, 92, 255, 0.2)",
-                agencies: {
-                  "안테나뮤직": { teams: { "솔로": ["이무진", "권진아"] } },
-                  "어도어": { teams: { "솔로": ["백예린"] } },
-                },
-              },
-              actor: {
-                label: "배우",
-                icon: "🎬",
-                accent: "#ff9f43",
-                background: "linear-gradient(135deg, #fff5eb, #ffe2c8)",
-                iconBg: "rgba(255, 159, 67, 0.22)",
-                shadow: "rgba(255, 159, 67, 0.22)",
-                agencies: {
-                  "BH엔터테인먼트": { teams: { "배우": ["이병헌", "한지민", "박보영"] } },
-                  "어썸이엔티": { teams: { "배우": ["박서준", "한지혜"] } },
-                },
-              },
-              model: {
-                label: "모델",
-                icon: "👗",
-                accent: "#00c6ae",
-                background: "linear-gradient(135deg, #e8fffb, #d3fff4)",
-                iconBg: "rgba(0, 198, 174, 0.18)",
-                shadow: "rgba(0, 198, 174, 0.25)",
-                agencies: {
-                  Esteem: { teams: { "모델": ["한혜진", "장윤주"] } },
-                  YGKPlus: { teams: { "모델": ["정호연", "이성경"] } },
-                },
-              },
-            },
-          },
-          sports: {
-            label: "스포츠",
-            subcategories: {
-              football: {
-                label: "축구",
-                icon: "⚽",
-                accent: "#00b894",
-                background: "linear-gradient(135deg, #ecfff9, #d3ffee)",
-                iconBg: "rgba(0, 184, 148, 0.2)",
-                shadow: "rgba(0, 184, 148, 0.2)",
-                agencies: {
-                  "토트넘 홋스퍼": { teams: { "1군": ["손흥민", "해리 케인"] } },
-                  "울버햄튼": { teams: { "1군": ["황희찬"] } },
-                  "K리그": {
-                    teams: {
-                      "울산 현대": ["조현우", "이청용"],
-                      "전북 현대": ["송범근", "백승호"],
-                    },
-                  },
-                },
-              },
-              baseball: {
-                label: "야구",
-                icon: "⚾",
-                accent: "#ff6b6b",
-                background: "linear-gradient(135deg, #fff0f0, #ffdada)",
-                iconBg: "rgba(255, 107, 107, 0.2)",
-                shadow: "rgba(255, 107, 107, 0.2)",
-                agencies: {
-                  "샌디에이고 파드리스": { teams: { "MLB": ["김하성"] } },
-                  "KBO": {
-                    teams: {
-                      "LG 트윈스": ["김현수", "문보경"],
-                      "SSG 랜더스": ["최정", "박성한"],
-                    },
-                  },
-                },
-              },
-              esports: {
-                label: "e스포츠",
-                icon: "🎮",
-                accent: "#00a8ff",
-                background: "linear-gradient(135deg, #eef6ff, #d8ecff)",
-                iconBg: "rgba(0, 168, 255, 0.2)",
-                shadow: "rgba(0, 168, 255, 0.2)",
-                agencies: {
-                  "T1": { teams: { "LoL": ["Faker", "Zeus"] } },
-                  "Gen.G": { teams: { "LoL": ["Chovy", "Peanut"] } },
-                },
-              },
-            },
-          },
-        };
-
-      const selectedCategoryData = categoryData[categoryKey];
-      if (!selectedCategoryData) {
-        window.location.replace("/letter.html");
+      async function loadTaxonomy() {
+        const response = await fetch("/api/recipients/categories");
+        if (!response.ok) {
+          throw new Error("taxonomy fetch failed");
+        }
+        state.taxonomy = await response.json();
       }
 
-      pageTitle.textContent = `${selectedCategoryData.label} 대상 선택`;
-      pageDesc.textContent = `${selectedCategoryData.label} 분야의 세부 카테고리를 선택한 뒤, 소속사와 팀을 지정해 주세요.`;
+      function resolveCategory() {
+        const categoryFromDb = state.taxonomy.categories.find(
+          (cat) => cat.name === (categoryLabelFromParam || categoryPreset.label)
+        );
+        if (!categoryFromDb) {
+          throw new Error("category not found");
+        }
+        state.selectedCategory = categoryFromDb;
+        pageTitle.textContent = `${categoryFromDb.name} 대상 선택`;
+        pageDesc.textContent = `${categoryFromDb.name} 분야의 세부 카테고리를 선택한 뒤, 소속사와 팀을 지정해 주세요.`;
+        state.subcategories = state.taxonomy.subcategories.filter(
+          (sub) => sub.category_id === categoryFromDb.id
+        );
+        if (state.subcategories.length === 0) {
+          selectionPreview.textContent = "등록된 세부 카테고리가 없습니다.";
+        }
+      }
 
-      let selectedSubcategory = null;
-      let selectedAgency = null;
-      let selectedTeam = null;
-      let selectedName = null;
+      function setupSubcategories() {
+        subcategoryChips.innerHTML = "";
+        state.subcategories.forEach((sub) => {
+          const preset = SUBCATEGORY_PRESETS[sub.name] || FALLBACK_STYLE;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "chip";
+          button.dataset.subcategoryId = sub.id;
+          button.dataset.subcategoryName = sub.name;
+          button.innerHTML = `
+            <span class="chip-icon" aria-hidden="true">${preset.icon}</span>
+            <span class="chip-details">
+              <span class="chip-label">${sub.name}</span>
+            </span>
+          `;
+          button.style.setProperty("--chip-accent", preset.accent);
+          button.style.setProperty("--chip-bg", preset.background);
+          button.style.setProperty("--chip-icon-bg", preset.iconBg);
+          button.style.setProperty("--chip-shadow", preset.shadow);
+          button.addEventListener("click", () => handleSubcategorySelect(sub, button));
+          subcategoryChips.appendChild(button);
+        });
+      }
+
+      function handleSubcategorySelect(subcategory, button) {
+        document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
+        button.classList.add("active");
+        state.selectedSubcategory = subcategory;
+        resetSelections("subcategory");
+        detailsSection.classList.add("visible");
+        detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        loadRecipientsForSubcategory(subcategory.id);
+      }
+
+      async function loadRecipientsForSubcategory(subcategoryId) {
+        selectionPreview.textContent = "수령인 목록을 불러오는 중입니다...";
+        agencySelect.innerHTML = '<option value="">불러오는 중...</option>';
+        agencySelect.disabled = true;
+        teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
+        teamSelect.disabled = true;
+        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
+        nameSelect.disabled = true;
+        try {
+          const response = await fetch(`/api/recipients/by-subcategory/${subcategoryId}`);
+          if (!response.ok) {
+            throw new Error("recipients fetch failed");
+          }
+          state.recipients = await response.json();
+          populateAgencySelect();
+        } catch (error) {
+          selectionPreview.textContent = "수령인 목록을 불러오지 못했습니다.";
+        }
+      }
+
+      function populateAgencySelect() {
+        const agencies = Array.from(
+          new Set(
+            state.recipients.map((recipient) => (recipient.agency?.trim() ? recipient.agency.trim() : "소속사 미지정"))
+          )
+        ).sort((a, b) => a.localeCompare(b, "ko"));
+
+        if (agencies.length === 0) {
+          selectionPreview.textContent = "등록된 수령인이 없습니다.";
+          return;
+        }
+
+        agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
+        agencies.forEach((agency) => {
+          const option = document.createElement("option");
+          option.value = agency;
+          option.textContent = agency;
+          agencySelect.appendChild(option);
+        });
+        agencySelect.disabled = false;
+        selectionPreview.textContent = "소속사를 선택해 주세요.";
+      }
+
+      function populateGroupSelect() {
+        if (!state.selectedAgency) return;
+        const groups = Array.from(
+          new Set(
+            state.recipients
+              .filter((recipient) => normalizeAgency(recipient.agency) === state.selectedAgency)
+              .map((recipient) => (recipient.group_name?.trim() ? recipient.group_name.trim() : "그룹/팀 미지정"))
+          )
+        ).sort((a, b) => a.localeCompare(b, "ko"));
+
+        teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
+        groups.forEach((group) => {
+          const option = document.createElement("option");
+          option.value = group;
+          option.textContent = group;
+          teamSelect.appendChild(option);
+        });
+        if (groups.length === 0) {
+          teamSelect.disabled = true;
+          state.selectedGroup = null;
+          selectionPreview.textContent = "팀/그룹 정보가 없습니다. 이름을 바로 선택해 주세요.";
+          populateNameSelect();
+        } else {
+          teamSelect.disabled = false;
+          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
+          nameSelect.disabled = true;
+          selectionPreview.textContent = "팀/그룹을 선택해 주세요.";
+        }
+      }
+
+      function populateNameSelect() {
+        if (!state.selectedAgency) return;
+        const filteredRecipients = state.recipients.filter((recipient) => {
+          const sameAgency = normalizeAgency(recipient.agency) === state.selectedAgency;
+          const groupName = recipient.group_name?.trim() ? recipient.group_name.trim() : "그룹/팀 미지정";
+          if (!state.selectedGroup) {
+            return sameAgency;
+          }
+          return sameAgency && groupName === state.selectedGroup;
+        });
+
+        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
+        filteredRecipients.forEach((recipient) => {
+          const option = document.createElement("option");
+          option.value = recipient.id;
+          option.textContent = recipient.name;
+          option.dataset.agency = normalizeAgency(recipient.agency);
+          option.dataset.group = recipient.group_name?.trim() || "";
+          nameSelect.appendChild(option);
+        });
+        nameSelect.disabled = filteredRecipients.length === 0;
+        if (filteredRecipients.length === 0) {
+          selectionPreview.textContent = "해당 조건의 수령인이 없습니다.";
+        }
+      }
+
+      function normalizeAgency(value) {
+        return value?.trim() || "소속사 미지정";
+      }
+
+      agencySelect.addEventListener("change", () => {
+        state.selectedAgency = agencySelect.value || null;
+        state.selectedGroup = null;
+        state.selectedRecipient = null;
+        teamSelect.value = "";
+        nameSelect.value = "";
+        nextButton.disabled = true;
+        if (!state.selectedAgency) {
+          teamSelect.disabled = true;
+          nameSelect.disabled = true;
+          selectionPreview.textContent = "소속사를 다시 선택해 주세요.";
+          return;
+        }
+        populateGroupSelect();
+      });
+
+      teamSelect.addEventListener("change", () => {
+        state.selectedGroup = teamSelect.value || null;
+        state.selectedRecipient = null;
+        nameSelect.value = "";
+        nextButton.disabled = true;
+        populateNameSelect();
+      });
+
+      nameSelect.addEventListener("change", () => {
+        const recipientId = Number(nameSelect.value);
+        state.selectedRecipient = state.recipients.find((recipient) => recipient.id === recipientId) || null;
+        updateSelectionPreview();
+      });
+
+      function updateSelectionPreview() {
+        if (!state.selectedRecipient || !state.selectedSubcategory) {
+          selectionPreview.textContent = "아직 선택되지 않았습니다.";
+          nextButton.disabled = true;
+          return;
+        }
+
+        const agencyLabel = normalizeAgency(state.selectedRecipient.agency);
+        const groupLabel = state.selectedRecipient.group_name?.trim() || "그룹/팀 미지정";
+        selectionPreview.textContent = [
+          state.selectedCategory.name,
+          state.selectedSubcategory.name,
+          agencyLabel,
+          groupLabel,
+          state.selectedRecipient.name,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        nextButton.disabled = false;
+      }
 
       function resetSelections(level) {
         if (level === "subcategory") {
-          selectedAgency = null;
-          selectedTeam = null;
-          selectedName = null;
+          state.selectedAgency = null;
+          state.selectedGroup = null;
+          state.selectedRecipient = null;
           agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
           agencySelect.disabled = true;
           teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
@@ -230,127 +403,35 @@
           nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
           nameSelect.disabled = true;
         } else if (level === "agency") {
-          selectedTeam = null;
-          selectedName = null;
+          state.selectedGroup = null;
+          state.selectedRecipient = null;
           teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
           teamSelect.disabled = true;
           nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
           nameSelect.disabled = true;
         } else if (level === "team") {
-          selectedName = null;
+          state.selectedRecipient = null;
           nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
           nameSelect.disabled = true;
         }
-        updateSelectionPreview();
+        selectionPreview.textContent = "아직 선택되지 않았습니다.";
         nextButton.disabled = true;
       }
 
-      function updateSelectionPreview() {
-        if (selectedSubcategory && selectedAgency && selectedTeam && selectedName) {
-          const subLabel = selectedCategoryData.subcategories[selectedSubcategory].label;
-          selectionPreview.textContent = `${selectedCategoryData.label} · ${subLabel} · ${selectedAgency} · ${selectedTeam} · ${selectedName}`;
-          nextButton.disabled = false;
-        } else {
-          selectionPreview.textContent = "아직 선택되지 않았습니다.";
-        }
-      }
-
-        function setupSubcategories() {
-          const subcategories = selectedCategoryData.subcategories;
-          subcategoryChips.innerHTML = "";
-          Object.entries(subcategories).forEach(([key, value]) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "chip";
-            button.dataset.subcategory = key;
-            button.innerHTML = `
-              <span class="chip-icon" aria-hidden="true">${value.icon || "✨"}</span>
-              <span class="chip-details">
-                <span class="chip-label">${value.label}</span>
-              </span>
-            `;
-            button.style.setProperty("--chip-accent", value.accent || "var(--primary)");
-            button.style.setProperty("--chip-bg", value.background || "#fff");
-            button.style.setProperty("--chip-icon-bg", value.iconBg || "rgba(17, 17, 17, 0.08)");
-            button.style.setProperty("--chip-shadow", value.shadow || "rgba(17, 17, 17, 0.05)");
-            button.addEventListener("click", () => {
-              document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
-              button.classList.add("active");
-              selectedSubcategory = key;
-              resetSelections("subcategory");
-
-              const agencies = subcategories[key].agencies;
-              agencySelect.innerHTML = '<option value="">소속사를 선택하세요</option>';
-              Object.keys(agencies).forEach((agency) => {
-                const option = document.createElement("option");
-                option.value = agency;
-                option.textContent = agency;
-                agencySelect.appendChild(option);
-              });
-              agencySelect.disabled = false;
-              detailsSection.classList.add("visible");
-              detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-            });
-            subcategoryChips.appendChild(button);
-          });
-        }
-
-      agencySelect.addEventListener("change", () => {
-        selectedAgency = agencySelect.value || null;
-        resetSelections("agency");
-        if (!selectedAgency || !selectedSubcategory) return;
-
-        const teams =
-          selectedCategoryData.subcategories[selectedSubcategory].agencies[selectedAgency].teams;
-        teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
-        Object.keys(teams).forEach((team) => {
-          const option = document.createElement("option");
-          option.value = team;
-          option.textContent = team;
-          teamSelect.appendChild(option);
+      nextButton.addEventListener("click", () => {
+        if (!state.selectedRecipient || !state.selectedSubcategory) return;
+        const redirectParams = new URLSearchParams({
+          category: categoryKey,
+          categoryLabel: state.selectedCategory.name,
+          subcategoryId: state.selectedSubcategory.id,
+          subcategoryLabel: state.selectedSubcategory.name,
+          agency: normalizeAgency(state.selectedRecipient.agency),
+          team: state.selectedRecipient.group_name?.trim() || "",
+          name: state.selectedRecipient.name,
+          recipientId: state.selectedRecipient.id,
         });
-        teamSelect.disabled = false;
+        window.location.href = `/letter-stationery.html?${redirectParams.toString()}`;
       });
-
-      teamSelect.addEventListener("change", () => {
-        selectedTeam = teamSelect.value || null;
-        resetSelections("team");
-        if (!selectedTeam || !selectedSubcategory || !selectedAgency) return;
-
-        const names =
-          selectedCategoryData.subcategories[selectedSubcategory].agencies[selectedAgency].teams[
-            selectedTeam
-          ];
-        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-        names.forEach((name) => {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          nameSelect.appendChild(option);
-        });
-        nameSelect.disabled = false;
-      });
-
-        nameSelect.addEventListener("change", () => {
-          selectedName = nameSelect.value || null;
-          updateSelectionPreview();
-        });
-
-        nextButton.addEventListener("click", () => {
-          if (nextButton.disabled) return;
-          const params = new URLSearchParams({
-            category: categoryKey,
-            categoryLabel: selectedCategoryData.label,
-            subcategory: selectedSubcategory,
-            subcategoryLabel: selectedCategoryData.subcategories[selectedSubcategory].label,
-            agency: selectedAgency,
-            team: selectedTeam,
-            name: selectedName,
-          });
-          window.location.href = `/letter-stationery.html?${params.toString()}`;
-        });
-
-      setupSubcategories();
     </script>
   </body>
 </html>
