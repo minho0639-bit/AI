@@ -72,12 +72,33 @@
           </div>
         </div>
 
+        <div class="payment-method-card" aria-labelledby="paymentMethodTitle">
+          <div class="payment-method-card__header">
+            <h3 id="paymentMethodTitle">결제 수단</h3>
+            <p class="muted small">카드와 휴대폰 소액결제 중 원하는 방식을 선택해 주세요.</p>
+          </div>
+          <label class="payment-method-option">
+            <input type="radio" name="payMethod" value="CARD" checked />
+            <div class="payment-method-option__body">
+              <strong>신용/체크카드</strong>
+              <span class="muted small">모든 국내 카드로 즉시 결제</span>
+            </div>
+          </label>
+          <label class="payment-method-option">
+            <input type="radio" name="payMethod" value="MOBILE" />
+            <div class="payment-method-option__body">
+              <strong>휴대폰 소액결제</strong>
+              <span class="muted small">통신사 요금에 합산 청구</span>
+            </div>
+          </label>
+        </div>
+
         <div class="payment-actions">
           <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
           <button type="button" class="primary" id="requestPayment">결제하기</button>
         </div>
         <p class="note">
-          · 포트원을 통해 안전하게 결제가 처리됩니다.<br />
+          · 포트원을 통해 카드 및 휴대폰 소액결제가 안전하게 처리됩니다.<br />
           · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
         </p>
       </section>
@@ -203,11 +224,17 @@
       const confirmMockPayment = document.getElementById("confirmMockPayment");
       const modalAmount = document.getElementById("modalAmount");
       const modalOrderId = document.getElementById("modalOrderId");
+      const payMethodInputs = document.querySelectorAll('input[name="payMethod"]');
 
       const BUYER_PROFILE_KEY = "fanletterProfile";
 
       let draftData = null;
       let storedBuyerProfile = null;
+
+      function getSelectedPayMethod() {
+        const checked = Array.from(payMethodInputs).find((input) => input.checked);
+        return checked ? checked.value : "CARD";
+      }
 
       function formatCurrency(value) {
         return `${value.toLocaleString("ko-KR")}원`;
@@ -436,6 +463,7 @@
 
         const orderId = `order_${Date.now()}`;
         const paymentAmount = PAYMENT_CONFIG.baseAmount;
+        const payMethod = getSelectedPayMethod();
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
           openPaymentModal(orderId, paymentAmount);
@@ -454,7 +482,7 @@
             orderName: "팬레터 기본 요금",
             totalAmount: paymentAmount,
             currency: "KRW",
-            payMethod: "CARD",
+            payMethod,
             customer: {
               customerId: `customer_${Date.now()}`,
               fullName: buyerInfo.name || "팬레터 고객",

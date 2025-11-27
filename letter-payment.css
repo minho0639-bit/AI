@@ -315,6 +315,60 @@ button:active {
   gap: 14px;
 }
 
+.payment-method-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.payment-method-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-method-card__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.payment-method-option input {
+  margin-top: 6px;
+  accent-color: var(--primary);
+}
+
+.payment-method-option__body {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.payment-method-option__body strong {
+  font-size: 1rem;
+}
+
+.payment-method-option input:checked + .payment-method-option__body {
+  border-color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
+}
+
 .price-row {
   display: flex;
   justify-content: space-between;
