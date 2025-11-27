@@ -270,6 +270,7 @@
       let storedBuyerProfile = null;
       let availableCoupons = loadCoupons();
       let appliedCoupon = null;
+      const ORDERS_PAGE_URL = "/profile.html#orders";
 
       function getSelectedPayMethod() {
         const checked = Array.from(payMethodInputs).find((input) => input.checked);
@@ -649,6 +650,10 @@
         link.click();
         link.remove();
       }
+
+      function navigateToOrdersPage() {
+        window.location.href = ORDERS_PAGE_URL;
+      }
       async function handleSavePreviewImage() {
         if (!draftData) {
           alert("편지 데이터가 없어 이미지를 저장할 수 없습니다.");
@@ -813,6 +818,7 @@
           alert("쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다.");
           sessionStorage.removeItem("fanletterDraft");
           consumeCoupon();
+          setTimeout(navigateToOrdersPage, 800);
           return;
         }
 
@@ -863,6 +869,7 @@
             alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
             sessionStorage.removeItem("fanletterDraft");
             consumeCoupon();
+            setTimeout(navigateToOrdersPage, 800);
           } else if (paymentResult.status === "READY") {
             alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
           } else if (paymentResult.status === "VIRTUAL_ACCOUNT_ISSUED") {
