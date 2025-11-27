@@ -77,6 +77,25 @@
       const form = document.getElementById("signup-form");
       const messageEl = document.getElementById("message");
 
+      function persistBuyerProfile(profile) {
+        if (!profile?.email) return;
+        const payload = {
+          name: profile.name || "",
+          email: profile.email,
+          phone: profile.phone || "",
+        };
+        try {
+          sessionStorage.setItem("fanletterProfile", JSON.stringify(payload));
+        } catch (error) {
+          console.warn("세션 저장 실패:", error);
+        }
+        try {
+          localStorage.setItem("fanletterProfile", JSON.stringify(payload));
+        } catch (error) {
+          console.warn("로컬 저장 실패:", error);
+        }
+      }
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         messageEl.textContent = "";
@@ -112,6 +131,7 @@
           messageEl.textContent = `${data.message} 잠시 후 홈으로 이동합니다.`;
           messageEl.classList.remove("error");
           messageEl.classList.add("success");
+          persistBuyerProfile({ name, email, phone });
           form.reset();
 
           setTimeout(() => {
