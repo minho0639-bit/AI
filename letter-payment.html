@@ -7,11 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&family=Dongle:wght@300;400;700&family=Gaegu:wght@300;400;700&family=Single+Day&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="letter-payment.css" />
     <script src="https://cdn.portone.io/v2/browser-sdk.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
   </head>
   <body>
     <header class="payment-nav">
@@ -66,20 +67,54 @@
             <span>추가 요금</span>
             <span id="extraAmount">0원</span>
           </div>
+          <div class="price-row discount" id="discountRow" hidden>
+            <span>쿠폰 할인</span>
+            <span id="discountAmount">-0원</span>
+          </div>
           <div class="price-row total">
             <span>결제 예정 금액</span>
             <span id="totalAmount">2,000원</span>
           </div>
         </div>
 
+        <div class="coupon-card" id="couponCard">
+          <div class="coupon-card__info">
+            <strong>보유 쿠폰</strong>
+            <p class="muted small" id="couponStatus">사용 가능한 쿠폰이 없습니다.</p>
+          </div>
+          <div class="coupon-card__actions">
+            <select id="couponSelect" aria-label="쿠폰 선택" disabled>
+              <option value="">쿠폰 없음</option>
+            </select>
+            <button type="button" class="ghost tiny" id="applyCoupon" disabled>쿠폰 적용</button>
+          </div>
+        </div>
+
+        <div class="payment-method-card" aria-labelledby="paymentMethodTitle">
+          <div class="payment-method-card__header">
+            <h3 id="paymentMethodTitle">결제 수단</h3>
+            <p class="muted small">카드와 휴대폰 소액결제 중 원하는 방식을 선택해 주세요.</p>
+          </div>
+          <label class="payment-method-option">
+            <input type="radio" name="payMethod" value="CARD" checked />
+            <div class="payment-method-option__body">
+              <strong>신용/체크카드</strong>
+              <span class="muted small">모든 국내 카드로 즉시 결제</span>
+            </div>
+          </label>
+          <label class="payment-method-option">
+            <input type="radio" name="payMethod" value="MOBILE" />
+            <div class="payment-method-option__body">
+              <strong>휴대폰 소액결제</strong>
+              <span class="muted small">통신사 요금에 합산 청구</span>
+            </div>
+          </label>
+        </div>
+
         <div class="payment-actions">
-          <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
+          <button type="button" class="ghost" id="downloadDraft">편지 이미지 저장</button>
           <button type="button" class="primary" id="requestPayment">결제하기</button>
         </div>
-        <p class="note">
-          · 포트원을 통해 안전하게 결제가 처리됩니다.<br />
-          · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
-        </p>
       </section>
 
       <section class="process-panel">
@@ -161,6 +196,24 @@
         midnight: "paper-midnight",
         default: "paper-lined",
       };
+      const PREVIEW_GUIDE_COUNT = 16;
+      const FONT_LABEL_MAP = {
+        default: "Pretendard",
+        serif: "Cormorant",
+        handwriting: "나눔펜",
+        gaegu: "개구",
+        dongle: "동글",
+        singleDay: "싱글데이",
+      };
+      const INLINE_COLOR_WHITELIST = new Set([
+        "#1b1c1f",
+        "#1f3a93",
+        "#d94b8c",
+        "#1f7a54",
+        "#ff7a45",
+        "#f9f6ef",
+      ]);
+      const COUPON_STORAGE_KEY = "fanletterCoupons";
       const FORBIDDEN_WORDS = [
         "씨발",
         "시발",
@@ -187,6 +240,12 @@
       const baseAmountEl = document.getElementById("baseAmount");
       const totalAmountEl = document.getElementById("totalAmount");
       const extraAmountEl = document.getElementById("extraAmount");
+      const discountRow = document.getElementById("discountRow");
+      const discountAmountEl = document.getElementById("discountAmount");
+      const couponCard = document.getElementById("couponCard");
+      const couponSelect = document.getElementById("couponSelect");
+      const couponStatus = document.getElementById("couponStatus");
+      const applyCouponBtn = document.getElementById("applyCoupon");
       const requestPayment = document.getElementById("requestPayment");
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
@@ -203,11 +262,20 @@
       const confirmMockPayment = document.getElementById("confirmMockPayment");
       const modalAmount = document.getElementById("modalAmount");
       const modalOrderId = document.getElementById("modalOrderId");
+      const payMethodInputs = document.querySelectorAll('input[name="payMethod"]');
 
       const BUYER_PROFILE_KEY = "fanletterProfile";
 
       let draftData = null;
       let storedBuyerProfile = null;
+      let availableCoupons = loadCoupons();
+      let appliedCoupon = null;
+      const ORDERS_PAGE_URL = "/profile.html#orders";
+
+      function getSelectedPayMethod() {
+        const checked = Array.from(payMethodInputs).find((input) => input.checked);
+        return checked ? checked.value : "CARD";
+      }
 
       function formatCurrency(value) {
         return `${value.toLocaleString("ko-KR")}원`;
@@ -231,6 +299,236 @@
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
+      }
+
+      function sanitizeDraftHtml(html) {
+        if (!html) return "";
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV", "SPAN"]);
+
+        function clean(node) {
+          Array.from(node.childNodes).forEach((child) => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              clean(child);
+              if (!allowedTags.has(child.tagName)) {
+                const fragment = document.createDocumentFragment();
+                while (child.firstChild) {
+                  fragment.appendChild(child.firstChild);
+                }
+                child.replaceWith(fragment);
+              } else {
+                sanitizeDraftElement(child);
+              }
+            } else if (child.nodeType === Node.COMMENT_NODE) {
+              child.remove();
+            }
+          });
+        }
+
+        clean(template.content);
+        return template.innerHTML;
+      }
+
+      function loadCoupons() {
+        try {
+          const raw = localStorage.getItem(COUPON_STORAGE_KEY);
+          let list = [];
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              list = parsed;
+            }
+          }
+          const legacyRaw = localStorage.getItem("fanletterWelcomeCoupon");
+          if (legacyRaw) {
+            try {
+              const legacy = JSON.parse(legacyRaw);
+              const exists = list.some((coupon) => coupon.code === legacy.code);
+              if (!exists && !legacy.used) {
+                list.push({
+                  code: legacy.code || "WELCOME-FREE",
+                  name: legacy.description || "첫 결제 무료 쿠폰",
+                  type: legacy.type || "amount",
+                  amount: legacy.amount || 2000,
+                  description: legacy.description || "기본 요금 2,000원 할인",
+                  issuedAt: legacy.createdAt || Date.now(),
+                  used: !!legacy.used,
+                  usedAt: legacy.usedAt,
+                });
+              }
+              localStorage.removeItem("fanletterWelcomeCoupon");
+              localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
+            } catch (legacyError) {
+              console.warn("기존 쿠폰 변환 실패:", legacyError);
+            }
+          }
+          return list;
+        } catch (error) {
+          console.warn("쿠폰 정보를 불러오지 못했습니다.", error);
+          return [];
+        }
+      }
+
+      function storeCouponState(list) {
+        if (!Array.isArray(list)) return;
+        try {
+          localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
+        } catch (error) {
+          console.warn("쿠폰 정보를 저장하지 못했습니다.", error);
+        }
+      }
+
+      function markCouponUsed() {
+        if (!appliedCoupon) return;
+        availableCoupons = availableCoupons.map((coupon) =>
+          coupon.code === appliedCoupon.code ? { ...coupon, used: true, usedAt: Date.now() } : coupon
+        );
+        storeCouponState(availableCoupons);
+        appliedCoupon = null;
+      }
+
+      function getCurrentDiscount() {
+        if (!appliedCoupon) return 0;
+        const amount = Number(appliedCoupon.amount) || 0;
+        return Math.max(0, Math.min(PAYMENT_CONFIG.baseAmount, amount));
+      }
+
+      function refreshAmounts() {
+        setAmounts(PAYMENT_CONFIG.baseAmount, 0, getCurrentDiscount());
+      }
+
+      function updateCouponUI() {
+        if (!couponCard) return;
+        const unusedCoupons = availableCoupons.filter((coupon) => !coupon.used);
+        couponCard.hidden = false;
+        couponStatus.textContent =
+          unusedCoupons.length === 0
+            ? "사용 가능한 쿠폰이 없습니다."
+            : "보유 쿠폰 중 하나를 선택해 적용해 주세요.";
+        if (!couponSelect) return;
+        couponSelect.innerHTML =
+          unusedCoupons.length === 0
+            ? '<option value="">쿠폰 없음</option>'
+            : `<option value="">쿠폰 선택</option>${unusedCoupons
+                .map(
+                  (coupon) => `
+                  <option value="${coupon.code}">
+                    ${coupon.name || coupon.code} (-${(coupon.amount || 0).toLocaleString("ko-KR")}원)
+                  </option>`
+                )
+                .join("")}`;
+        couponSelect.disabled = unusedCoupons.length === 0;
+        if (applyCouponBtn) {
+          applyCouponBtn.disabled = unusedCoupons.length === 0;
+          applyCouponBtn.textContent = appliedCoupon ? "적용 완료" : "쿠폰 적용";
+        }
+        if (appliedCoupon && couponSelect) {
+          couponSelect.value = appliedCoupon.code;
+        }
+      }
+
+      function handleApplyCoupon() {
+        if (!couponSelect) return;
+        const code = couponSelect.value;
+        if (!code) {
+          alert("적용할 쿠폰을 선택해 주세요.");
+          return;
+        }
+        const coupon = availableCoupons.find((item) => item.code === code && !item.used);
+        if (!coupon) {
+          alert("선택한 쿠폰을 사용할 수 없습니다.");
+          return;
+        }
+        appliedCoupon = coupon;
+        updateCouponUI();
+        refreshAmounts();
+        alert("쿠폰이 적용되었습니다.");
+      }
+
+      function consumeCoupon() {
+        if (!appliedCoupon) return;
+        markCouponUsed();
+        appliedCoupon = null;
+        updateCouponUI();
+        refreshAmounts();
+      }
+
+      function sanitizeDraftElement(element) {
+        if (element.tagName === "SPAN") {
+          const style = extractPreviewColorStyle(element.getAttribute("style"));
+          if (style) {
+            element.setAttribute("style", style);
+          } else {
+            element.removeAttribute("style");
+          }
+          stripAttributesExcept(element, ["style"]);
+          return;
+        }
+        stripAllAttributes(element);
+      }
+
+      function stripAllAttributes(element) {
+        while (element.attributes.length > 0) {
+          element.removeAttribute(element.attributes[0].name);
+        }
+      }
+
+      function stripAttributesExcept(element, allowedNames = []) {
+        const whitelist = new Set(allowedNames.map((name) => name.toLowerCase()));
+        Array.from(element.attributes).forEach((attr) => {
+          if (!whitelist.has(attr.name.toLowerCase())) {
+            element.removeAttribute(attr.name);
+          }
+        });
+      }
+
+      function extractPreviewColorStyle(styleValue) {
+        if (!styleValue) return null;
+        const declarations = styleValue
+          .split(";")
+          .map((decl) => decl.trim())
+          .filter(Boolean);
+        let colorValue = null;
+        declarations.forEach((decl) => {
+          const [prop, value] = decl.split(":");
+          if (!prop || !value) return;
+          if (prop.trim().toLowerCase() === "color") {
+            const normalized = normalizePreviewColor(value.trim());
+            if (normalized) {
+              colorValue = normalized;
+            }
+          }
+        });
+        return colorValue ? `color: ${colorValue}` : null;
+      }
+
+      function normalizePreviewColor(value) {
+        if (!value) return null;
+        const trimmed = value.replace(/\s+/g, "").toLowerCase();
+        if (INLINE_COLOR_WHITELIST.has(trimmed)) {
+          return trimmed;
+        }
+        if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+          return INLINE_COLOR_WHITELIST.has(trimmed) ? trimmed : null;
+        }
+        const rgbMatch = trimmed.match(
+          /^rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})(?:,(0|1|0?\.\d+))?\)$/i
+        );
+        if (!rgbMatch) {
+          return null;
+        }
+        const [, r, g, b] = rgbMatch;
+        const hex = rgbToHex(r, g, b);
+        return INLINE_COLOR_WHITELIST.has(hex) ? hex : null;
+      }
+
+      function rgbToHex(r, g, b) {
+        const clamp = (value) => {
+          const num = Math.max(0, Math.min(255, parseInt(value, 10) || 0));
+          return num.toString(16).padStart(2, "0");
+        };
+        return `#${clamp(r)}${clamp(g)}${clamp(b)}`;
       }
 
       const FORBIDDEN_REGEXES = FORBIDDEN_WORDS.map((word) => {
@@ -268,18 +566,24 @@
           return;
         }
 
-        const preview = data.text.length > 400 ? `${data.text.slice(0, 400)}…` : data.text;
+        const baseText = data.text || "";
+        const previewFallback = baseText.length > 400 ? `${baseText.slice(0, 400)}…` : baseText;
+        const pages = Number(data.pages) || 1;
+        const characters = Number(data.characters) || baseText.length;
         const stationeryClass = STATIONERY_CLASS_MAP[data.stationery] || STATIONERY_CLASS_MAP.default;
-        const previewHtml = escapeHtml(preview).replace(/\n/g, "<br>");
+        const previewHtml = data.formattedText
+          ? sanitizeDraftHtml(data.formattedText)
+          : escapeHtml(previewFallback).replace(/\n/g, "<br>");
+        const fontLabel = FONT_LABEL_MAP[data.font] || data.font || FONT_LABEL_MAP.default;
         summaryBody.innerHTML = `
           <ul class="summary-grid">
             <li>
               <span class="label">작성 분량</span>
-              <strong>${data.pages}장 · ${data.characters}자</strong>
+              <strong>${pages}장 · ${characters}자</strong>
             </li>
             <li>
               <span class="label">선택 서체</span>
-              <strong>${data.font}</strong>
+              <strong>${fontLabel}</strong>
             </li>
             <li>
               <span class="label">글자 색상</span>
@@ -293,29 +597,98 @@
           <div class="preview">
             <p class="label">내용 미리보기</p>
             <div class="preview-paper ${stationeryClass}">
-              <div class="preview-paper-body font-${data.font || "default"}">${previewHtml}</div>
+              <div class="preview-paper-inner">
+                <div class="preview-paper-guides" aria-hidden="true"></div>
+                <div class="preview-paper-body font-${data.font || "default"}">${previewHtml}</div>
+              </div>
             </div>
           </div>
         `;
+        const previewPaperEl = summaryBody.querySelector(".preview-paper");
+        if (previewPaperEl) {
+          renderPreviewGuides(previewPaperEl);
+        }
+      }
+      function renderPreviewGuides(previewPaper) {
+        const guidesContainer = previewPaper.querySelector(".preview-paper-guides");
+        if (!guidesContainer) return;
+        guidesContainer.innerHTML = "";
+        const computed = getComputedStyle(previewPaper);
+        const spacingValue = parseFloat(
+          (computed.getPropertyValue("--paper-line-spacing") || "32").replace("px", "")
+        );
+        const lineColor = computed.getPropertyValue("--paper-line-color") || "rgba(0,0,0,0.08)";
+        const lineCount = PREVIEW_GUIDE_COUNT;
+        for (let index = 0; index < lineCount; index += 1) {
+          const guide = document.createElement("div");
+          guide.className = "preview-paper-guide";
+          guide.style.top = `${Math.round(spacingValue * index)}px`;
+          guide.style.backgroundColor = lineColor;
+          guidesContainer.appendChild(guide);
+        }
       }
 
-      function setAmounts(base, extra = 0) {
+      function setAmounts(base, extra = 0, discount = 0) {
         baseAmountEl.textContent = formatCurrency(base);
         extraAmountEl.textContent = formatCurrency(extra);
-        totalAmountEl.textContent = formatCurrency(base + extra);
+        const hasDiscount = discount > 0;
+        if (discountRow) {
+          discountRow.hidden = !hasDiscount;
+        }
+        if (discountAmountEl) {
+          discountAmountEl.textContent = hasDiscount ? `-${discount.toLocaleString("ko-KR")}원` : "-0원";
+        }
+        const total = Math.max(0, base + extra - discount);
+        totalAmountEl.textContent = formatCurrency(total);
       }
 
-      function downloadLetter(data) {
-        const blob = new Blob([data.text], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
+      function downloadDataUrl(dataUrl, filename) {
         const link = document.createElement("a");
-        const timestamp = new Date().toISOString().split("T")[0];
-        link.href = url;
-        link.download = `fanletter-${timestamp}.txt`;
+        link.href = dataUrl;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
+      }
+
+      function navigateToOrdersPage() {
+        window.location.href = ORDERS_PAGE_URL;
+      }
+      async function handleSavePreviewImage() {
+        if (!draftData) {
+          alert("편지 데이터가 없어 이미지를 저장할 수 없습니다.");
+          return;
+        }
+        const previewPaper = document.querySelector(".preview .preview-paper");
+        if (!previewPaper) {
+          alert("미리보기를 불러온 뒤 다시 시도해 주세요.");
+          return;
+        }
+        if (typeof html2canvas !== "function") {
+          alert("이미지 저장 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          return;
+        }
+
+        try {
+          downloadDraft.disabled = true;
+          downloadDraft.textContent = "이미지 생성 중...";
+
+          const canvas = await html2canvas(previewPaper, {
+            backgroundColor: "#ffffff",
+            scale: Math.min(3, window.devicePixelRatio ? window.devicePixelRatio + 1 : 2),
+            logging: false,
+            useCORS: true,
+          });
+          const timestamp = new Date().toISOString().split("T")[0];
+          const dataUrl = canvas.toDataURL("image/png", 1);
+          downloadDataUrl(dataUrl, `fanletter-preview-${timestamp}.png`);
+        } catch (error) {
+          console.error("preview capture error:", error);
+          alert("이미지를 저장하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+          downloadDraft.disabled = false;
+          downloadDraft.textContent = "편지 이미지 저장";
+        }
       }
 
       function openPaymentModal(orderId, amount) {
@@ -416,6 +789,10 @@
         buyerNameInput.focus();
       }
 
+      function navigateToOrdersPage() {
+        window.location.href = "/profile.html#orders";
+      }
+
       async function handlePayment() {
         if (isProcessingPayment) return;
         if (!draftData) {
@@ -435,7 +812,19 @@
         }
 
         const orderId = `order_${Date.now()}`;
-        const paymentAmount = PAYMENT_CONFIG.baseAmount;
+        const discountAmount = getCurrentDiscount();
+        const paymentAmount = Math.max(0, PAYMENT_CONFIG.baseAmount - discountAmount);
+        const payMethod = getSelectedPayMethod();
+        // 이니시스 V2 휴대폰 결제는 상품 유형 명시가 필수
+        const productType = payMethod === "MOBILE" ? "PRODUCT_TYPE_REAL" : undefined;
+
+        if (paymentAmount === 0) {
+          alert("쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다.");
+          sessionStorage.removeItem("fanletterDraft");
+          consumeCoupon();
+          setTimeout(navigateToOrdersPage, 800);
+          return;
+        }
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
           openPaymentModal(orderId, paymentAmount);
@@ -447,14 +836,14 @@
           requestPayment.disabled = true;
           requestPayment.textContent = "결제창 호출 중...";
 
-          const paymentResult = await PortOne.requestPayment({
+          const paymentPayload = {
             storeId: PAYMENT_CONFIG.storeId,
             channelKey: PAYMENT_CONFIG.channelKey,
             paymentId: orderId,
             orderName: "팬레터 기본 요금",
             totalAmount: paymentAmount,
             currency: "KRW",
-            payMethod: "CARD",
+            payMethod,
             customer: {
               customerId: `customer_${Date.now()}`,
               fullName: buyerInfo.name || "팬레터 고객",
@@ -470,13 +859,21 @@
             buyerName: buyerInfo.name || "팬레터 고객",
             buyerTel: buyerInfo.phone || undefined,
             redirectUrl: `${window.location.origin}/letter-payment-complete.html`,
-          });
+          };
+
+          if (productType) {
+            paymentPayload.productType = productType;
+          }
+
+          const paymentResult = await PortOne.requestPayment(paymentPayload);
 
           console.log("PortOne 응답", paymentResult);
 
           if (paymentResult.status === "PAID") {
             alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
             sessionStorage.removeItem("fanletterDraft");
+            consumeCoupon();
+            setTimeout(navigateToOrdersPage, 800);
           } else if (paymentResult.status === "READY") {
             alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
           } else if (paymentResult.status === "VIRTUAL_ACCOUNT_ISSUED") {
@@ -494,8 +891,9 @@
         }
       }
 
+      applyCouponBtn?.addEventListener("click", handleApplyCoupon);
       requestPayment.addEventListener("click", handlePayment);
-      downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
+      downloadDraft.addEventListener("click", handleSavePreviewImage);
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
       backHome.addEventListener("click", () => (window.location.href = "/"));
       editBuyerInfoBtn.addEventListener("click", unlockBuyerForm);
@@ -508,7 +906,8 @@
 
       draftData = loadDraft();
       renderSummary(draftData);
-      setAmounts(PAYMENT_CONFIG.baseAmount, 0);
+      refreshAmounts();
+      updateCouponUI();
       const existingProfile = loadBuyerProfile();
       if (existingProfile) {
         applyBuyerProfile(existingProfile);

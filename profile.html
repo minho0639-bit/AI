@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 내 정보</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body>
+    <header class="profile-nav">
+      <div class="brand" role="img" aria-label="Fanletter Post">Fanletter Post</div>
+      <nav>
+        <button type="button" class="ghost tiny" id="goHomeBtn">홈으로</button>
+        <button type="button" class="ghost tiny" id="logoutBtn">로그아웃</button>
+      </nav>
+    </header>
+
+    <main class="profile-main" aria-live="polite">
+      <section class="profile-card" id="profileCard">
+        <div class="profile-card__header">
+          <div>
+            <p class="badge">My Account</p>
+            <h1>내 정보</h1>
+          </div>
+          <button type="button" class="ghost tiny" id="refreshProfile">새로고침</button>
+        </div>
+        <div class="profile-content" id="profileContent">
+          <p class="muted">회원 정보를 불러오는 중입니다...</p>
+        </div>
+        <div class="profile-actions">
+          <button type="button" class="primary" id="writeLetterBtn">편지 쓰러 가기</button>
+        </div>
+      </section>
+
+      <section class="coupon-section" id="couponSection">
+        <div class="coupon-section__header">
+          <h2>내 쿠폰</h2>
+          <p class="muted small">보유 쿠폰 현황</p>
+        </div>
+        <div class="coupon-status" id="couponStatusCard">
+          <div>
+            <strong>보유 현황</strong>
+            <p class="muted small" id="couponStatus">사용 가능한 쿠폰이 없습니다.</p>
+          </div>
+          <span class="coupon-badge" id="couponBadge">0장</span>
+        </div>
+        <ul class="coupon-list" id="couponList"></ul>
+      </section>
+
+      <section class="orders-section" id="ordersSection">
+        <span id="orders" class="sr-only" aria-hidden="true"></span>
+        <div class="orders-section__header">
+          <h2>주문 내역</h2>
+          <p class="muted small">최근 주문 20건</p>
+        </div>
+        <div id="ordersList" class="orders-list muted small">주문 내역을 불러오는 중입니다...</div>
+      </section>
+
+      <section class="empty-section" id="emptyState" hidden>
+        <p>로그인 정보를 확인할 수 없습니다.</p>
+        <button type="button" class="primary" id="backHomeBtn">홈으로 이동</button>
+      </section>
+    </main>
+
+    <script>
+      const profileContent = document.getElementById("profileContent");
+      const couponSection = document.getElementById("couponSection");
+      const couponStatusCard = document.getElementById("couponStatusCard");
+      const couponBadge = document.getElementById("couponBadge");
+      const couponStatusText = document.getElementById("couponStatus");
+      const couponListEl = document.getElementById("couponList");
+      const ordersListEl = document.getElementById("ordersList");
+      const refreshProfileBtn = document.getElementById("refreshProfile");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const goHomeBtn = document.getElementById("goHomeBtn");
+      const backHomeBtn = document.getElementById("backHomeBtn");
+      const writeLetterBtn = document.getElementById("writeLetterBtn");
+      const emptyState = document.getElementById("emptyState");
+
+      const COUPON_STORAGE_KEY = "fanletterCoupons";
+
+      async function fetchProfile() {
+        try {
+          profileContent.innerHTML = '<p class="muted">회원 정보를 불러오는 중입니다...</p>';
+          const res = await fetch("/api/me");
+          if (!res.ok) {
+            throw new Error("회원 정보를 불러올 수 없습니다.");
+          }
+          const data = await res.json();
+          if (!data.loggedIn) {
+            handleLogoutState();
+            return;
+          }
+          renderProfile(data.user);
+        } catch (error) {
+          profileContent.innerHTML = `<p class="error">${error.message}</p>`;
+        }
+      }
+
+      function renderProfile(user) {
+        emptyState.hidden = true;
+        const rows = [
+          { label: "이름", value: user.name || "이름 정보 없음" },
+          { label: "이메일", value: user.email },
+          { label: "회원 유형", value: user.isAdmin ? "관리자" : "일반 회원" },
+        ];
+        profileContent.innerHTML = `
+          <dl class="profile-info">
+            ${rows
+              .map(
+                (row) => `
+              <div class="profile-info__row">
+                <dt>${row.label}</dt>
+                <dd>${row.value}</dd>
+              </div>`
+              )
+              .join("")}
+          </dl>
+        `;
+        renderCouponSection();
+      }
+
+      function renderCouponSection() {
+        const coupons = loadCoupons();
+        if (!couponStatusText || !couponBadge || !couponListEl) return;
+        couponSection.hidden = false;
+        if (coupons.length === 0) {
+          couponStatusCard.classList.remove("coupon-status--used");
+          couponBadge.textContent = "0장";
+          couponStatusText.textContent = "사용 가능한 쿠폰이 없습니다.";
+          couponListEl.innerHTML = '<li class="coupon-item empty">보유 쿠폰이 없습니다.</li>';
+          return;
+        }
+        const unused = coupons.filter((coupon) => !coupon.used);
+        couponBadge.textContent = `${unused.length}장`;
+        couponStatusText.textContent =
+          unused.length > 0 ? "사용 가능한 쿠폰이 있습니다." : "모든 쿠폰을 사용했습니다.";
+        couponStatusCard.classList.toggle("coupon-status--used", unused.length === 0);
+        couponListEl.innerHTML = coupons
+          .map((coupon) => {
+            const amount = coupon.amount ? `-${coupon.amount.toLocaleString("ko-KR")}원` : "";
+            return `
+              <li class="coupon-item ${coupon.used ? "used" : ""}">
+                <div>
+                  <strong>${coupon.name || coupon.code}</strong>
+                  <p class="muted small">${coupon.description || ""}</p>
+                </div>
+                <div class="coupon-item__meta">
+                  <span>${amount}</span>
+                  <span class="coupon-item__badge">${coupon.used ? "사용 완료" : "사용 가능"}</span>
+                </div>
+              </li>
+            `;
+          })
+          .join("");
+      }
+
+      function loadCoupons() {
+        try {
+          const raw = localStorage.getItem(COUPON_STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+          console.warn("쿠폰 정보를 읽지 못했습니다.", error);
+          return [];
+        }
+      }
+
+      async function fetchOrders() {
+        try {
+          const response = await fetch("/api/orders/my?limit=20");
+          if (!response.ok) throw new Error("주문 내역을 불러올 수 없습니다.");
+          return await response.json();
+        } catch (error) {
+          console.warn(error.message);
+          return [];
+        }
+      }
+
+      async function renderOrders() {
+        if (!ordersListEl) return;
+        ordersListEl.innerHTML = '<p class="muted">주문 내역을 불러오는 중입니다...</p>';
+        const orders = await fetchOrders();
+        if (orders.length === 0) {
+          ordersListEl.innerHTML = '<p class="muted small">아직 주문 기록이 없습니다.</p>';
+          return;
+        }
+        ordersListEl.innerHTML = `
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>주문 번호</th>
+                <th>제목</th>
+                <th>결제 금액</th>
+                <th>결제 상태</th>
+                <th>작성일</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders
+                .map((order) => {
+                  const paid = order.payment_status || "미결제";
+                  return `
+                    <tr>
+                      <td>${order.id}</td>
+                      <td>${order.recipient_name || "편지"}</td>
+                      <td>${(order.payment_amount || 0).toLocaleString("ko-KR")}원</td>
+                      <td class="${paid === "PAID" ? "status-paid" : "status-pending"}">${paid}</td>
+                      <td>${order.created_at ? new Date(order.created_at).toLocaleDateString("ko-KR") : "-"}</td>
+                    </tr>
+                  `;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      async function handleLogout() {
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (error) {
+          console.warn("로그아웃 실패", error);
+        } finally {
+          window.location.href = "/";
+        }
+      }
+
+      refreshProfileBtn?.addEventListener("click", () => {
+        fetchProfile();
+        renderOrders();
+      });
+      logoutBtn?.addEventListener("click", handleLogout);
+      goHomeBtn?.addEventListener("click", () => (window.location.href = "/"));
+      backHomeBtn?.addEventListener("click", () => (window.location.href = "/"));
+      writeLetterBtn?.addEventListener("click", () => (window.location.href = "/letter.html"));
+
+      fetchProfile();
+      renderOrders();
+    </script>
+  </body>
+</html>

@@ -213,6 +213,9 @@ button:active {
 }
 
 .preview-paper {
+  --paper-fill: #fff;
+  --paper-line-color: rgba(0, 0, 0, 0.08);
+  --paper-line-spacing: 32px;
   width: 14cm;
   min-width: 14cm;
   max-width: 14cm;
@@ -226,70 +229,69 @@ button:active {
   overflow: hidden;
 }
 
-.preview-paper::after {
-  content: "";
-  position: absolute;
-  inset: 2cm;
-  pointer-events: none;
-  z-index: 0;
+.preview-paper.paper-classic {
+  --paper-fill: linear-gradient(135deg, #fff6ec, #f1e0cf);
+  --paper-line-color: rgba(123, 86, 53, 0.16);
+  --paper-line-spacing: 34px;
+  background: linear-gradient(135deg, #fff6ec, #f1e0cf);
 }
 
-.preview-paper.paper-lined::after {
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.08),
-    rgba(0, 0, 0, 0.08) 1px,
-    transparent 1px,
-    transparent 32px
-  );
-}
-
-.preview-paper.paper-classic::after {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(123, 86, 53, 0.08),
-      rgba(123, 86, 53, 0.08) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
-    linear-gradient(135deg, #fff6ec, #f1e0cf);
-}
-
-.preview-paper.paper-blossom::after {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(217, 75, 140, 0.08),
-      rgba(217, 75, 140, 0.08) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
-    linear-gradient(135deg, #fff1f7, #ffe2ef);
+.preview-paper.paper-blossom {
+  --paper-fill: linear-gradient(135deg, #fff1f7, #ffe2ef);
+  --paper-line-color: rgba(217, 75, 140, 0.16);
+  --paper-line-spacing: 34px;
+  background: linear-gradient(135deg, #fff1f7, #ffe2ef);
 }
 
 .preview-paper.paper-midnight {
+  --paper-fill: linear-gradient(135deg, #0d1a2e, #182544);
+  --paper-line-color: rgba(255, 255, 255, 0.25);
+  --paper-line-spacing: 34px;
   background: linear-gradient(135deg, #0d1a2e, #182544);
   color: #f2f4ff;
   border: 1px solid rgba(12, 21, 39, 0.6);
 }
 
-.preview-paper.paper-midnight::after {
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.15),
-    rgba(255, 255, 255, 0.15) 1px,
-    transparent 1px,
-    transparent 32px
-  );
+.preview-paper-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--paper-fill);
+  padding: 0;
+  overflow: hidden;
 }
 
+.preview-paper-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.preview-paper-guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--paper-line-color);
+  opacity: 1;
+}
+
+.preview-paper.paper-lined {
+  --paper-fill: #fff;
+  --paper-line-color: rgba(0, 0, 0, 0.08);
+  --paper-line-spacing: 32px;
+}
 .preview-paper-body {
   position: relative;
   z-index: 1;
-  line-height: 2;
+  font-size: 18px;
+  line-height: 1.8;
   height: 100%;
   overflow: hidden;
   white-space: pre-wrap;
   color: inherit;
+  background: transparent;
 }
 
 .preview-paper-body.font-default {
@@ -305,6 +307,21 @@ button:active {
   letter-spacing: 0.02em;
 }
 
+.preview-paper-body.font-gaegu {
+  font-family: "Gaegu", "Nanum Pen Script", cursive;
+  letter-spacing: 0.01em;
+}
+
+.preview-paper-body.font-dongle {
+  font-family: "Dongle", "Nanum Pen Script", cursive;
+  letter-spacing: 0.04em;
+}
+
+.preview-paper-body.font-singleDay {
+  font-family: "Single Day", "Nanum Pen Script", cursive;
+  letter-spacing: 0.02em;
+}
+
 .price-card {
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -313,6 +330,60 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.payment-method-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.payment-method-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-method-card__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.payment-method-option input {
+  margin-top: 6px;
+  accent-color: var(--primary);
+}
+
+.payment-method-option__body {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.payment-method-option__body strong {
+  font-size: 1rem;
+}
+
+.payment-method-option input:checked + .payment-method-option__body {
+  border-color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
 }
 
 .price-row {
@@ -331,14 +402,20 @@ button:active {
   font-weight: 700;
 }
 
+.price-row.discount {
+  color: #d94b8c;
+  font-weight: 600;
+}
+
 .payment-actions {
   margin-top: 20px;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .payment-actions button {
-  flex: 1;
+  flex: 1 1 40%;
 }
 
 .note {
@@ -346,6 +423,42 @@ button:active {
   font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.coupon-card {
+  margin-top: 16px;
+  border: 1px dashed rgba(217, 75, 140, 0.4);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(217, 75, 140, 0.08);
+}
+
+.coupon-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coupon-card__info strong {
+  font-size: 1rem;
+}
+
+.coupon-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.coupon-card__actions select {
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  background: #fff;
 }
 
 .empty-state {

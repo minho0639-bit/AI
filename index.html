@@ -142,7 +142,11 @@
       });
 
       profileBtn.addEventListener("click", () => {
-        alert("내 정보 페이지는 곧 제공될 예정입니다.");
+        if (document.body.classList.contains("logged-in")) {
+          window.location.href = "/profile.html";
+        } else {
+          alert("로그인 후 이용할 수 있습니다.");
+        }
       });
 
       letterBtn.addEventListener("click", () => {

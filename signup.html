@@ -77,6 +77,47 @@
       const form = document.getElementById("signup-form");
       const messageEl = document.getElementById("message");
 
+      function persistBuyerProfile(profile) {
+        if (!profile?.email) return;
+        const payload = {
+          name: profile.name || "",
+          email: profile.email,
+          phone: profile.phone || "",
+        };
+        try {
+          sessionStorage.setItem("fanletterProfile", JSON.stringify(payload));
+        } catch (error) {
+          console.warn("세션 저장 실패:", error);
+        }
+        try {
+          localStorage.setItem("fanletterProfile", JSON.stringify(payload));
+        } catch (error) {
+          console.warn("로컬 저장 실패:", error);
+        }
+      }
+
+      function persistWelcomeCoupon() {
+        try {
+          const storageKey = "fanletterCoupons";
+          const raw = localStorage.getItem(storageKey);
+          const coupons = raw ? JSON.parse(raw) : [];
+          const exists = coupons.some((coupon) => coupon.code === "WELCOME-FREE");
+          if (exists) return;
+          coupons.push({
+            code: "WELCOME-FREE",
+            name: "첫 결제 무료 쿠폰",
+            type: "amount",
+            amount: 2000,
+            description: "기본 요금 2,000원 할인",
+            issuedAt: Date.now(),
+            used: false,
+          });
+          localStorage.setItem(storageKey, JSON.stringify(coupons));
+        } catch (error) {
+          console.warn("쿠폰 저장 실패:", error);
+        }
+      }
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         messageEl.textContent = "";
@@ -109,10 +150,16 @@
             throw new Error(data.message || "회원가입에 실패했습니다.");
           }
 
-          messageEl.textContent = data.message;
+          messageEl.textContent = `${data.message} 잠시 후 홈으로 이동합니다.`;
           messageEl.classList.remove("error");
           messageEl.classList.add("success");
+          persistBuyerProfile({ name, email, phone });
+          persistWelcomeCoupon();
           form.reset();
+
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1200);
         } catch (error) {
           messageEl.textContent = error.message;
           messageEl.classList.remove("success");
