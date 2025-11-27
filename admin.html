@@ -108,8 +108,12 @@
                   </div>
                 </div>
                 <div class="field">
-                  <label for="recipient-notes">비고</label>
-                  <textarea id="recipient-notes" name="notes" placeholder="메모를 입력하세요"></textarea>
+                  <label for="recipient-address">주소</label>
+                  <textarea
+                    id="recipient-address"
+                    name="address"
+                    placeholder="예) 서울특별시 용산구 한강대로 100"
+                  ></textarea>
                 </div>
                 <div class="form-actions">
                   <button type="submit">수령인 추가</button>
@@ -127,6 +131,7 @@
                     <th>분류</th>
                     <th>소속사</th>
                     <th>그룹</th>
+                    <th>주소</th>
                     <th>상태</th>
                     <th>업데이트</th>
                     <th>관리</th>
@@ -404,7 +409,7 @@
           agencyName: formData.get("agencyName") || null,
           groupName: formData.get("groupName") || null,
           isActive: formData.get("isActive") === "1",
-          notes: formData.get("notes") || null,
+          address: formData.get("address") || null,
         };
         try {
           const response = await fetch("/api/admin/recipients", {
@@ -495,6 +500,9 @@
               </td>
               <td>${recipient.agency || "-"}</td>
               <td>${recipient.group_name || "-"}</td>
+              <td>
+                <div>${recipient.address || "-"}</div>
+              </td>
               <td>${recipient.is_active ? "활성" : "비활성"}</td>
               <td>${formatDate(recipient.updated_at)}</td>
               <td>

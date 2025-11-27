@@ -224,6 +224,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
          rs.name AS subcategory,
          a.name AS agency,
          rg.name AS group_name,
+         r.notes AS address,
          r.is_active,
          r.updated_at
        FROM recipients r
@@ -243,7 +244,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
-  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, notes } = req.body;
+  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address } = req.body;
   if (!name?.trim() || !categoryId) {
     return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
   }
@@ -260,7 +261,7 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
       agencyId,
       groupId,
       typeof isActive === "boolean" ? (isActive ? 1 : 0) : 1,
-      notes || null,
+      address?.trim() ? address.trim() : null,
     ];
     const [result] = await pool.query(
       `INSERT INTO recipients
@@ -277,6 +278,7 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
          rs.name AS subcategory,
          a.name AS agency,
          rg.name AS group_name,
+         r.notes AS address,
          r.is_active,
          r.updated_at
        FROM recipients r
