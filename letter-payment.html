@@ -97,10 +97,6 @@
           <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
           <button type="button" class="primary" id="requestPayment">결제하기</button>
         </div>
-        <p class="note">
-          · 포트원을 통해 카드 및 휴대폰 소액결제가 안전하게 처리됩니다.<br />
-          · 결제 완료 후 영수증과 진행 상황을 이메일로 안내드릴 예정입니다.
-        </p>
       </section>
 
       <section class="process-panel">
@@ -464,6 +460,7 @@
         const orderId = `order_${Date.now()}`;
         const paymentAmount = PAYMENT_CONFIG.baseAmount;
         const payMethod = getSelectedPayMethod();
+        const productType = payMethod === "MOBILE" ? "REALTIME" : undefined;
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
           openPaymentModal(orderId, paymentAmount);
@@ -475,7 +472,7 @@
           requestPayment.disabled = true;
           requestPayment.textContent = "결제창 호출 중...";
 
-          const paymentResult = await PortOne.requestPayment({
+          const paymentPayload = {
             storeId: PAYMENT_CONFIG.storeId,
             channelKey: PAYMENT_CONFIG.channelKey,
             paymentId: orderId,
@@ -498,7 +495,13 @@
             buyerName: buyerInfo.name || "팬레터 고객",
             buyerTel: buyerInfo.phone || undefined,
             redirectUrl: `${window.location.origin}/letter-payment-complete.html`,
-          });
+          };
+
+          if (productType) {
+            paymentPayload.productType = productType;
+          }
+
+          const paymentResult = await PortOne.requestPayment(paymentPayload);
 
           console.log("PortOne 응답", paymentResult);
 
