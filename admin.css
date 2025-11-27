@@ -311,3 +311,12 @@ select {
   font-size: 13px;
   border-radius: 6px;
 }
+
+.stationery-thumb {
+  width: 80px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  object-fit: cover;
+}

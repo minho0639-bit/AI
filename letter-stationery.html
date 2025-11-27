@@ -52,19 +52,17 @@
       const backToTargetButtons = [document.getElementById("backToTarget"), document.getElementById("backToTargetBottom")];
       const backHome = document.getElementById("backHome");
 
-        const stationeryOptions = [
-          {
-            id: "basic",
-            name: "기본 편지지",
-            desc: "가장 깔끔하게 연출되는 기본 디자인",
-            image: "assets/stationery/기본편지지_선택.png",
-          },
-        ];
+      const FALLBACK_STATIONERY = [
+        {
+          id: "fallback-basic",
+          name: "기본 편지지",
+          description: "가장 깔끔하게 연출되는 기본 디자인",
+          previewImageUrl: "assets/stationery/기본편지지_선택.png",
+        },
+      ];
 
+      let stationeryOptions = [];
       let selectedStationery = params.get("stationery") || null;
-      if (selectedStationery && !stationeryOptions.find((opt) => opt.id === selectedStationery)) {
-        selectedStationery = null;
-      }
 
       function setTargetSummary() {
         const name = params.get("name");
@@ -81,23 +79,46 @@
         }
       }
 
+      async function loadStationeryOptions() {
+        try {
+          const response = await fetch("/api/stationery");
+          if (!response.ok) {
+            throw new Error("failed");
+          }
+          const data = await response.json();
+          stationeryOptions = Array.isArray(data) && data.length > 0 ? data : FALLBACK_STATIONERY;
+        } catch (error) {
+          stationeryOptions = FALLBACK_STATIONERY;
+        }
+
+        if (
+          selectedStationery &&
+          !stationeryOptions.find((opt) => String(opt.id) === String(selectedStationery))
+        ) {
+          selectedStationery = null;
+        }
+
+        renderStationeryOptions();
+      }
+
       function renderStationeryOptions() {
         stationeryGrid.innerHTML = "";
         stationeryOptions.forEach((option) => {
+          const optionId = String(option.id);
           const card = document.createElement("button");
           card.type = "button";
-          card.className = `stationery-card ${option.id === selectedStationery ? "active" : ""}`;
+          card.className = `stationery-card ${optionId === String(selectedStationery) ? "active" : ""}`;
           card.innerHTML = `
             <div class="stationery-preview">
-              <img src="${option.image}" alt="${option.name} 미리보기" />
+              <img src="${option.previewImageUrl || "assets/stationery/기본편지지_선택.png"}" alt="${option.name} 미리보기" />
             </div>
             <div>
               <strong>${option.name}</strong>
-              <p>${option.desc}</p>
+              <p>${option.description || ""}</p>
             </div>
           `;
           card.addEventListener("click", () => {
-            selectedStationery = option.id;
+            selectedStationery = optionId;
             goToCompose.disabled = false;
             renderStationeryOptions();
           });
@@ -136,7 +157,7 @@
       goToCompose.addEventListener("click", goToLetterCompose);
 
       setTargetSummary();
-      renderStationeryOptions();
+      loadStationeryOptions();
     </script>
   </body>
 </html>

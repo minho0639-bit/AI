@@ -25,6 +25,14 @@ const DEFAULT_RECIPIENT_TAXONOMY = [
     subcategories: ["축구", "야구", "e스포츠"],
   },
 ];
+const DEFAULT_STATIONERY = [
+  {
+    name: "기본 편지지",
+    description: "가장 깔끔하게 연출되는 기본 디자인",
+    previewImageUrl: "assets/stationery/기본편지지_선택.png",
+    isActive: true,
+  },
+];
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
@@ -313,6 +321,133 @@ app.delete("/api/admin/recipients/:id", requireAdmin, async (req, res) => {
   }
 });
 
+app.get("/api/admin/stationery", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         description,
+         preview_image_url AS previewImageUrl,
+         is_active AS isActive,
+         created_at,
+         updated_at
+       FROM stationery_templates
+       ORDER BY created_at DESC`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("admin stationery fetch error:", error);
+    res.status(500).json({ message: "편지지 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.post("/api/admin/stationery", requireAdmin, async (req, res) => {
+  const { name, description, previewImageUrl, isActive } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "편지지 이름을 입력해 주세요." });
+  }
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO stationery_templates (name, description, preview_image_url, is_active)
+       VALUES (?, ?, ?, ?)`,
+      [name.trim(), description?.trim() || null, previewImageUrl?.trim() || null, isActive ? 1 : 0]
+    );
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         description,
+         preview_image_url AS previewImageUrl,
+         is_active AS isActive,
+         created_at,
+         updated_at
+       FROM stationery_templates
+       WHERE id = ?`,
+      [result.insertId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("admin stationery create error:", error);
+    res.status(500).json({ message: "편지지를 추가하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.put("/api/admin/stationery/:id", requireAdmin, async (req, res) => {
+  const templateId = Number(req.params.id);
+  if (!templateId) {
+    return res.status(400).json({ message: "잘못된 편지지 ID입니다." });
+  }
+  const { name, description, previewImageUrl, isActive } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "편지지 이름을 입력해 주세요." });
+  }
+  try {
+    await pool.query(
+      `UPDATE stationery_templates
+       SET name = ?, description = ?, preview_image_url = ?, is_active = ?
+       WHERE id = ?`,
+      [name.trim(), description?.trim() || null, previewImageUrl?.trim() || null, isActive ? 1 : 0, templateId]
+    );
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         description,
+         preview_image_url AS previewImageUrl,
+         is_active AS isActive,
+         created_at,
+         updated_at
+       FROM stationery_templates
+       WHERE id = ?`,
+      [templateId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "편지지를 찾을 수 없습니다." });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("admin stationery update error:", error);
+    res.status(500).json({ message: "편지지를 수정하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.delete("/api/admin/stationery/:id", requireAdmin, async (req, res) => {
+  const templateId = Number(req.params.id);
+  if (!templateId) {
+    return res.status(400).json({ message: "잘못된 편지지 ID입니다." });
+  }
+  try {
+    const [result] = await pool.query("DELETE FROM stationery_templates WHERE id = ?", [templateId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "편지지를 찾을 수 없습니다." });
+    }
+    res.json({ message: "편지지를 삭제했습니다." });
+  } catch (error) {
+    console.error("admin stationery delete error:", error);
+    res.status(500).json({ message: "편지지를 삭제하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.get("/api/stationery", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         description,
+         preview_image_url AS previewImageUrl
+       FROM stationery_templates
+       WHERE is_active = 1
+       ORDER BY created_at DESC`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("public stationery fetch error:", error);
+    res.status(500).json({ message: "편지지 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
 app.get("/api/recipients/categories", async (req, res) => {
   try {
     const [categories] = await pool.query(
@@ -524,6 +659,7 @@ async function getUserById(userId) {
 async function initializeBootstrapTasks() {
   await ensureAdminUser();
   await ensureRecipientTaxonomy();
+  await ensureStationeryTemplates();
 }
 
 async function ensureAdminUser() {
@@ -586,6 +722,39 @@ async function ensureRecipientTaxonomy() {
           [categoryId, subcategoryName]
         );
       }
+    }
+  }
+}
+
+async function ensureStationeryTemplates() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS stationery_templates (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      description VARCHAR(255),
+      preview_image_url VARCHAR(255),
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+  );
+
+  for (const template of DEFAULT_STATIONERY) {
+    const [rows] = await pool.query(
+      "SELECT id FROM stationery_templates WHERE name = ? LIMIT 1",
+      [template.name]
+    );
+    if (rows.length === 0) {
+      await pool.query(
+        `INSERT INTO stationery_templates (name, description, preview_image_url, is_active)
+         VALUES (?, ?, ?, ?)`,
+        [
+          template.name,
+          template.description || null,
+          template.previewImageUrl || null,
+          template.isActive ? 1 : 0,
+        ]
+      );
     }
   }
 }
