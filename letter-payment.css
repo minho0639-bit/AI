@@ -260,8 +260,7 @@ button:active {
   padding: 0;
 }
 
-.preview-paper-inner::before {
-  content: "";
+.preview-paper-lines {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
@@ -280,7 +279,6 @@ button:active {
   --paper-line-color: rgba(0, 0, 0, 0.08);
   --paper-line-spacing: 32px;
 }
-
 .preview-paper-body {
   position: relative;
   z-index: 1;
