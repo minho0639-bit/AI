@@ -460,7 +460,8 @@
         const orderId = `order_${Date.now()}`;
         const paymentAmount = PAYMENT_CONFIG.baseAmount;
         const payMethod = getSelectedPayMethod();
-        const productType = payMethod === "MOBILE" ? "REALTIME" : undefined;
+        // 이니시스 V2 휴대폰 결제는 상품 유형 명시가 필수
+        const productType = payMethod === "MOBILE" ? "PRODUCT_TYPE_REAL" : undefined;
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
           openPaymentModal(orderId, paymentAmount);
