@@ -179,6 +179,7 @@
         midnight: "paper-midnight",
         default: "paper-lined",
       };
+      const PREVIEW_GUIDE_COUNT = 16;
       const FONT_LABEL_MAP = {
         default: "Pretendard",
         serif: "Cormorant",
@@ -446,12 +447,34 @@
             <p class="label">내용 미리보기</p>
             <div class="preview-paper ${stationeryClass}">
               <div class="preview-paper-inner">
-                <div class="preview-paper-lines" aria-hidden="true"></div>
+                <div class="preview-paper-guides" aria-hidden="true"></div>
                 <div class="preview-paper-body font-${data.font || "default"}">${previewHtml}</div>
               </div>
             </div>
           </div>
         `;
+        const previewPaperEl = summaryBody.querySelector(".preview-paper");
+        if (previewPaperEl) {
+          renderPreviewGuides(previewPaperEl);
+        }
+      }
+      function renderPreviewGuides(previewPaper) {
+        const guidesContainer = previewPaper.querySelector(".preview-paper-guides");
+        if (!guidesContainer) return;
+        guidesContainer.innerHTML = "";
+        const computed = getComputedStyle(previewPaper);
+        const spacingValue = parseFloat(
+          (computed.getPropertyValue("--paper-line-spacing") || "32").replace("px", "")
+        );
+        const lineColor = computed.getPropertyValue("--paper-line-color") || "rgba(0,0,0,0.08)";
+        const lineCount = PREVIEW_GUIDE_COUNT;
+        for (let index = 0; index < lineCount; index += 1) {
+          const guide = document.createElement("div");
+          guide.className = "preview-paper-guide";
+          guide.style.top = `${Math.round(spacingValue * index)}px`;
+          guide.style.backgroundColor = lineColor;
+          guidesContainer.appendChild(guide);
+        }
       }
 
       function setAmounts(base, extra = 0) {

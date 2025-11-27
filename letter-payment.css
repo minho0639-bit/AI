@@ -258,20 +258,23 @@ button:active {
   height: 100%;
   background: var(--paper-fill);
   padding: 0;
+  overflow: hidden;
 }
 
-.preview-paper-lines {
+.preview-paper-guides {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--paper-line-color),
-    var(--paper-line-color) 1px,
-    transparent 1px,
-    transparent var(--paper-line-spacing)
-  );
   pointer-events: none;
   z-index: 0;
+}
+
+.preview-paper-guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--paper-line-color);
+  opacity: 1;
 }
 
 .preview-paper.paper-lined {
