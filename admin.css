@@ -313,10 +313,11 @@ select {
 }
 
 .stationery-thumb {
-  width: 80px;
-  height: auto;
-  border-radius: 8px;
+  width: 160px;
+  height: 110px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
   background: #fff;
   object-fit: cover;
+  display: block;
 }

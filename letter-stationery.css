@@ -150,8 +150,8 @@ button:active {
 }
 
 .stationery-preview {
-  max-width: 180px;
-  width: 70%;
+  width: 100%;
+  max-width: 320px;
   border-radius: 22px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   background: #f8f6f1;
@@ -159,7 +159,7 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   margin: 0 auto 8px;
 }
@@ -167,7 +167,7 @@ button:active {
 .stationery-preview img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   border-radius: 16px;
   box-shadow: 0 6px 18px rgba(17, 17, 17, 0.08);
