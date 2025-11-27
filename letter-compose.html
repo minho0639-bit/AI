@@ -166,6 +166,7 @@
           { id: "sunset", label: "선셋", value: "#ff7a45" },
           { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
         ];
+        const COLOR_VALUE_WHITELIST = new Set(colorOptions.map((option) => option.value.toLowerCase()));
 
         let paperBodies = [];
         let activeBody = null;
@@ -202,14 +203,10 @@
             swatch.type = "button";
             swatch.className = `color-swatch ${option.id === selectedColorId ? "active" : ""}`;
             swatch.style.setProperty("--swatch-color", option.value);
-            swatch.setAttribute("aria-label", option.label);
+            swatch.setAttribute("aria-label", `${option.label} 색 적용`);
             swatch.innerHTML = "<span></span>";
-            swatch.addEventListener("click", () => {
-              selectedColorId = option.id;
-              selectedColor = option.value;
-              renderColorPalette();
-              applyTypography();
-            });
+            swatch.addEventListener("mousedown", (event) => event.preventDefault());
+            swatch.addEventListener("click", () => applyColorSelection(option.id, option.value));
             colorPalette.appendChild(swatch);
           });
         }
@@ -255,6 +252,51 @@
           paperBodies.forEach((body) => applyTypographyToBody(body));
         }
 
+        function applyColorSelection(colorId, colorValue) {
+          if (!paperBodies.length) return;
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          target.focus();
+          restoreSelectionRange(target);
+
+          const selectionState = getSelectionState();
+          if (!selectionState.withinEditor) {
+            placeCursorEnd(target);
+          }
+
+          try {
+            document.execCommand("styleWithCSS", false, true);
+          } catch (error) {
+            // no-op
+          }
+          document.execCommand("foreColor", false, colorValue);
+          try {
+            document.execCommand("styleWithCSS", false, false);
+          } catch (error) {
+            // no-op
+          }
+
+          if (selectionState.collapsed) {
+            selectedColorId = colorId;
+            selectedColor = colorValue;
+            applyTypography();
+          }
+
+          renderColorPalette();
+          captureSnapshot();
+          updateFormatToolbarState();
+        }
+
+        function getSelectionState() {
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            return { withinEditor: false, collapsed: true };
+          }
+          const range = selection.getRangeAt(0);
+          const withinEditor = !!paperStack && paperStack.contains(range.commonAncestorContainer);
+          return { withinEditor, collapsed: range.collapsed };
+        }
+
         function applyStationeryStyles() {
           const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
           paperBodies.forEach((body) => {
@@ -298,7 +340,7 @@
         function sanitizeRichText(html) {
           const template = document.createElement("template");
           template.innerHTML = html;
-          const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV"]);
+          const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV", "SPAN"]);
 
           function clean(node) {
             Array.from(node.childNodes).forEach((child) => {
@@ -311,9 +353,7 @@
                   }
                   child.replaceWith(fragment);
                 } else {
-                  while (child.attributes.length > 0) {
-                    child.removeAttribute(child.attributes[0].name);
-                  }
+                  sanitizeElementAttributes(child);
                 }
               } else if (child.nodeType === Node.COMMENT_NODE) {
                 child.remove();
@@ -323,6 +363,83 @@
 
           clean(template.content);
           return template.innerHTML;
+        }
+
+        function sanitizeElementAttributes(element) {
+          if (element.tagName === "SPAN") {
+            const sanitizedStyle = extractAllowedColorStyle(element.getAttribute("style"));
+            if (sanitizedStyle) {
+              element.setAttribute("style", sanitizedStyle);
+            } else {
+              element.removeAttribute("style");
+            }
+            removeDisallowedAttributes(element, ["style"]);
+            return;
+          }
+          removeAllAttributes(element);
+        }
+
+        function removeAllAttributes(element) {
+          while (element.attributes.length > 0) {
+            element.removeAttribute(element.attributes[0].name);
+          }
+        }
+
+        function removeDisallowedAttributes(element, allowedAttributeNames = []) {
+          const whitelist = new Set(allowedAttributeNames.map((name) => name.toLowerCase()));
+          Array.from(element.attributes).forEach((attr) => {
+            if (!whitelist.has(attr.name.toLowerCase())) {
+              element.removeAttribute(attr.name);
+            }
+          });
+        }
+
+        function extractAllowedColorStyle(styleValue) {
+          if (!styleValue) return null;
+          const declarations = styleValue
+            .split(";")
+            .map((decl) => decl.trim())
+            .filter(Boolean);
+          let colorValue = null;
+          declarations.forEach((decl) => {
+            const [prop, value] = decl.split(":");
+            if (!prop || !value) return;
+            if (prop.trim().toLowerCase() === "color") {
+              const normalized = normalizeAllowedColor(value.trim());
+              if (normalized) {
+                colorValue = normalized;
+              }
+            }
+          });
+          return colorValue ? `color: ${colorValue}` : null;
+        }
+
+        function normalizeAllowedColor(value) {
+          if (!value) return null;
+          const trimmed = value.replace(/\s+/g, "").toLowerCase();
+          if (COLOR_VALUE_WHITELIST.has(trimmed)) {
+            return trimmed;
+          }
+          if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+            return COLOR_VALUE_WHITELIST.has(trimmed) ? trimmed : null;
+          }
+          const rgbMatch = trimmed.match(
+            /^rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})(?:,(0|1|0?\.\d+))?\)$/i
+          );
+          if (!rgbMatch) {
+            return null;
+          }
+          const [, r, g, b] = rgbMatch;
+          const hex = rgbToHex(r, g, b);
+          return COLOR_VALUE_WHITELIST.has(hex) ? hex : null;
+        }
+
+        function rgbToHex(r, g, b) {
+          const clamp = (value) => {
+            const num = Math.max(0, Math.min(255, parseInt(value, 10) || 0));
+            return num.toString(16).padStart(2, "0");
+          };
+          return `#${clamp(r)}${clamp(g)}${clamp(b)}`;
         }
 
         function getAllBodyHtml() {
