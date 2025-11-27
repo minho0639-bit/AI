@@ -179,6 +179,7 @@
         midnight: "paper-midnight",
         default: "paper-lined",
       };
+      const PREVIEW_GUIDE_COUNT = 16;
       const FONT_LABEL_MAP = {
         default: "Pretendard",
         serif: "Cormorant",
@@ -422,6 +423,9 @@
         const previewHtml = data.formattedText
           ? sanitizeDraftHtml(data.formattedText)
           : escapeHtml(previewFallback).replace(/\n/g, "<br>");
+        const guideLinesMarkup = Array.from({ length: PREVIEW_GUIDE_COUNT })
+          .map(() => '<span class="preview-paper-guide"></span>')
+          .join("");
         const fontLabel = FONT_LABEL_MAP[data.font] || data.font || FONT_LABEL_MAP.default;
         summaryBody.innerHTML = `
           <ul class="summary-grid">
@@ -446,6 +450,7 @@
             <p class="label">내용 미리보기</p>
             <div class="preview-paper ${stationeryClass}">
               <div class="preview-paper-inner">
+                <div class="preview-paper-guides" aria-hidden="true">${guideLinesMarkup}</div>
                 <div class="preview-paper-body font-${data.font || "default"}">${previewHtml}</div>
               </div>
             </div>

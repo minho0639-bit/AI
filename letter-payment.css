@@ -234,54 +234,54 @@ button:active {
   padding: 0;
 }
 
-.preview-paper.paper-lined .preview-paper-inner {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.08),
-      rgba(0, 0, 0, 0.08) 1px,
-      transparent 1px,
-      transparent 32px
-    ),
-    #fff;
-}
-
-.preview-paper.paper-classic .preview-paper-inner {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(123, 86, 53, 0.08),
-      rgba(123, 86, 53, 0.08) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
-    linear-gradient(135deg, #fff6ec, #f1e0cf);
-}
-
-.preview-paper.paper-blossom .preview-paper-inner {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(217, 75, 140, 0.08),
-      rgba(217, 75, 140, 0.08) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
-    linear-gradient(135deg, #fff1f7, #ffe2ef);
-}
-
 .preview-paper.paper-midnight {
   background: linear-gradient(135deg, #0d1a2e, #182544);
   color: #f2f4ff;
   border: 1px solid rgba(12, 21, 39, 0.6);
 }
 
+.preview-paper.paper-classic .preview-paper-inner {
+  background: linear-gradient(135deg, #fff6ec, #f1e0cf);
+}
+
+.preview-paper.paper-blossom .preview-paper-inner {
+  background: linear-gradient(135deg, #fff1f7, #ffe2ef);
+}
+
 .preview-paper.paper-midnight .preview-paper-inner {
-  background: repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.15),
-      rgba(255, 255, 255, 0.15) 1px,
-      transparent 1px,
-      transparent 32px
-    ),
-    transparent;
+  background: transparent;
+}
+
+.preview-paper-guides {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.preview-paper-guide {
+  flex: 1;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.preview-paper-guide:last-child {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.preview-paper.paper-classic .preview-paper-guide {
+  border-color: rgba(123, 86, 53, 0.16);
+}
+
+.preview-paper.paper-blossom .preview-paper-guide {
+  border-color: rgba(217, 75, 140, 0.15);
+}
+
+.preview-paper.paper-midnight .preview-paper-guide {
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .preview-paper-body {
