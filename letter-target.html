@@ -254,6 +254,12 @@
           populateAgencySelect();
         } catch (error) {
           selectionPreview.textContent = "수령인 목록을 불러오지 못했습니다.";
+          agencySelect.innerHTML = '<option value="">데이터를 불러오지 못했습니다.</option>';
+          agencySelect.disabled = true;
+          teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
+          teamSelect.disabled = true;
+          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
+          nameSelect.disabled = true;
         }
       }
 
@@ -265,7 +271,13 @@
         ).sort((a, b) => a.localeCompare(b, "ko"));
 
         if (agencies.length === 0) {
-          selectionPreview.textContent = "등록된 수령인이 없습니다.";
+          agencySelect.innerHTML = '<option value="">등록된 수령인이 없습니다.</option>';
+          agencySelect.disabled = true;
+          teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
+          teamSelect.disabled = true;
+          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
+          nameSelect.disabled = true;
+          selectionPreview.textContent = "등록된 수령인이 없습니다. 관리자에게 문의해 주세요.";
           return;
         }
 
