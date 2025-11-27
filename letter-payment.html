@@ -178,6 +178,14 @@
         midnight: "paper-midnight",
         default: "paper-lined",
       };
+      const FONT_LABEL_MAP = {
+        default: "Pretendard",
+        serif: "Cormorant",
+        handwriting: "나눔펜",
+        gaegu: "개구",
+        dongle: "동글",
+        singleDay: "싱글데이",
+      };
       const FORBIDDEN_WORDS = [
         "씨발",
         "시발",
@@ -330,6 +338,7 @@
         const previewHtml = data.formattedText
           ? sanitizeDraftHtml(data.formattedText)
           : escapeHtml(previewFallback).replace(/\n/g, "<br>");
+        const fontLabel = FONT_LABEL_MAP[data.font] || data.font || FONT_LABEL_MAP.default;
         summaryBody.innerHTML = `
           <ul class="summary-grid">
             <li>
@@ -338,7 +347,7 @@
             </li>
             <li>
               <span class="label">선택 서체</span>
-              <strong>${data.font}</strong>
+              <strong>${fontLabel}</strong>
             </li>
             <li>
               <span class="label">글자 색상</span>

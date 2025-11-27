@@ -338,14 +338,16 @@ button:active {
 .format-toolbar {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .format-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
   height: 44px;
+  padding: 0 16px;
+  gap: 6px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: #fff;
@@ -354,12 +356,34 @@ button:active {
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.format-btn span {
-  font-size: 1rem;
+.format-btn:hover,
+.format-btn.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
 }
 
-.format-btn:hover {
-  border-color: var(--primary);
+.format-btn__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.format-btn__icon--bold {
+  font-weight: 800;
+}
+
+.format-btn__icon--italic {
+  font-style: italic;
+}
+
+.format-btn__icon--underline {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.format-btn__label {
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .chip-option {
