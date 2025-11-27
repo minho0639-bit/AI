@@ -29,7 +29,7 @@ const DEFAULT_STATIONERY = [
   {
     name: "기본 편지지",
     description: "가장 깔끔하게 연출되는 기본 디자인",
-    previewImageUrl: "assets/stationery/기본편지지_선택.png",
+    previewImageUrl: "assets/stationery/basic.jpg",
     isActive: true,
   },
 ];

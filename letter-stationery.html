@@ -57,7 +57,7 @@
           id: "fallback-basic",
           name: "기본 편지지",
           description: "가장 깔끔하게 연출되는 기본 디자인",
-          previewImageUrl: "assets/stationery/기본편지지_선택.png",
+          previewImageUrl: "assets/stationery/basic.jpg",
         },
       ];
 
@@ -110,7 +110,7 @@
           card.className = `stationery-card ${optionId === String(selectedStationery) ? "active" : ""}`;
           card.innerHTML = `
             <div class="stationery-preview">
-              <img src="${option.previewImageUrl || "assets/stationery/기본편지지_선택.png"}" alt="${option.name} 미리보기" />
+              <img src="${option.previewImageUrl || "assets/stationery/basic.jpg"}" alt="${option.name} 미리보기" />
             </div>
             <div>
               <strong>${option.name}</strong>
