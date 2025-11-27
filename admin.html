@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fanletter Admin</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Fanletter Post 관리자</h1>
+      <div class="actions">
+        <button id="refresh-btn" class="secondary" disabled>데이터 새로고침</button>
+        <button id="logout-btn" class="secondary" disabled>로그아웃</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="login-section" class="card login-card">
+        <h2>관리자 로그인</h2>
+        <form id="admin-login-form">
+          <label for="admin-email">이메일</label>
+          <input type="email" id="admin-email" name="email" placeholder="admin@example.com" required />
+
+          <label for="admin-password">비밀번호</label>
+          <input type="password" id="admin-password" name="password" placeholder="비밀번호" required />
+
+          <button type="submit" id="admin-login-button">로그인</button>
+          <div id="login-status" class="status-text"></div>
+        </form>
+      </section>
+
+      <section id="dashboard" class="dashboard">
+        <p id="welcome-text" class="text-muted"></p>
+
+        <nav class="admin-tabs" role="tablist">
+          <button class="tab-button active" data-tab="orders">주문 현황</button>
+          <button class="tab-button" data-tab="recipients">수령인 관리</button>
+          <button class="tab-button" data-tab="stationery">편지지 관리</button>
+          <button class="tab-button" data-tab="users">회원 목록</button>
+        </nav>
+
+        <div class="tab-panel active" data-panel="orders">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>주문 현황</h2>
+              <span id="orders-status" class="panel-status">-</span>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>회원</th>
+                    <th>수령인</th>
+                    <th>편지 상태</th>
+                    <th>결제</th>
+                    <th>배송</th>
+                    <th>작성일</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="recipients">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>수령인 관리</h2>
+              <span id="recipients-status" class="panel-status">-</span>
+            </div>
+
+            <div class="form-card">
+              <strong>수령인 추가</strong>
+              <form id="recipient-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="recipient-name">이름 *</label>
+                    <input type="text" id="recipient-name" name="name" placeholder="예) 김연아" required />
+                  </div>
+                  <div class="field">
+                    <label for="recipient-category">대분류 *</label>
+                    <select id="recipient-category" name="categoryId" required>
+                      <option value="">불러오는 중...</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-subcategory">중분류</label>
+                    <select id="recipient-subcategory" name="subcategoryId" disabled required>
+                      <option value="">대분류를 먼저 선택해 주세요</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipient-agency">소속사</label>
+                    <input type="text" id="recipient-agency" name="agencyName" placeholder="예) HYBE" />
+                  </div>
+                  <div class="field">
+                    <label for="recipient-group">그룹 / 팀</label>
+                    <input type="text" id="recipient-group" name="groupName" placeholder="예) 뉴진스" />
+                  </div>
+                  <div class="field">
+                    <label for="recipient-status-select">상태</label>
+                    <select id="recipient-status-select" name="isActive">
+                      <option value="1">활성</option>
+                      <option value="0">비활성</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="recipient-address">주소</label>
+                  <textarea
+                    id="recipient-address"
+                    name="address"
+                    placeholder="예) 서울특별시 용산구 한강대로 100"
+                  ></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">수령인 추가</button>
+                  <div id="recipient-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>분류</th>
+                    <th>소속사</th>
+                    <th>그룹</th>
+                    <th>주소</th>
+                    <th>상태</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="recipients-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="stationery">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>편지지 관리</h2>
+              <span id="stationery-status" class="panel-status">-</span>
+            </div>
+
+            <div class="form-card">
+              <strong>편지지 추가</strong>
+              <form id="stationery-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="stationery-name">이름 *</label>
+                    <input type="text" id="stationery-name" name="name" placeholder="예) 기본 편지지" required />
+                  </div>
+                  <div class="field">
+                    <label for="stationery-preview">미리보기 이미지 URL</label>
+                    <input
+                      type="text"
+                      id="stationery-preview"
+                      name="previewImageUrl"
+                      placeholder="예) assets/stationery/basic.jpg"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="stationery-status-select">상태</label>
+                    <select id="stationery-status-select" name="isActive">
+                      <option value="1">활성</option>
+                      <option value="0">비활성</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="stationery-description">설명</label>
+                  <textarea
+                    id="stationery-description"
+                    name="description"
+                    placeholder="예) 깨끗한 라인과 심플한 배경으로 구성된 기본 편지지"
+                  ></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">편지지 추가</button>
+                  <div id="stationery-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>설명</th>
+                    <th>미리보기</th>
+                    <th>상태</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="stationery-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="users">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>회원 목록</h2>
+              <span id="users-status" class="panel-status">-</span>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>회원 정보</th>
+                    <th>연락처</th>
+                    <th>권한</th>
+                    <th>마케팅 수신</th>
+                    <th>가입일</th>
+                  </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const loginSection = document.getElementById("login-section");
+      const dashboardSection = document.getElementById("dashboard");
+      const loginForm = document.getElementById("admin-login-form");
+      const loginStatus = document.getElementById("login-status");
+      const refreshButtons = [document.getElementById("refresh-btn")].filter(Boolean);
+      const logoutButtons = [document.getElementById("logout-btn")].filter(Boolean);
+      const welcomeText = document.getElementById("welcome-text");
+      const tabButtons = document.querySelectorAll(".tab-button");
+      const tabPanels = document.querySelectorAll(".tab-panel");
+
+      const ordersStatus = document.getElementById("orders-status");
+      const recipientsStatus = document.getElementById("recipients-status");
+      const stationeryStatus = document.getElementById("stationery-status");
+      const usersStatus = document.getElementById("users-status");
+
+      const ordersBody = document.getElementById("orders-body");
+      const recipientsBody = document.getElementById("recipients-body");
+      const stationeryBody = document.getElementById("stationery-body");
+      const usersBody = document.getElementById("users-body");
+
+      const recipientForm = document.getElementById("recipient-form");
+      const recipientFormStatus = document.getElementById("recipient-form-status");
+      const recipientCategorySelect = document.getElementById("recipient-category");
+      const recipientSubcategorySelect = document.getElementById("recipient-subcategory");
+      const recipientAgencyInput = document.getElementById("recipient-agency");
+      const recipientGroupInput = document.getElementById("recipient-group");
+      const recipientStatusSelect = document.getElementById("recipient-status-select");
+      const stationeryForm = document.getElementById("stationery-form");
+      const stationeryFormStatus = document.getElementById("stationery-form-status");
+      const stationeryStatusSelect = document.getElementById("stationery-status-select");
+
+      const state = {
+        metaLoaded: false,
+        meta: {
+          categories: [],
+          subcategories: [],
+        },
+        stationery: [],
+      };
+
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleAdminLogin(new FormData(loginForm));
+      });
+
+      refreshButtons.forEach((button) =>
+        button.addEventListener("click", () => {
+          loadAdminData({ refreshMeta: true });
+        })
+      );
+      logoutButtons.forEach((button) =>
+        button.addEventListener("click", async () => {
+          await fetch("/api/logout", { method: "POST" });
+          toggleDashboard(false);
+        })
+      );
+
+      tabButtons.forEach((button) =>
+        button.addEventListener("click", () => activateTab(button.dataset.tab))
+      );
+
+      recipientCategorySelect.addEventListener("change", () => {
+        updateSubcategoryOptions();
+      });
+
+      recipientForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleRecipientCreate(new FormData(recipientForm));
+      });
+
+      recipientsBody.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-recipient-delete]");
+        if (!deleteBtn) return;
+        const recipientId = deleteBtn.dataset.recipientDelete;
+        const targetName = deleteBtn.dataset.recipientName || "";
+        const confirmed = window.confirm(`${targetName} 수령인을 삭제할까요?`);
+        if (!confirmed) return;
+        try {
+          await deleteRecipient(recipientId);
+          await loadRecipientsOnly();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      stationeryForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleStationeryCreate(new FormData(stationeryForm));
+      });
+
+      stationeryBody.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-stationery-delete]");
+        const toggleBtn = event.target.closest("[data-stationery-toggle]");
+        if (deleteBtn) {
+          const templateId = deleteBtn.dataset.stationeryDelete;
+          const templateName = deleteBtn.dataset.stationeryName || "";
+          const confirmed = window.confirm(`${templateName} 편지지를 삭제할까요?`);
+          if (!confirmed) return;
+          try {
+            await deleteStationery(templateId);
+            await loadStationeryOnly();
+          } catch (error) {
+            alert(error.message);
+          }
+        } else if (toggleBtn) {
+          const templateId = toggleBtn.dataset.stationeryToggle;
+          const nextStatus = toggleBtn.dataset.nextStatus === "true";
+          try {
+            await updateStationery(templateId, { isActive: nextStatus });
+            await loadStationeryOnly();
+          } catch (error) {
+            alert(error.message);
+          }
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", initAdminPage);
+
+      async function initAdminPage() {
+        const isAdmin = await checkAdminSession();
+        toggleDashboard(isAdmin);
+        if (isAdmin) {
+          await ensureRecipientMetaLoaded();
+          await loadAdminData();
+        }
+      }
+
+      async function checkAdminSession() {
+        try {
+          const response = await fetch("/api/admin/session");
+          return response.ok;
+        } catch (error) {
+          console.error(error);
+          return false;
+        }
+      }
+
+      async function handleAdminLogin(formData) {
+        loginStatus.textContent = "로그인 중...";
+        loginStatus.classList.remove("error", "success");
+        const payload = Object.fromEntries(formData.entries());
+        try {
+          const response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "로그인에 실패했습니다.");
+          }
+          loginStatus.textContent = "로그인 성공! 데이터를 불러오는 중...";
+          loginStatus.classList.add("success");
+          toggleDashboard(true);
+          await ensureRecipientMetaLoaded(true);
+          await loadAdminData();
+        } catch (error) {
+          loginStatus.textContent = error.message;
+          loginStatus.classList.add("error");
+        }
+      }
+
+      function toggleDashboard(isLoggedIn) {
+        if (isLoggedIn) {
+          loginSection.classList.add("hidden");
+          dashboardSection.classList.add("active");
+          refreshButtons.forEach((btn) => (btn.disabled = false));
+          logoutButtons.forEach((btn) => (btn.disabled = false));
+          welcomeText.textContent = "관리자 계정으로 접속 중 - 메뉴에서 원하는 영역을 선택하세요.";
+          activateTab("orders");
+        } else {
+          loginSection.classList.remove("hidden");
+          dashboardSection.classList.remove("active");
+          refreshButtons.forEach((btn) => (btn.disabled = true));
+          logoutButtons.forEach((btn) => (btn.disabled = true));
+          loginStatus.textContent = "";
+          loginForm.reset();
+          state.metaLoaded = false;
+        }
+      }
+
+      function activateTab(tabName) {
+        tabButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.tab === tabName);
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.panel === tabName);
+        });
+      }
+
+      async function loadAdminData(options = {}) {
+        const { refreshMeta = false } = options;
+        ordersStatus.textContent = "불러오는 중...";
+        recipientsStatus.textContent = "불러오는 중...";
+        stationeryStatus.textContent = "불러오는 중...";
+        usersStatus.textContent = "불러오는 중...";
+        try {
+          await ensureRecipientMetaLoaded(refreshMeta);
+          const [orders, recipients, users, stationery] = await Promise.all([
+            fetchJson("/api/admin/orders"),
+            fetchJson("/api/admin/recipients"),
+            fetchJson("/api/admin/users"),
+            fetchJson("/api/admin/stationery"),
+          ]);
+          renderOrders(orders);
+          renderRecipients(recipients);
+          renderStationery(stationery);
+          renderUsers(users);
+          ordersStatus.textContent = `${orders.length}건`;
+          recipientsStatus.textContent = `${recipients.length}명`;
+          stationeryStatus.textContent = `${stationery.length}종`;
+          usersStatus.textContent = `${users.length}명`;
+        } catch (error) {
+          console.error(error);
+          const message = error.message || "데이터를 불러오지 못했습니다.";
+          ordersStatus.textContent = message;
+          recipientsStatus.textContent = message;
+          stationeryStatus.textContent = message;
+          usersStatus.textContent = message;
+        }
+      }
+
+      async function loadRecipientsOnly() {
+        recipientsStatus.textContent = "불러오는 중...";
+        try {
+          const recipients = await fetchJson("/api/admin/recipients");
+          renderRecipients(recipients);
+          recipientsStatus.textContent = `${recipients.length}명`;
+        } catch (error) {
+          recipientsStatus.textContent = error.message || "수령인을 불러오지 못했습니다.";
+        }
+      }
+
+      async function loadStationeryOnly() {
+        stationeryStatus.textContent = "불러오는 중...";
+        try {
+          const stationery = await fetchJson("/api/admin/stationery");
+          renderStationery(stationery);
+          stationeryStatus.textContent = `${stationery.length}종`;
+        } catch (error) {
+          stationeryStatus.textContent = error.message || "편지지를 불러오지 못했습니다.";
+        }
+      }
+
+      async function ensureRecipientMetaLoaded(force = false) {
+        if (state.metaLoaded && !force) return;
+        try {
+          state.meta = await fetchJson("/api/admin/recipient-meta");
+          state.metaLoaded = true;
+          hydrateRecipientForm();
+        } catch (error) {
+          console.error(error);
+          throw new Error("수령인 분류 정보를 불러오지 못했습니다.");
+        }
+      }
+
+      function hydrateRecipientForm() {
+        populateSelect(recipientCategorySelect, state.meta.categories, "대분류 선택");
+        updateSubcategoryOptions();
+      }
+
+      function populateSelect(selectEl, items, placeholder) {
+        const options = [`<option value="">${placeholder}</option>`]
+          .concat(items.map((item) => `<option value="${item.id}">${item.name}</option>`));
+        selectEl.innerHTML = options.join("");
+        selectEl.disabled = false;
+      }
+
+      function updateSubcategoryOptions() {
+        const categoryId = Number(recipientCategorySelect.value);
+        const filtered = state.meta.subcategories.filter(
+          (subcat) => !categoryId || subcat.category_id === categoryId
+        );
+        const placeholder = categoryId ? "중분류 선택" : "대분류를 먼저 선택해 주세요";
+        const options = [`<option value="">${placeholder}</option>`].concat(
+          filtered.map((item) => `<option value="${item.id}">${item.name}</option>`)
+        );
+        recipientSubcategorySelect.innerHTML = options.join("");
+        recipientSubcategorySelect.disabled = !categoryId;
+        recipientSubcategorySelect.value = "";
+      }
+
+      async function handleRecipientCreate(formData) {
+        recipientFormStatus.textContent = "추가 중...";
+        recipientFormStatus.classList.remove("error", "success");
+        const payload = {
+          name: formData.get("name"),
+          categoryId: formData.get("categoryId"),
+          subcategoryId: formData.get("subcategoryId") || null,
+          agencyName: formData.get("agencyName") || null,
+          groupName: formData.get("groupName") || null,
+          isActive: formData.get("isActive") === "1",
+          address: formData.get("address") || null,
+        };
+        try {
+          const response = await fetch("/api/admin/recipients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
+          }
+          recipientForm.reset();
+          recipientCategorySelect.value = "";
+          updateSubcategoryOptions();
+          recipientStatusSelect.value = "1";
+          recipientFormStatus.textContent = "수령인을 추가했습니다.";
+          recipientFormStatus.classList.add("success");
+          await loadRecipientsOnly();
+        } catch (error) {
+          recipientFormStatus.textContent = error.message;
+          recipientFormStatus.classList.add("error");
+        }
+      }
+
+      async function deleteRecipient(recipientId) {
+        const response = await fetch(`/api/admin/recipients/${recipientId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
+        }
+      }
+
+      async function handleStationeryCreate(formData) {
+        stationeryFormStatus.textContent = "추가 중...";
+        stationeryFormStatus.classList.remove("error", "success");
+        const payload = {
+          name: formData.get("name"),
+          description: formData.get("description") || null,
+          previewImageUrl: formData.get("previewImageUrl") || null,
+          isActive: formData.get("isActive") === "1",
+        };
+        try {
+          const response = await fetch("/api/admin/stationery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "편지지를 추가하지 못했습니다.");
+          }
+          stationeryForm.reset();
+          stationeryStatusSelect.value = "1";
+          stationeryFormStatus.textContent = "편지지를 추가했습니다.";
+          stationeryFormStatus.classList.add("success");
+          await loadStationeryOnly();
+        } catch (error) {
+          stationeryFormStatus.textContent = error.message;
+          stationeryFormStatus.classList.add("error");
+        }
+      }
+
+      async function deleteStationery(templateId) {
+        const response = await fetch(`/api/admin/stationery/${templateId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "편지지를 삭제하지 못했습니다.");
+        }
+      }
+
+      async function updateStationery(templateId, patch) {
+        const template = state.stationery.find(
+          (item) => String(item.id) === String(templateId)
+        );
+        if (!template) {
+          throw new Error("편지지를 찾을 수 없습니다.");
+        }
+        const payload = {
+          name: patch.name ?? template.name,
+          description: patch.description ?? template.description,
+          previewImageUrl: patch.previewImageUrl ?? template.previewImageUrl,
+          isActive:
+            typeof patch.isActive === "boolean" ? patch.isActive : !!template.isActive,
+        };
+        const response = await fetch(`/api/admin/stationery/${templateId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "편지지를 수정하지 못했습니다.");
+        }
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "요청에 실패했습니다.");
+        }
+        return response.json();
+      }
+
+      function renderOrders(orders) {
+        ordersBody.innerHTML = orders
+          .map((order) => {
+            const paymentAmount = formatAmount(order.payment_amount);
+            return `
+              <tr>
+                <td>#${order.id}</td>
+                <td>
+                  <div>${order.user_name || "-"}</div>
+                  <div class="text-muted">${order.user_email || "-"}</div>
+                </td>
+                <td>
+                  <div>${order.recipient_name || "-"}</div>
+                  <div class="text-muted">${order.recipient_group || ""}</div>
+                </td>
+                <td>
+                  <div class="badge">${order.status}</div>
+                  <div class="text-muted">${formatDate(order.submitted_at)}</div>
+                </td>
+                <td>
+                  <div>${order.payment_status || "-"}</div>
+                  <div class="text-muted">${order.payment_method || ""} ${paymentAmount}</div>
+                </td>
+                <td>
+                  <div>${order.shipment_status || "-"}</div>
+                  <div class="text-muted">${[order.carrier, order.tracking_code].filter(Boolean).join(" ")}</div>
+                </td>
+                <td>${formatDate(order.created_at)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function renderRecipients(recipients) {
+        recipientsBody.innerHTML = recipients
+          .map(
+            (recipient) => `
+            <tr>
+              <td>#${recipient.id}</td>
+              <td>${recipient.name}</td>
+              <td>
+                <div>${recipient.category || "-"}</div>
+                <div class="text-muted">${recipient.subcategory || ""}</div>
+              </td>
+              <td>${recipient.agency || "-"}</td>
+              <td>${recipient.group_name || "-"}</td>
+              <td>
+                <div>${recipient.address || "-"}</div>
+              </td>
+              <td>${recipient.is_active ? "활성" : "비활성"}</td>
+              <td>${formatDate(recipient.updated_at)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-recipient-delete="${recipient.id}"
+                    data-recipient-name="${recipient.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function renderStationery(templates) {
+        state.stationery = templates;
+        stationeryBody.innerHTML = templates
+          .map((template) => {
+            const preview =
+              template.previewImageUrl && template.previewImageUrl.trim().length > 0
+                ? `<img src="${template.previewImageUrl}" alt="${template.name}" class="stationery-thumb" />`
+                : '<span class="text-muted">이미지 없음</span>';
+            return `
+            <tr>
+              <td>#${template.id}</td>
+              <td>${template.name}</td>
+              <td>
+                <div>${template.description || "-"}</div>
+              </td>
+              <td>${preview}</td>
+              <td>${template.isActive ? "활성" : "비활성"}</td>
+              <td>${formatDate(template.updated_at)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-ghost"
+                    data-stationery-toggle="${template.id}"
+                    data-next-status="${template.isActive ? "false" : "true"}"
+                  >
+                    ${template.isActive ? "비활성화" : "활성화"}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-stationery-delete="${template.id}"
+                    data-stationery-name="${template.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+          })
+          .join("");
+      }
+
+      function renderUsers(users) {
+        usersBody.innerHTML = users
+          .map(
+            (user) => `
+            <tr>
+              <td>#${user.id}</td>
+              <td>
+                <div>${user.name || "-"}</div>
+                <div class="text-muted">${user.email}</div>
+              </td>
+              <td>${user.phone || "-"}</td>
+              <td>${user.is_admin ? "관리자" : "일반"}</td>
+              <td>${user.marketing_consent ? "동의" : "미동의"}</td>
+              <td>${formatDate(user.created_at)}</td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function formatDate(value) {
+        if (!value) return "-";
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return "-";
+        return date.toLocaleString("ko-KR", { hour12: false });
+      }
+
+      function formatAmount(value) {
+        if (!value && value !== 0) return "";
+        const numberValue = Number(value);
+        if (Number.isNaN(numberValue)) {
+          return "";
+        }
+        return numberValue.toLocaleString("ko-KR") + "원";
+      }
+    </script>
+  </body>
+</html>
