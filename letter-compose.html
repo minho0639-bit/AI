@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&family=Dongle:wght@300;400;700&family=Gaegu:wght@300;400;700&family=Single+Day&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="letter-compose.css" />
@@ -28,11 +28,18 @@
             <div class="chip-group" id="fontChips"></div>
           </div>
           <div class="control-group">
-            <p class="group-label">
-              폰트 크기
-              <span id="fontSizeValue">16px</span>
-            </p>
-            <input type="range" id="fontSizeRange" min="16" max="16" value="16" disabled />
+            <p class="group-label">텍스트 스타일</p>
+            <div class="format-toolbar" id="formatToolbar" role="group" aria-label="텍스트 스타일 버튼">
+              <button type="button" class="format-btn" data-command="bold" aria-label="굵게">
+                <span>B</span>
+              </button>
+              <button type="button" class="format-btn" data-command="italic" aria-label="기울임">
+                <span>I</span>
+              </button>
+              <button type="button" class="format-btn" data-command="underline" aria-label="밑줄">
+                <span>U</span>
+              </button>
+            </div>
           </div>
           <div class="control-group">
             <p class="group-label">폰트 색상</p>
@@ -67,15 +74,15 @@
         const saveDraft = document.getElementById("saveDraft");
         const toSummary = document.getElementById("toSummary");
         const fontChips = document.getElementById("fontChips");
-        const fontSizeRange = document.getElementById("fontSizeRange");
-        const fontSizeValue = document.getElementById("fontSizeValue");
         const colorPalette = document.getElementById("colorPalette");
         const emojiPalette = document.getElementById("emojiPalette");
         const emojiToggle = document.getElementById("emojiToggle");
+        const formatToolbar = document.getElementById("formatToolbar");
 
         const MAX_BODY = 1500;
         const MAX_LINES_PER_PAGE = 15;
-        const DEFAULT_FONT_SIZE = 16;
+        const BASE_FONT_SIZE = 18;
+        const HANDWRITING_FONT_IDS = new Set(["handwriting", "gaegu", "dongle", "singleDay"]);
         const EMOJI_LIST = [
           "😊",
           "🥰",
@@ -140,7 +147,10 @@
         const fontOptions = [
           { id: "default", label: "Pretendard", className: "font-default" },
           { id: "serif", label: "Cormorant", className: "font-serif" },
-          { id: "handwriting", label: "Nanum Pen", className: "font-handwriting" },
+          { id: "handwriting", label: "나눔펜", className: "font-handwriting" },
+          { id: "gaegu", label: "개구", className: "font-gaegu" },
+          { id: "dongle", label: "동글", className: "font-dongle" },
+          { id: "singleDay", label: "싱글데이", className: "font-singleDay" },
         ];
 
         const colorOptions = [
@@ -157,9 +167,9 @@
         let selectedStationery = params.get("stationery") || "basic";
         if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
         let selectedFont = "default";
-        let selectedFontSize = DEFAULT_FONT_SIZE;
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
+        let lastValidSnapshot = [];
 
         function renderFontOptions() {
           fontChips.innerHTML = "";
@@ -221,14 +231,14 @@
         }
 
         function getPlaceholderText() {
-          return selectedFont === "handwriting"
+          return HANDWRITING_FONT_IDS.has(selectedFont)
             ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
             : "편지 내용을 입력하세요.";
         }
 
         function applyTypographyToBody(body) {
           body.className = `paper-body font-${selectedFont}`;
-          body.style.fontSize = `${selectedFontSize}px`;
+          body.style.fontSize = `${BASE_FONT_SIZE}px`;
           body.style.color = selectedColor;
           body.dataset.placeholder = getPlaceholderText();
         }
@@ -246,6 +256,64 @@
               page.style.backgroundImage = "";
             }
           });
+        }
+
+        function sanitizeRichText(html) {
+          const template = document.createElement("template");
+          template.innerHTML = html;
+          const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV"]);
+
+          function clean(node) {
+            Array.from(node.childNodes).forEach((child) => {
+              if (child.nodeType === Node.ELEMENT_NODE) {
+                clean(child);
+                if (!allowedTags.has(child.tagName)) {
+                  const fragment = document.createDocumentFragment();
+                  while (child.firstChild) {
+                    fragment.appendChild(child.firstChild);
+                  }
+                  child.replaceWith(fragment);
+                } else {
+                  while (child.attributes.length > 0) {
+                    child.removeAttribute(child.attributes[0].name);
+                  }
+                }
+              } else if (child.nodeType === Node.COMMENT_NODE) {
+                child.remove();
+              }
+            });
+          }
+
+          clean(template.content);
+          return template.innerHTML;
+        }
+
+        function getAllBodyHtml() {
+          const sanitizedPages = paperBodies.map((body) => sanitizeRichText(body.innerHTML));
+          return sanitizedPages.join("<div><br /></div>");
+        }
+
+        function captureSnapshot() {
+          lastValidSnapshot = paperBodies.map((body) => body.innerHTML);
+        }
+
+        function restoreSnapshot() {
+          if (!lastValidSnapshot.length) {
+            return;
+          }
+          while (paperBodies.length < lastValidSnapshot.length) {
+            createPaperPage();
+          }
+          paperBodies.forEach((body, index) => {
+            if (index < lastValidSnapshot.length) {
+              body.innerHTML = lastValidSnapshot[index];
+            } else {
+              const page = body.closest(".letter-paper");
+              page?.remove();
+            }
+          });
+          paperBodies = paperBodies.slice(0, lastValidSnapshot.length);
+          activeBody = paperBodies[paperBodies.length - 1] || null;
         }
 
         function getPlainText(element) {
@@ -287,8 +355,11 @@
           if (!enforceCharacterLimit(body)) {
             return;
           }
-          enforceLineLimit(body);
+          if (!enforceLineLimit(body)) {
+            return;
+          }
           cleanupEmptyPages();
+          captureSnapshot();
         }
 
         function handleBodyKeydown(event, body) {
@@ -320,11 +391,12 @@
           if (total <= MAX_BODY) {
             return true;
           }
-          const overflow = total - MAX_BODY;
-          const text = getPlainText(body);
-          body.innerText = text.slice(0, Math.max(0, text.length - overflow));
           alert("1,500자 제한을 초과하여 더 입력할 수 없습니다.");
-          placeCursorEnd(body);
+          restoreSnapshot();
+          const fallbackBody = paperBodies[Math.max(0, paperBodies.length - 1)] || null;
+          if (fallbackBody) {
+            placeCursorEnd(fallbackBody);
+          }
           return false;
         }
 
@@ -335,29 +407,22 @@
         }
 
         function enforceLineLimit(body) {
+          if (!body) return true;
           const text = getPlainText(body);
-          if (!text) return;
+          if (!text) return true;
           const lines = text.split("\n");
           const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
           const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
           if (effectiveCount <= MAX_LINES_PER_PAGE) {
-            return;
+            return true;
           }
-
-          const allowedLines = lines.slice(0, MAX_LINES_PER_PAGE);
-          const overflowLines = lines.slice(MAX_LINES_PER_PAGE);
-          body.innerText = allowedLines.join("\n");
-
-          let nextBody = getNextBody(body);
-          if (!nextBody) {
-            nextBody = createPaperPage();
+          alert("한 페이지에는 15줄까지만 작성할 수 있습니다. 새 페이지로 이동해 주세요.");
+          restoreSnapshot();
+          const fallbackBody = paperBodies[Math.max(0, paperBodies.length - 1)] || null;
+          if (fallbackBody) {
+            placeCursorEnd(fallbackBody);
           }
-          const existingText = getPlainText(nextBody);
-          nextBody.innerText = overflowLines.join("\n") + (existingText ? `\n${existingText}` : "");
-          activeBody = nextBody;
-          nextBody.focus();
-          placeCursorEnd(nextBody);
-          enforceLineLimit(nextBody);
+          return false;
         }
 
         function cleanupEmptyPages() {
@@ -434,8 +499,29 @@
           selection.removeAllRanges();
           selection.addRange(range);
 
-          enforceLineLimit(target);
+          if (!enforceLineLimit(target)) {
+            return;
+          }
           cleanupEmptyPages();
+          captureSnapshot();
+        }
+
+        function applyTextStyle(command) {
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          target.focus();
+          try {
+            if (
+              typeof document.queryCommandSupported === "function" &&
+              document.queryCommandSupported("styleWithCSS")
+            ) {
+              document.execCommand("styleWithCSS", false, false);
+            }
+          } catch (error) {
+            console.warn("styleWithCSS 명령을 설정할 수 없습니다.", error);
+          }
+          document.execCommand(command, false, null);
+          captureSnapshot();
         }
 
         emojiToggle?.addEventListener("click", (event) => {
@@ -449,6 +535,13 @@
           if (!emojiPalette.classList.contains("visible")) return;
           if (emojiPalette.contains(event.target) || emojiToggle.contains(event.target)) return;
           setEmojiPaletteState(false);
+        });
+
+        formatToolbar?.addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-command]");
+          if (!button) return;
+          event.preventDefault();
+          applyTextStyle(button.dataset.command);
         });
 
         backToSelect.addEventListener("click", () => {
@@ -484,8 +577,10 @@
             alert("먼저 편지 내용을 작성해 주세요.");
             return;
           }
+          const formattedText = getAllBodyHtml();
           const orderPayload = {
             text: fullText,
+            formattedText,
             characters: getTotalCharacterCount(),
             pages: paperBodies.length,
             font: selectedFont,
@@ -501,8 +596,6 @@
           window.location.href = "/letter-payment.html";
         });
 
-        fontSizeRange.value = DEFAULT_FONT_SIZE;
-        fontSizeValue.textContent = `${DEFAULT_FONT_SIZE}px`;
         renderFontOptions();
         renderColorPalette();
         renderEmojiPalette();
@@ -510,6 +603,7 @@
         createPaperPage();
         applyStationeryStyles();
         applyTypography();
+        captureSnapshot();
       </script>
   </body>
 </html>

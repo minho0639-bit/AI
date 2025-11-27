@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&family=Dongle:wght@300;400;700&family=Gaegu:wght@300;400;700&family=Single+Day&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="letter-payment.css" />
@@ -256,6 +256,37 @@
           .replace(/'/g, "&#39;");
       }
 
+      function sanitizeDraftHtml(html) {
+        if (!html) return "";
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV"]);
+
+        function clean(node) {
+          Array.from(node.childNodes).forEach((child) => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              clean(child);
+              if (!allowedTags.has(child.tagName)) {
+                const fragment = document.createDocumentFragment();
+                while (child.firstChild) {
+                  fragment.appendChild(child.firstChild);
+                }
+                child.replaceWith(fragment);
+              } else {
+                while (child.attributes.length > 0) {
+                  child.removeAttribute(child.attributes[0].name);
+                }
+              }
+            } else if (child.nodeType === Node.COMMENT_NODE) {
+              child.remove();
+            }
+          });
+        }
+
+        clean(template.content);
+        return template.innerHTML;
+      }
+
       const FORBIDDEN_REGEXES = FORBIDDEN_WORDS.map((word) => {
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const loose = escaped
@@ -291,14 +322,19 @@
           return;
         }
 
-        const preview = data.text.length > 400 ? `${data.text.slice(0, 400)}…` : data.text;
+        const baseText = data.text || "";
+        const previewFallback = baseText.length > 400 ? `${baseText.slice(0, 400)}…` : baseText;
+        const pages = Number(data.pages) || 1;
+        const characters = Number(data.characters) || baseText.length;
         const stationeryClass = STATIONERY_CLASS_MAP[data.stationery] || STATIONERY_CLASS_MAP.default;
-        const previewHtml = escapeHtml(preview).replace(/\n/g, "<br>");
+        const previewHtml = data.formattedText
+          ? sanitizeDraftHtml(data.formattedText)
+          : escapeHtml(previewFallback).replace(/\n/g, "<br>");
         summaryBody.innerHTML = `
           <ul class="summary-grid">
             <li>
               <span class="label">작성 분량</span>
-              <strong>${data.pages}장 · ${data.characters}자</strong>
+              <strong>${pages}장 · ${characters}자</strong>
             </li>
             <li>
               <span class="label">선택 서체</span>

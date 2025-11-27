@@ -305,6 +305,21 @@ button:active {
   letter-spacing: 0.02em;
 }
 
+.preview-paper-body.font-gaegu {
+  font-family: "Gaegu", "Nanum Pen Script", cursive;
+  letter-spacing: 0.01em;
+}
+
+.preview-paper-body.font-dongle {
+  font-family: "Dongle", "Nanum Pen Script", cursive;
+  letter-spacing: 0.04em;
+}
+
+.preview-paper-body.font-singleDay {
+  font-family: "Single Day", "Nanum Pen Script", cursive;
+  letter-spacing: 0.02em;
+}
+
 .price-card {
   border: 1px solid var(--border);
   border-radius: 20px;
