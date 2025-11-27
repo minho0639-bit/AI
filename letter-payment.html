@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="letter-payment.css" />
     <script src="https://cdn.portone.io/v2/browser-sdk.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
   </head>
   <body>
     <header class="payment-nav">
@@ -95,6 +96,7 @@
 
         <div class="payment-actions">
           <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
+          <button type="button" class="ghost" id="savePreviewImage">미리보기 이미지 저장</button>
           <button type="button" class="primary" id="requestPayment">결제하기</button>
         </div>
       </section>
@@ -222,6 +224,7 @@
       const extraAmountEl = document.getElementById("extraAmount");
       const requestPayment = document.getElementById("requestPayment");
       const downloadDraft = document.getElementById("downloadDraft");
+      const savePreviewImageBtn = document.getElementById("savePreviewImage");
       const backToCompose = document.getElementById("backToCompose");
       const backHome = document.getElementById("backHome");
       const buyerForm = document.getElementById("buyerForm");
@@ -469,6 +472,51 @@
         URL.revokeObjectURL(url);
       }
 
+      function downloadDataUrl(dataUrl, filename) {
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+      async function handleSavePreviewImage() {
+        if (!draftData) {
+          alert("편지 데이터가 없어 이미지를 저장할 수 없습니다.");
+          return;
+        }
+        const previewPaper = document.querySelector(".preview .preview-paper");
+        if (!previewPaper) {
+          alert("미리보기를 불러온 뒤 다시 시도해 주세요.");
+          return;
+        }
+        if (typeof html2canvas !== "function") {
+          alert("이미지 저장 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          return;
+        }
+
+        try {
+          savePreviewImageBtn.disabled = true;
+          savePreviewImageBtn.textContent = "이미지 생성 중...";
+
+          const canvas = await html2canvas(previewPaper, {
+            backgroundColor: "#ffffff",
+            scale: Math.min(3, window.devicePixelRatio ? window.devicePixelRatio + 1 : 2),
+            logging: false,
+            useCORS: true,
+          });
+          const timestamp = new Date().toISOString().split("T")[0];
+          const dataUrl = canvas.toDataURL("image/png", 1);
+          downloadDataUrl(dataUrl, `fanletter-preview-${timestamp}.png`);
+        } catch (error) {
+          console.error("preview capture error:", error);
+          alert("이미지를 저장하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+          savePreviewImageBtn.disabled = false;
+          savePreviewImageBtn.textContent = "미리보기 이미지 저장";
+        }
+      }
+
       function openPaymentModal(orderId, amount) {
         modalOrderId.textContent = orderId;
         modalAmount.textContent = formatCurrency(amount);
@@ -656,6 +704,7 @@
 
       requestPayment.addEventListener("click", handlePayment);
       downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
+      savePreviewImageBtn.addEventListener("click", handleSavePreviewImage);
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
       backHome.addEventListener("click", () => (window.location.href = "/"));
       editBuyerInfoBtn.addEventListener("click", unlockBuyerForm);

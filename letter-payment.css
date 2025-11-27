@@ -403,11 +403,12 @@ button:active {
 .payment-actions {
   margin-top: 20px;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .payment-actions button {
-  flex: 1;
+  flex: 1 1 30%;
 }
 
 .note {
