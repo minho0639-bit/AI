@@ -38,19 +38,27 @@
         </div>
       </section>
 
-      <section class="coupon-section" id="couponSection" hidden>
+      <section class="coupon-section" id="couponSection">
         <div class="coupon-section__header">
           <h2>내 쿠폰</h2>
-          <p class="muted small">가입 시 제공되는 첫 결제 무료 쿠폰</p>
+          <p class="muted small">보유 쿠폰 현황</p>
         </div>
         <div class="coupon-status" id="couponStatusCard">
           <div>
-            <strong id="couponTitle">WELCOME-FREE</strong>
-            <p class="muted small" id="couponDescription">기본 요금 2,000원 할인</p>
+            <strong>보유 현황</strong>
+            <p class="muted small" id="couponStatus">사용 가능한 쿠폰이 없습니다.</p>
           </div>
-          <span class="coupon-badge" id="couponBadge">사용 가능</span>
+          <span class="coupon-badge" id="couponBadge">0장</span>
         </div>
-        <p class="muted small" id="couponNotice"></p>
+        <ul class="coupon-list" id="couponList"></ul>
+      </section>
+
+      <section class="orders-section" id="ordersSection">
+        <div class="orders-section__header">
+          <h2>주문 내역</h2>
+          <p class="muted small">최근 주문 20건</p>
+        </div>
+        <div id="ordersList" class="orders-list muted small">주문 내역을 불러오는 중입니다...</div>
       </section>
 
       <section class="empty-section" id="emptyState" hidden>
@@ -64,7 +72,9 @@
       const couponSection = document.getElementById("couponSection");
       const couponStatusCard = document.getElementById("couponStatusCard");
       const couponBadge = document.getElementById("couponBadge");
-      const couponNotice = document.getElementById("couponNotice");
+      const couponStatusText = document.getElementById("couponStatus");
+      const couponListEl = document.getElementById("couponList");
+      const ordersListEl = document.getElementById("ordersList");
       const refreshProfileBtn = document.getElementById("refreshProfile");
       const logoutBtn = document.getElementById("logoutBtn");
       const goHomeBtn = document.getElementById("goHomeBtn");
@@ -72,7 +82,7 @@
       const writeLetterBtn = document.getElementById("writeLetterBtn");
       const emptyState = document.getElementById("emptyState");
 
-      const WELCOME_COUPON_KEY = "fanletterWelcomeCoupon";
+      const COUPON_STORAGE_KEY = "fanletterCoupons";
 
       async function fetchProfile() {
         try {
@@ -116,24 +126,53 @@
       }
 
       function renderCouponSection() {
-        const coupon = loadCoupon();
+        const coupons = loadCoupons();
+        if (!couponStatusText || !couponBadge || !couponListEl) return;
         couponSection.hidden = false;
-        if (!coupon) {
+        if (coupons.length === 0) {
           couponStatusCard.classList.remove("coupon-status--used");
-          couponBadge.textContent = "미발급";
-          couponNotice.textContent = "첫 결제 무료 쿠폰이 아직 발급되지 않았습니다.";
+          couponBadge.textContent = "0장";
+          couponStatusText.textContent = "사용 가능한 쿠폰이 없습니다.";
+          couponListEl.innerHTML = '<li class="coupon-item empty">보유 쿠폰이 없습니다.</li>';
           return;
         }
-        couponStatusCard.classList.toggle("coupon-status--used", !!coupon.used);
-        couponBadge.textContent = coupon.used ? "사용 완료" : "사용 가능";
-        couponNotice.textContent = coupon.used
-          ? `쿠폰이 ${new Date(coupon.usedAt).toLocaleDateString("ko-KR")}에 사용되었습니다.`
-          : "결제 단계에서 '쿠폰 적용'을 누르면 자동으로 무료 처리됩니다.";
+        const unused = coupons.filter((coupon) => !coupon.used);
+        couponBadge.textContent = `${unused.length}장`;
+        couponStatusText.textContent =
+          unused.length > 0 ? "사용 가능한 쿠폰이 있습니다." : "모든 쿠폰을 사용했습니다.";
+        couponStatusCard.classList.toggle("coupon-status--used", unused.length === 0);
+        couponListEl.innerHTML = coupons
+          .map((coupon) => {
+            const amount = coupon.amount ? `-${coupon.amount.toLocaleString("ko-KR")}원` : "";
+            return `
+              <li class="coupon-item ${coupon.used ? "used" : ""}">
+                <div>
+                  <strong>${coupon.name || coupon.code}</strong>
+                  <p class="muted small">${coupon.description || ""}</p>
+                </div>
+                <div class="coupon-item__meta">
+                  <span>${amount}</span>
+                  <span class="coupon-item__badge">${coupon.used ? "사용 완료" : "사용 가능"}</span>
+                </div>
+              </li>
+            `;
+          })
+          .join("");
+      }
+
+      function loadCoupons() {
+        try {
+          const raw = localStorage.getItem(COUPON_STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+          console.warn("쿠폰 정보를 읽지 못했습니다.", error);
+          return [];
+        }
       }
 
       async function fetchOrders() {
         try {
-          const response = await fetch("/api/admin/orders?limit=20");
+          const response = await fetch("/api/orders/my?limit=20");
           if (!response.ok) throw new Error("주문 내역을 불러올 수 없습니다.");
           return await response.json();
         } catch (error) {
@@ -143,16 +182,14 @@
       }
 
       async function renderOrders() {
-        const ordersSection = document.getElementById("ordersSection");
-        if (!ordersSection) return;
-        const ordersList = document.getElementById("ordersList");
-        ordersList.innerHTML = '<p class="muted">주문 내역을 불러오는 중입니다...</p>';
+        if (!ordersListEl) return;
+        ordersListEl.innerHTML = '<p class="muted">주문 내역을 불러오는 중입니다...</p>';
         const orders = await fetchOrders();
         if (orders.length === 0) {
-          ordersList.innerHTML = '<p class="muted small">아직 주문 기록이 없습니다.</p>';
+          ordersListEl.innerHTML = '<p class="muted small">아직 주문 기록이 없습니다.</p>';
           return;
         }
-        ordersList.innerHTML = `
+        ordersListEl.innerHTML = `
           <table class="orders-table">
             <thead>
               <tr>

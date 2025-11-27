@@ -528,6 +528,32 @@ app.get("/api/me", async (req, res) => {
   }
 });
 
+app.get("/api/orders/my", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         l.id,
+         l.recipient_name,
+         l.created_at,
+         p.status AS payment_status,
+         p.amount AS payment_amount
+       FROM letters l
+       LEFT JOIN payments p ON p.letter_id = l.id
+       WHERE l.user_id = ?
+       ORDER BY l.created_at DESC
+       LIMIT 20`,
+      [req.session.userId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("my orders fetch error:", error);
+    res.status(500).json({ message: "주문 내역을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
 app.post("/api/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {

@@ -447,6 +447,20 @@ button:active {
   font-size: 1rem;
 }
 
+.coupon-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.coupon-card__actions select {
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
 .empty-state {
   text-align: center;
   padding: 32px 0;

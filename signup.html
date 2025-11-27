@@ -98,17 +98,21 @@
 
       function persistWelcomeCoupon() {
         try {
-          const existing = localStorage.getItem("fanletterWelcomeCoupon");
-          if (existing) return;
-          const coupon = {
+          const storageKey = "fanletterCoupons";
+          const raw = localStorage.getItem(storageKey);
+          const coupons = raw ? JSON.parse(raw) : [];
+          const exists = coupons.some((coupon) => coupon.code === "WELCOME-FREE");
+          if (exists) return;
+          coupons.push({
             code: "WELCOME-FREE",
+            name: "첫 결제 무료 쿠폰",
             type: "amount",
             amount: 2000,
-            description: "첫 회원가입 무료 쿠폰",
-            createdAt: Date.now(),
+            description: "기본 요금 2,000원 할인",
+            issuedAt: Date.now(),
             used: false,
-          };
-          localStorage.setItem("fanletterWelcomeCoupon", JSON.stringify(coupon));
+          });
+          localStorage.setItem(storageKey, JSON.stringify(coupons));
         } catch (error) {
           console.warn("쿠폰 저장 실패:", error);
         }

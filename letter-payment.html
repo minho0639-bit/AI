@@ -77,12 +77,17 @@
           </div>
         </div>
 
-        <div class="coupon-card" id="couponCard" hidden>
+        <div class="coupon-card" id="couponCard">
           <div class="coupon-card__info">
-            <strong>첫 결제 무료 쿠폰</strong>
-            <p class="muted small" id="couponStatus"></p>
+            <strong>보유 쿠폰</strong>
+            <p class="muted small" id="couponStatus">사용 가능한 쿠폰이 없습니다.</p>
           </div>
-          <button type="button" class="ghost tiny" id="applyCoupon">쿠폰 적용</button>
+          <div class="coupon-card__actions">
+            <select id="couponSelect" aria-label="쿠폰 선택" disabled>
+              <option value="">쿠폰 없음</option>
+            </select>
+            <button type="button" class="ghost tiny" id="applyCoupon" disabled>쿠폰 적용</button>
+          </div>
         </div>
 
         <div class="payment-method-card" aria-labelledby="paymentMethodTitle">
@@ -208,7 +213,7 @@
         "#ff7a45",
         "#f9f6ef",
       ]);
-      const WELCOME_COUPON_KEY = "fanletterWelcomeCoupon";
+      const COUPON_STORAGE_KEY = "fanletterCoupons";
       const FORBIDDEN_WORDS = [
         "씨발",
         "시발",
@@ -238,6 +243,7 @@
       const discountRow = document.getElementById("discountRow");
       const discountAmountEl = document.getElementById("discountAmount");
       const couponCard = document.getElementById("couponCard");
+      const couponSelect = document.getElementById("couponSelect");
       const couponStatus = document.getElementById("couponStatus");
       const applyCouponBtn = document.getElementById("applyCoupon");
       const requestPayment = document.getElementById("requestPayment");
@@ -262,7 +268,7 @@
 
       let draftData = null;
       let storedBuyerProfile = null;
-      let availableCoupon = loadWelcomeCoupon();
+      let availableCoupons = loadCoupons();
       let appliedCoupon = null;
 
       function getSelectedPayMethod() {
@@ -323,37 +329,62 @@
         return template.innerHTML;
       }
 
-      function loadWelcomeCoupon() {
+      function loadCoupons() {
         try {
-          const raw = localStorage.getItem(WELCOME_COUPON_KEY);
-          if (!raw) return null;
-          const parsed = JSON.parse(raw);
-          if (!parsed || parsed.used) {
-            return null;
+          const raw = localStorage.getItem(COUPON_STORAGE_KEY);
+          let list = [];
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              list = parsed;
+            }
           }
-          return parsed;
+          const legacyRaw = localStorage.getItem("fanletterWelcomeCoupon");
+          if (legacyRaw) {
+            try {
+              const legacy = JSON.parse(legacyRaw);
+              const exists = list.some((coupon) => coupon.code === legacy.code);
+              if (!exists && !legacy.used) {
+                list.push({
+                  code: legacy.code || "WELCOME-FREE",
+                  name: legacy.description || "첫 결제 무료 쿠폰",
+                  type: legacy.type || "amount",
+                  amount: legacy.amount || 2000,
+                  description: legacy.description || "기본 요금 2,000원 할인",
+                  issuedAt: legacy.createdAt || Date.now(),
+                  used: !!legacy.used,
+                  usedAt: legacy.usedAt,
+                });
+              }
+              localStorage.removeItem("fanletterWelcomeCoupon");
+              localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
+            } catch (legacyError) {
+              console.warn("기존 쿠폰 변환 실패:", legacyError);
+            }
+          }
+          return list;
         } catch (error) {
           console.warn("쿠폰 정보를 불러오지 못했습니다.", error);
-          return null;
+          return [];
         }
       }
 
-      function storeCouponState(coupon) {
-        if (!coupon) return;
+      function storeCouponState(list) {
+        if (!Array.isArray(list)) return;
         try {
-          localStorage.setItem(WELCOME_COUPON_KEY, JSON.stringify(coupon));
+          localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
         } catch (error) {
           console.warn("쿠폰 정보를 저장하지 못했습니다.", error);
         }
       }
 
       function markCouponUsed() {
-        const target = appliedCoupon || availableCoupon;
-        if (!target) return;
-        target.used = true;
-        target.usedAt = Date.now();
-        storeCouponState(target);
-        availableCoupon = null;
+        if (!appliedCoupon) return;
+        availableCoupons = availableCoupons.map((coupon) =>
+          coupon.code === appliedCoupon.code ? { ...coupon, used: true, usedAt: Date.now() } : coupon
+        );
+        storeCouponState(availableCoupons);
+        appliedCoupon = null;
       }
 
       function getCurrentDiscount() {
@@ -368,29 +399,50 @@
 
       function updateCouponUI() {
         if (!couponCard) return;
-        const hasCoupon = availableCoupon || appliedCoupon;
-        if (!hasCoupon) {
-          couponCard.hidden = true;
-          return;
-        }
+        const unusedCoupons = availableCoupons.filter((coupon) => !coupon.used);
         couponCard.hidden = false;
-        if (couponStatus) {
-          couponStatus.textContent = appliedCoupon
-            ? "쿠폰이 적용되어 기본 요금이 0원이 되었습니다."
-            : "첫 결제 무료 쿠폰을 사용할 수 있습니다.";
-        }
+        couponStatus.textContent =
+          unusedCoupons.length === 0
+            ? "사용 가능한 쿠폰이 없습니다."
+            : "보유 쿠폰 중 하나를 선택해 적용해 주세요.";
+        if (!couponSelect) return;
+        couponSelect.innerHTML =
+          unusedCoupons.length === 0
+            ? '<option value="">쿠폰 없음</option>'
+            : `<option value="">쿠폰 선택</option>${unusedCoupons
+                .map(
+                  (coupon) => `
+                  <option value="${coupon.code}">
+                    ${coupon.name || coupon.code} (-${(coupon.amount || 0).toLocaleString("ko-KR")}원)
+                  </option>`
+                )
+                .join("")}`;
+        couponSelect.disabled = unusedCoupons.length === 0;
         if (applyCouponBtn) {
-          applyCouponBtn.disabled = !!appliedCoupon;
+          applyCouponBtn.disabled = unusedCoupons.length === 0;
           applyCouponBtn.textContent = appliedCoupon ? "적용 완료" : "쿠폰 적용";
+        }
+        if (appliedCoupon && couponSelect) {
+          couponSelect.value = appliedCoupon.code;
         }
       }
 
       function handleApplyCoupon() {
-        if (!availableCoupon || appliedCoupon) return;
-        appliedCoupon = availableCoupon;
+        if (!couponSelect) return;
+        const code = couponSelect.value;
+        if (!code) {
+          alert("적용할 쿠폰을 선택해 주세요.");
+          return;
+        }
+        const coupon = availableCoupons.find((item) => item.code === code && !item.used);
+        if (!coupon) {
+          alert("선택한 쿠폰을 사용할 수 없습니다.");
+          return;
+        }
+        appliedCoupon = coupon;
         updateCouponUI();
         refreshAmounts();
-        alert("쿠폰이 적용되었습니다. 결제 금액이 무료로 변경됩니다.");
+        alert("쿠폰이 적용되었습니다.");
       }
 
       function consumeCoupon() {
