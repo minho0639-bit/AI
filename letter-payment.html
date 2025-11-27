@@ -95,8 +95,7 @@
         </div>
 
         <div class="payment-actions">
-          <button type="button" class="ghost" id="downloadDraft">편지 내용 저장</button>
-          <button type="button" class="ghost" id="savePreviewImage">미리보기 이미지 저장</button>
+          <button type="button" class="ghost" id="downloadDraft">편지 이미지 저장</button>
           <button type="button" class="primary" id="requestPayment">결제하기</button>
         </div>
       </section>
@@ -224,7 +223,6 @@
       const extraAmountEl = document.getElementById("extraAmount");
       const requestPayment = document.getElementById("requestPayment");
       const downloadDraft = document.getElementById("downloadDraft");
-      const savePreviewImageBtn = document.getElementById("savePreviewImage");
       const backToCompose = document.getElementById("backToCompose");
       const backHome = document.getElementById("backHome");
       const buyerForm = document.getElementById("buyerForm");
@@ -459,19 +457,6 @@
         totalAmountEl.textContent = formatCurrency(base + extra);
       }
 
-      function downloadLetter(data) {
-        const blob = new Blob([data.text], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        const timestamp = new Date().toISOString().split("T")[0];
-        link.href = url;
-        link.download = `fanletter-${timestamp}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-      }
-
       function downloadDataUrl(dataUrl, filename) {
         const link = document.createElement("a");
         link.href = dataUrl;
@@ -496,8 +481,8 @@
         }
 
         try {
-          savePreviewImageBtn.disabled = true;
-          savePreviewImageBtn.textContent = "이미지 생성 중...";
+          downloadDraft.disabled = true;
+          downloadDraft.textContent = "이미지 생성 중...";
 
           const canvas = await html2canvas(previewPaper, {
             backgroundColor: "#ffffff",
@@ -512,8 +497,8 @@
           console.error("preview capture error:", error);
           alert("이미지를 저장하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         } finally {
-          savePreviewImageBtn.disabled = false;
-          savePreviewImageBtn.textContent = "미리보기 이미지 저장";
+          downloadDraft.disabled = false;
+          downloadDraft.textContent = "편지 이미지 저장";
         }
       }
 
@@ -703,8 +688,7 @@
       }
 
       requestPayment.addEventListener("click", handlePayment);
-      downloadDraft.addEventListener("click", () => draftData && downloadLetter(draftData));
-      savePreviewImageBtn.addEventListener("click", handleSavePreviewImage);
+      downloadDraft.addEventListener("click", handleSavePreviewImage);
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
       backHome.addEventListener("click", () => (window.location.href = "/"));
       editBuyerInfoBtn.addEventListener("click", unlockBuyerForm);
