@@ -756,6 +756,20 @@ async function ensureStationeryTemplates() {
         ]
       );
     }
+    if (rows.length > 0) {
+      const templateId = rows[0].id;
+      await pool.query(
+        `UPDATE stationery_templates
+         SET description = ?, preview_image_url = ?, is_active = ?
+         WHERE id = ?`,
+        [
+          template.description || null,
+          template.previewImageUrl || null,
+          template.isActive ? 1 : 0,
+          templateId,
+        ]
+      );
+    }
   }
 }
 
