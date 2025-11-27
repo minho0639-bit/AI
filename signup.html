@@ -96,6 +96,24 @@
         }
       }
 
+      function persistWelcomeCoupon() {
+        try {
+          const existing = localStorage.getItem("fanletterWelcomeCoupon");
+          if (existing) return;
+          const coupon = {
+            code: "WELCOME-FREE",
+            type: "amount",
+            amount: 2000,
+            description: "첫 회원가입 무료 쿠폰",
+            createdAt: Date.now(),
+            used: false,
+          };
+          localStorage.setItem("fanletterWelcomeCoupon", JSON.stringify(coupon));
+        } catch (error) {
+          console.warn("쿠폰 저장 실패:", error);
+        }
+      }
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         messageEl.textContent = "";
@@ -132,6 +150,7 @@
           messageEl.classList.remove("error");
           messageEl.classList.add("success");
           persistBuyerProfile({ name, email, phone });
+          persistWelcomeCoupon();
           form.reset();
 
           setTimeout(() => {

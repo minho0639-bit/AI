@@ -67,10 +67,22 @@
             <span>추가 요금</span>
             <span id="extraAmount">0원</span>
           </div>
+          <div class="price-row discount" id="discountRow" hidden>
+            <span>쿠폰 할인</span>
+            <span id="discountAmount">-0원</span>
+          </div>
           <div class="price-row total">
             <span>결제 예정 금액</span>
             <span id="totalAmount">2,000원</span>
           </div>
+        </div>
+
+        <div class="coupon-card" id="couponCard" hidden>
+          <div class="coupon-card__info">
+            <strong>첫 결제 무료 쿠폰</strong>
+            <p class="muted small" id="couponStatus"></p>
+          </div>
+          <button type="button" class="ghost tiny" id="applyCoupon">쿠폰 적용</button>
         </div>
 
         <div class="payment-method-card" aria-labelledby="paymentMethodTitle">
@@ -196,6 +208,7 @@
         "#ff7a45",
         "#f9f6ef",
       ]);
+      const WELCOME_COUPON_KEY = "fanletterWelcomeCoupon";
       const FORBIDDEN_WORDS = [
         "씨발",
         "시발",
@@ -222,6 +235,11 @@
       const baseAmountEl = document.getElementById("baseAmount");
       const totalAmountEl = document.getElementById("totalAmount");
       const extraAmountEl = document.getElementById("extraAmount");
+      const discountRow = document.getElementById("discountRow");
+      const discountAmountEl = document.getElementById("discountAmount");
+      const couponCard = document.getElementById("couponCard");
+      const couponStatus = document.getElementById("couponStatus");
+      const applyCouponBtn = document.getElementById("applyCoupon");
       const requestPayment = document.getElementById("requestPayment");
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
@@ -244,6 +262,8 @@
 
       let draftData = null;
       let storedBuyerProfile = null;
+      let availableCoupon = loadWelcomeCoupon();
+      let appliedCoupon = null;
 
       function getSelectedPayMethod() {
         const checked = Array.from(payMethodInputs).find((input) => input.checked);
@@ -301,6 +321,84 @@
 
         clean(template.content);
         return template.innerHTML;
+      }
+
+      function loadWelcomeCoupon() {
+        try {
+          const raw = localStorage.getItem(WELCOME_COUPON_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || parsed.used) {
+            return null;
+          }
+          return parsed;
+        } catch (error) {
+          console.warn("쿠폰 정보를 불러오지 못했습니다.", error);
+          return null;
+        }
+      }
+
+      function storeCouponState(coupon) {
+        if (!coupon) return;
+        try {
+          localStorage.setItem(WELCOME_COUPON_KEY, JSON.stringify(coupon));
+        } catch (error) {
+          console.warn("쿠폰 정보를 저장하지 못했습니다.", error);
+        }
+      }
+
+      function markCouponUsed() {
+        const target = appliedCoupon || availableCoupon;
+        if (!target) return;
+        target.used = true;
+        target.usedAt = Date.now();
+        storeCouponState(target);
+        availableCoupon = null;
+      }
+
+      function getCurrentDiscount() {
+        if (!appliedCoupon) return 0;
+        const amount = Number(appliedCoupon.amount) || 0;
+        return Math.max(0, Math.min(PAYMENT_CONFIG.baseAmount, amount));
+      }
+
+      function refreshAmounts() {
+        setAmounts(PAYMENT_CONFIG.baseAmount, 0, getCurrentDiscount());
+      }
+
+      function updateCouponUI() {
+        if (!couponCard) return;
+        const hasCoupon = availableCoupon || appliedCoupon;
+        if (!hasCoupon) {
+          couponCard.hidden = true;
+          return;
+        }
+        couponCard.hidden = false;
+        if (couponStatus) {
+          couponStatus.textContent = appliedCoupon
+            ? "쿠폰이 적용되어 기본 요금이 0원이 되었습니다."
+            : "첫 결제 무료 쿠폰을 사용할 수 있습니다.";
+        }
+        if (applyCouponBtn) {
+          applyCouponBtn.disabled = !!appliedCoupon;
+          applyCouponBtn.textContent = appliedCoupon ? "적용 완료" : "쿠폰 적용";
+        }
+      }
+
+      function handleApplyCoupon() {
+        if (!availableCoupon || appliedCoupon) return;
+        appliedCoupon = availableCoupon;
+        updateCouponUI();
+        refreshAmounts();
+        alert("쿠폰이 적용되었습니다. 결제 금액이 무료로 변경됩니다.");
+      }
+
+      function consumeCoupon() {
+        if (!appliedCoupon) return;
+        markCouponUsed();
+        appliedCoupon = null;
+        updateCouponUI();
+        refreshAmounts();
       }
 
       function sanitizeDraftElement(element) {
@@ -477,10 +575,18 @@
         }
       }
 
-      function setAmounts(base, extra = 0) {
+      function setAmounts(base, extra = 0, discount = 0) {
         baseAmountEl.textContent = formatCurrency(base);
         extraAmountEl.textContent = formatCurrency(extra);
-        totalAmountEl.textContent = formatCurrency(base + extra);
+        const hasDiscount = discount > 0;
+        if (discountRow) {
+          discountRow.hidden = !hasDiscount;
+        }
+        if (discountAmountEl) {
+          discountAmountEl.textContent = hasDiscount ? `-${discount.toLocaleString("ko-KR")}원` : "-0원";
+        }
+        const total = Math.max(0, base + extra - discount);
+        totalAmountEl.textContent = formatCurrency(total);
       }
 
       function downloadDataUrl(dataUrl, filename) {
@@ -645,10 +751,18 @@
         }
 
         const orderId = `order_${Date.now()}`;
-        const paymentAmount = PAYMENT_CONFIG.baseAmount;
+        const discountAmount = getCurrentDiscount();
+        const paymentAmount = Math.max(0, PAYMENT_CONFIG.baseAmount - discountAmount);
         const payMethod = getSelectedPayMethod();
         // 이니시스 V2 휴대폰 결제는 상품 유형 명시가 필수
         const productType = payMethod === "MOBILE" ? "PRODUCT_TYPE_REAL" : undefined;
+
+        if (paymentAmount === 0) {
+          alert("쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다.");
+          sessionStorage.removeItem("fanletterDraft");
+          consumeCoupon();
+          return;
+        }
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
           openPaymentModal(orderId, paymentAmount);
@@ -696,6 +810,7 @@
           if (paymentResult.status === "PAID") {
             alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
             sessionStorage.removeItem("fanletterDraft");
+            consumeCoupon();
           } else if (paymentResult.status === "READY") {
             alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
           } else if (paymentResult.status === "VIRTUAL_ACCOUNT_ISSUED") {
@@ -713,6 +828,7 @@
         }
       }
 
+      applyCouponBtn?.addEventListener("click", handleApplyCoupon);
       requestPayment.addEventListener("click", handlePayment);
       downloadDraft.addEventListener("click", handleSavePreviewImage);
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
@@ -727,7 +843,8 @@
 
       draftData = loadDraft();
       renderSummary(draftData);
-      setAmounts(PAYMENT_CONFIG.baseAmount, 0);
+      refreshAmounts();
+      updateCouponUI();
       const existingProfile = loadBuyerProfile();
       if (existingProfile) {
         applyBuyerProfile(existingProfile);
