@@ -109,10 +109,14 @@
             throw new Error(data.message || "회원가입에 실패했습니다.");
           }
 
-          messageEl.textContent = data.message;
+          messageEl.textContent = `${data.message} 잠시 후 홈으로 이동합니다.`;
           messageEl.classList.remove("error");
           messageEl.classList.add("success");
           form.reset();
+
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1200);
         } catch (error) {
           messageEl.textContent = error.message;
           messageEl.classList.remove("success");
