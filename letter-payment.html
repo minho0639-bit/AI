@@ -789,6 +789,10 @@
         buyerNameInput.focus();
       }
 
+      function navigateToOrdersPage() {
+        window.location.href = "/profile.html#orders";
+      }
+
       async function handlePayment() {
         if (isProcessingPayment) return;
         if (!draftData) {
