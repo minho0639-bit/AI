@@ -1506,13 +1506,13 @@
                 }
                 .preview-paper {
                   --paper-fill: #fff;
-                  --paper-line-color: rgba(0, 0, 0, 0.25);
+                  --paper-line-color: rgba(0, 0, 0, 0.35);
                   width: 12cm;
                   min-width: 12cm;
-                  height: 18cm;
+                  height: 15cm;
                   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
                   position: relative;
-                  padding: 3cm;
+                  padding: 1.5cm 3cm 1.5cm 3cm;
                   background: var(--paper-fill);
                   overflow: hidden;
                 }
@@ -1596,13 +1596,19 @@
                   const guides = document.querySelector(".preview-paper-guides");
                   if (!paper || !guides) return;
                   const lines = 16;
-                  const spacing = paper.clientHeight / lines;
+                  const body = document.querySelector(".preview-paper-body");
+                  const textLineHeight = 30; // px
+                  const spacing = textLineHeight;
+                  const offset = 4;
                   guides.innerHTML = "";
                   for (let i = 0; i < lines; i += 1) {
                     const guide = document.createElement("div");
                     guide.className = "preview-paper-guide";
-                    guide.style.top = \`\${Math.round(i * spacing)}px\`;
+                    guide.style.top = \`\${offset + i * spacing}px\`;
                     guides.appendChild(guide);
+                  }
+                  if (body) {
+                    body.style.lineHeight = \`\${textLineHeight}px\`;
                   }
                 })();
               <\/script>
