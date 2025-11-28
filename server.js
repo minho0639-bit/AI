@@ -453,6 +453,230 @@ app.delete("/api/admin/stationery/:id", requireAdmin, async (req, res) => {
   }
 });
 
+app.get("/api/admin/coupons", requireAdmin, async (req, res) => {
+  try {
+    await ensureCouponSetup();
+    const [couponRows] = await pool.query(
+      `SELECT
+         c.*,
+         COUNT(uc.id) AS total_issued,
+         SUM(uc.status = 'issued') AS active_count,
+         SUM(uc.status = 'used') AS used_count
+       FROM coupons c
+       LEFT JOIN user_coupons uc ON uc.coupon_id = c.id
+       GROUP BY c.id
+       ORDER BY c.created_at DESC`
+    );
+    const [issueRows] = await pool.query(
+      `SELECT
+         uc.id,
+         uc.user_id,
+         uc.coupon_id,
+         uc.status,
+         uc.issued_at,
+         uc.used_at,
+         uc.expires_at,
+         uc.notes,
+         u.email AS user_email,
+         u.name AS user_name,
+         c.code AS coupon_code,
+         c.name AS coupon_name,
+         c.discount_type,
+         c.discount_value
+       FROM user_coupons uc
+       INNER JOIN users u ON u.id = uc.user_id
+       INNER JOIN coupons c ON c.id = uc.coupon_id
+       ORDER BY uc.created_at DESC
+       LIMIT 100`
+    );
+    res.json({
+      coupons: couponRows.map(mapAdminCouponDefinition),
+      issues: issueRows.map(mapAdminCouponIssue),
+    });
+  } catch (error) {
+    console.error("admin coupons fetch error:", error);
+    res.status(500).json({ message: "쿠폰 정보를 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
+  const payload = req.body || {};
+  const code = payload.code?.trim();
+  const name = payload.name?.trim();
+  const discountType = payload.discountType === "percent" ? "percent" : "amount";
+  const discountValue = Number(payload.discountValue);
+  if (!code || !name) {
+    return res.status(400).json({ message: "코드와 이름을 입력해 주세요." });
+  }
+  if (!Number.isFinite(discountValue) || discountValue <= 0) {
+    return res.status(400).json({ message: "할인 금액/비율이 올바르지 않습니다." });
+  }
+  const minOrderTotal =
+    payload.minOrderTotal === "" || payload.minOrderTotal == null
+      ? null
+      : Number(payload.minOrderTotal);
+  const maxDiscount =
+    payload.maxDiscount === "" || payload.maxDiscount == null
+      ? null
+      : Number(payload.maxDiscount);
+  const usageLimit =
+    payload.usageLimit === "" || payload.usageLimit == null ? null : Number(payload.usageLimit);
+  if (
+    (minOrderTotal != null && (!Number.isFinite(minOrderTotal) || minOrderTotal < 0)) ||
+    (maxDiscount != null && (!Number.isFinite(maxDiscount) || maxDiscount < 0)) ||
+    (usageLimit != null && (!Number.isFinite(usageLimit) || usageLimit < 0))
+  ) {
+    return res.status(400).json({ message: "조건 값이 올바르지 않습니다." });
+  }
+  let startsAt = null;
+  let expiresAt = null;
+  if (payload.startsAt) {
+    const parsed = new Date(payload.startsAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return res.status(400).json({ message: "시작 시각 형식이 올바르지 않습니다." });
+    }
+    startsAt = parsed;
+  }
+  if (payload.expiresAt) {
+    const parsed = new Date(payload.expiresAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return res.status(400).json({ message: "만료 시각 형식이 올바르지 않습니다." });
+    }
+    expiresAt = parsed;
+  }
+  try {
+    await ensureCouponSetup();
+    const [result] = await pool.query(
+      `INSERT INTO coupons
+         (code, name, description, discount_type, discount_value, min_order_total, max_discount, starts_at, expires_at, usage_limit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        code,
+        name,
+        payload.description?.trim() || null,
+        discountType,
+        discountValue,
+        minOrderTotal,
+        maxDiscount,
+        startsAt,
+        expiresAt,
+        usageLimit,
+      ]
+    );
+    const [rows] = await pool.query("SELECT * FROM coupons WHERE id = ?", [result.insertId]);
+    const created = rows.length ? rows[0] : null;
+    res
+      .status(201)
+      .json(
+        created ? mapAdminCouponDefinition({ ...created, total_issued: 0, active_count: 0, used_count: 0 }) : null
+      );
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "이미 존재하는 쿠폰 코드입니다." });
+    }
+    console.error("admin coupon create error:", error);
+    res.status(500).json({ message: "쿠폰을 생성하지 못했습니다." });
+  }
+});
+
+app.delete("/api/admin/coupons/:id", requireAdmin, async (req, res) => {
+  const couponId = Number(req.params.id);
+  if (!couponId) {
+    return res.status(400).json({ message: "잘못된 쿠폰 ID입니다." });
+  }
+  try {
+    await ensureCouponSetup();
+    const [result] = await pool.query("DELETE FROM coupons WHERE id = ?", [couponId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "쿠폰을 찾을 수 없습니다." });
+    }
+    res.json({ message: "쿠폰을 삭제했습니다." });
+  } catch (error) {
+    console.error("admin coupon delete error:", error);
+    res.status(500).json({ message: "쿠폰을 삭제하지 못했습니다." });
+  }
+});
+
+app.post("/api/admin/coupons/issue", requireAdmin, async (req, res) => {
+  const { couponId, userId, userEmail, expiresAt, notes } = req.body || {};
+  const parsedCouponId = Number(couponId);
+  if (!parsedCouponId) {
+    return res.status(400).json({ message: "쿠폰을 선택해 주세요." });
+  }
+  let targetUserId = Number(userId);
+  try {
+    await ensureCouponSetup();
+    const [couponRows] = await pool.query("SELECT id, code FROM coupons WHERE id = ? LIMIT 1", [
+      parsedCouponId,
+    ]);
+    if (couponRows.length === 0) {
+      return res.status(404).json({ message: "쿠폰을 찾을 수 없습니다." });
+    }
+    if (!targetUserId && userEmail) {
+      const [userByEmail] = await pool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [
+        userEmail.trim(),
+      ]);
+      if (userByEmail.length > 0) {
+        targetUserId = userByEmail[0].id;
+      }
+    }
+    if (!targetUserId) {
+      return res
+        .status(400)
+        .json({ message: "발급할 회원 ID 또는 이메일을 입력해 주세요." });
+    }
+    const [userRows] = await pool.query("SELECT id FROM users WHERE id = ? LIMIT 1", [targetUserId]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: "회원 정보를 찾을 수 없습니다." });
+    }
+    const [activeRows] = await pool.query(
+      `SELECT id FROM user_coupons WHERE user_id = ? AND coupon_id = ? AND status = 'issued' LIMIT 1`,
+      [targetUserId, couponRows[0].id]
+    );
+    if (activeRows.length > 0) {
+      return res.status(409).json({ message: "이미 발급된 쿠폰이 있습니다." });
+    }
+    let customExpires = null;
+    if (expiresAt) {
+      const parsed = new Date(expiresAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: "만료 시각 형식이 올바르지 않습니다." });
+      }
+      customExpires = parsed;
+    }
+    const issueId = await issueCouponToUser(targetUserId, couponRows[0].code, {
+      expiresAt: customExpires || undefined,
+      notes: notes?.trim() || null,
+    });
+    const [rows] = await pool.query(
+      `SELECT
+         uc.id,
+         uc.user_id,
+         uc.coupon_id,
+         uc.status,
+         uc.issued_at,
+         uc.used_at,
+         uc.expires_at,
+         uc.notes,
+         u.email AS user_email,
+         u.name AS user_name,
+         c.code AS coupon_code,
+         c.name AS coupon_name,
+         c.discount_type,
+         c.discount_value
+       FROM user_coupons uc
+       INNER JOIN users u ON u.id = uc.user_id
+       INNER JOIN coupons c ON c.id = uc.coupon_id
+       WHERE uc.id = ?`,
+      [issueId]
+    );
+    res.status(201).json(mapAdminCouponIssue(rows[0]));
+  } catch (error) {
+    console.error("admin coupon issue error:", error);
+    res.status(500).json({ message: "쿠폰을 발급하지 못했습니다." });
+  }
+});
+
 app.get("/api/stationery", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -890,6 +1114,56 @@ async function findOrCreateGroup(name, agencyId) {
   return result.insertId;
 }
 
+
+function formatDateValue(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString();
+}
+
+function mapAdminCouponDefinition(row = {}) {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    discountType: row.discount_type,
+    discountValue: Number(row.discount_value || 0),
+    minOrderTotal: row.min_order_total != null ? Number(row.min_order_total) : null,
+    maxDiscount: row.max_discount != null ? Number(row.max_discount) : null,
+    startsAt: formatDateValue(row.starts_at),
+    expiresAt: formatDateValue(row.expires_at),
+    usageLimit: row.usage_limit != null ? Number(row.usage_limit) : null,
+    totalIssued: Number(row.total_issued || 0),
+    activeCount: Number(row.active_count || 0),
+    usedCount: Number(row.used_count || 0),
+    createdAt: formatDateValue(row.created_at),
+    updatedAt: formatDateValue(row.updated_at),
+  };
+}
+
+function mapAdminCouponIssue(row = {}) {
+  return {
+    id: row.id,
+    couponId: row.coupon_id,
+    couponCode: row.coupon_code,
+    couponName: row.coupon_name,
+    userId: row.user_id,
+    userEmail: row.user_email,
+    userName: row.user_name,
+    status: row.status,
+    issuedAt: formatDateValue(row.issued_at),
+    usedAt: formatDateValue(row.used_at),
+    expiresAt: formatDateValue(row.expires_at),
+    notes: row.notes,
+    discountType: row.discount_type,
+    discountValue: row.discount_value != null ? Number(row.discount_value) : null,
+  };
+}
+
 async function ensureCouponSetup() {
   if (!couponSetupPromise) {
     couponSetupPromise = (async () => {
@@ -967,11 +1241,11 @@ async function grantWelcomeCouponToUser(userId) {
   await issueCouponToUser(userId, DEFAULT_WELCOME_COUPON.code);
 }
 
-async function issueCouponToUser(userId, couponCode) {
+async function issueCouponToUser(userId, couponCode, options = {}) {
   if (!userId || !couponCode) return null;
   await ensureCouponSetup();
   const [couponRows] = await pool.query(
-    `SELECT id, expires_at FROM coupons WHERE code = ? LIMIT 1`,
+    `SELECT id, code, expires_at FROM coupons WHERE code = ? LIMIT 1`,
     [couponCode]
   );
   if (couponRows.length === 0) {
@@ -979,16 +1253,31 @@ async function issueCouponToUser(userId, couponCode) {
   }
   const coupon = couponRows[0];
   const [existing] = await pool.query(
-    `SELECT id FROM user_coupons WHERE user_id = ? AND coupon_id = ? LIMIT 1`,
+    `SELECT id FROM user_coupons WHERE user_id = ? AND coupon_id = ? AND status = 'issued' LIMIT 1`,
     [userId, coupon.id]
   );
   if (existing.length > 0) {
     return existing[0].id;
   }
+  const expiresAt =
+    options.expiresAt instanceof Date
+      ? options.expiresAt
+      : options.expiresAt
+      ? new Date(options.expiresAt)
+      : coupon.expires_at || null;
+  if (expiresAt && expiresAt instanceof Date && Number.isNaN(expiresAt.getTime())) {
+    throw new Error("invalid expiresAt value");
+  }
   const [result] = await pool.query(
-    `INSERT INTO user_coupons (user_id, coupon_id, status, expires_at)
-     VALUES (?, ?, 'issued', ?)`,
-    [userId, coupon.id, coupon.expires_at || null]
+    `INSERT INTO user_coupons (user_id, coupon_id, status, expires_at, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      userId,
+      coupon.id,
+      options.status || "issued",
+      expiresAt instanceof Date ? expiresAt : expiresAt || null,
+      options.notes || null,
+    ]
   );
   return result.insertId;
 }
