@@ -1352,11 +1352,30 @@ async function ensureCouponInfrastructure() {
       notes VARCHAR(255),
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uq_user_coupon (user_id, coupon_id, status),
       CONSTRAINT fk_user_coupons_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       CONSTRAINT fk_user_coupons_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
   );
+
+  try {
+    await pool.query(
+      "ALTER TABLE user_coupons DROP INDEX uq_user_coupon"
+    );
+  } catch (error) {
+    if (error.code !== "ER_CANT_DROP_FIELD_OR_KEY" && error.code !== "ER_DUP_KEYNAME") {
+      console.warn("user_coupons drop index warn:", error.message || error);
+    }
+  }
+
+  try {
+    await pool.query(
+      "CREATE INDEX idx_user_coupons_user_coupon_status ON user_coupons (user_id, coupon_id, status)"
+    );
+  } catch (error) {
+    if (error.code !== "ER_DUP_KEYNAME") {
+      console.warn("user_coupons add index warn:", error.message || error);
+    }
+  }
 }
 
 async function ensureWelcomeCouponDefinition() {
