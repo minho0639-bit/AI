@@ -213,7 +213,10 @@
         "#ff7a45",
         "#f9f6ef",
       ]);
-      const COUPON_STORAGE_KEY = "fanletterCoupons";
+      const COUPON_API_ENDPOINTS = Object.freeze({
+        list: "/api/coupons/me",
+        consume: "/api/coupons/consume",
+      });
       const FORBIDDEN_WORDS = [
         "씨발",
         "시발",
@@ -268,8 +271,10 @@
 
       let draftData = null;
       let storedBuyerProfile = null;
-      let availableCoupons = loadCoupons();
+      let availableCoupons = [];
       let appliedCoupon = null;
+      let isCouponLoading = false;
+      let couponLoadError = null;
       const ORDERS_PAGE_URL = "/profile.html#orders";
 
       function getSelectedPayMethod() {
@@ -330,67 +335,47 @@
         return template.innerHTML;
       }
 
-      function loadCoupons() {
-        try {
-          const raw = localStorage.getItem(COUPON_STORAGE_KEY);
-          let list = [];
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              list = parsed;
-            }
-          }
-          const legacyRaw = localStorage.getItem("fanletterWelcomeCoupon");
-          if (legacyRaw) {
-            try {
-              const legacy = JSON.parse(legacyRaw);
-              const exists = list.some((coupon) => coupon.code === legacy.code);
-              if (!exists && !legacy.used) {
-                list.push({
-                  code: legacy.code || "WELCOME-FREE",
-                  name: legacy.description || "첫 결제 무료 쿠폰",
-                  type: legacy.type || "amount",
-                  amount: legacy.amount || 2000,
-                  description: legacy.description || "기본 요금 2,000원 할인",
-                  issuedAt: legacy.createdAt || Date.now(),
-                  used: !!legacy.used,
-                  usedAt: legacy.usedAt,
-                });
-              }
-              localStorage.removeItem("fanletterWelcomeCoupon");
-              localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
-            } catch (legacyError) {
-              console.warn("기존 쿠폰 변환 실패:", legacyError);
-            }
-          }
-          return list;
-        } catch (error) {
-          console.warn("쿠폰 정보를 불러오지 못했습니다.", error);
-          return [];
-        }
+      function setCouponLoadingState(isLoading) {
+        isCouponLoading = isLoading;
+        updateCouponUI();
       }
 
-      function storeCouponState(list) {
-        if (!Array.isArray(list)) return;
+      async function fetchCouponsFromServer() {
+        setCouponLoadingState(true);
         try {
-          localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(list));
+          const response = await fetch(COUPON_API_ENDPOINTS.list, { credentials: "include" });
+          if (response.status === 401) {
+            couponLoadError = "로그인 후 쿠폰을 사용할 수 있습니다.";
+            availableCoupons = [];
+            appliedCoupon = null;
+            return;
+          }
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "쿠폰을 불러오지 못했습니다.");
+          }
+          const coupons = await response.json();
+          availableCoupons = Array.isArray(coupons) ? coupons : [];
+          couponLoadError = null;
+          if (appliedCoupon) {
+            appliedCoupon =
+              availableCoupons.find(
+                (coupon) => coupon.code === appliedCoupon.code && coupon.canUse
+              ) || null;
+          }
         } catch (error) {
-          console.warn("쿠폰 정보를 저장하지 못했습니다.", error);
+          console.error("coupon fetch error:", error);
+          couponLoadError = error.message || "쿠폰 정보를 불러오지 못했습니다.";
+          availableCoupons = [];
+          appliedCoupon = null;
+        } finally {
+          setCouponLoadingState(false);
         }
-      }
-
-      function markCouponUsed() {
-        if (!appliedCoupon) return;
-        availableCoupons = availableCoupons.map((coupon) =>
-          coupon.code === appliedCoupon.code ? { ...coupon, used: true, usedAt: Date.now() } : coupon
-        );
-        storeCouponState(availableCoupons);
-        appliedCoupon = null;
       }
 
       function getCurrentDiscount() {
         if (!appliedCoupon) return 0;
-        const amount = Number(appliedCoupon.amount) || 0;
+        const amount = Number(appliedCoupon.discountValue) || 0;
         return Math.max(0, Math.min(PAYMENT_CONFIG.baseAmount, amount));
       }
 
@@ -400,31 +385,67 @@
 
       function updateCouponUI() {
         if (!couponCard) return;
-        const unusedCoupons = availableCoupons.filter((coupon) => !coupon.used);
         couponCard.hidden = false;
+        if (!couponStatus) return;
+
+        if (isCouponLoading) {
+          couponStatus.textContent = "쿠폰 정보를 불러오는 중입니다...";
+          if (couponSelect) {
+            couponSelect.innerHTML = '<option value="">불러오는 중...</option>';
+            couponSelect.disabled = true;
+          }
+          if (applyCouponBtn) {
+            applyCouponBtn.disabled = true;
+            applyCouponBtn.textContent = "쿠폰 적용";
+          }
+          return;
+        }
+
+        if (couponLoadError) {
+          couponStatus.textContent = couponLoadError;
+          if (couponSelect) {
+            couponSelect.innerHTML = '<option value="">쿠폰 없음</option>';
+            couponSelect.disabled = true;
+          }
+          if (applyCouponBtn) {
+            applyCouponBtn.disabled = true;
+            applyCouponBtn.textContent = "쿠폰 적용";
+          }
+          return;
+        }
+
+        const usableCoupons = availableCoupons.filter((coupon) => coupon.canUse);
         couponStatus.textContent =
-          unusedCoupons.length === 0
+          usableCoupons.length === 0
             ? "사용 가능한 쿠폰이 없습니다."
             : "보유 쿠폰 중 하나를 선택해 적용해 주세요.";
-        if (!couponSelect) return;
-        couponSelect.innerHTML =
-          unusedCoupons.length === 0
-            ? '<option value="">쿠폰 없음</option>'
-            : `<option value="">쿠폰 선택</option>${unusedCoupons
-                .map(
-                  (coupon) => `
+
+        if (couponSelect) {
+          couponSelect.innerHTML =
+            usableCoupons.length === 0
+              ? '<option value="">쿠폰 없음</option>'
+              : `<option value="">쿠폰 선택</option>${usableCoupons
+                  .map(
+                    (coupon) => `
                   <option value="${coupon.code}">
-                    ${coupon.name || coupon.code} (-${(coupon.amount || 0).toLocaleString("ko-KR")}원)
+                    ${coupon.name || coupon.code} (-${(coupon.discountValue || 0).toLocaleString("ko-KR")}원)
                   </option>`
-                )
-                .join("")}`;
-        couponSelect.disabled = unusedCoupons.length === 0;
+                  )
+                  .join("")}`;
+          couponSelect.disabled = usableCoupons.length === 0;
+        }
+
         if (applyCouponBtn) {
-          applyCouponBtn.disabled = unusedCoupons.length === 0;
+          applyCouponBtn.disabled = usableCoupons.length === 0;
           applyCouponBtn.textContent = appliedCoupon ? "적용 완료" : "쿠폰 적용";
         }
-        if (appliedCoupon && couponSelect) {
-          couponSelect.value = appliedCoupon.code;
+
+        if (couponSelect) {
+          if (appliedCoupon && usableCoupons.some((coupon) => coupon.code === appliedCoupon.code)) {
+            couponSelect.value = appliedCoupon.code;
+          } else if (couponSelect.value) {
+            couponSelect.value = "";
+          }
         }
       }
 
@@ -435,7 +456,7 @@
           alert("적용할 쿠폰을 선택해 주세요.");
           return;
         }
-        const coupon = availableCoupons.find((item) => item.code === code && !item.used);
+        const coupon = availableCoupons.find((item) => item.code === code && item.canUse);
         if (!coupon) {
           alert("선택한 쿠폰을 사용할 수 없습니다.");
           return;
@@ -446,12 +467,32 @@
         alert("쿠폰이 적용되었습니다.");
       }
 
-      function consumeCoupon() {
+      async function consumeCoupon() {
         if (!appliedCoupon) return;
-        markCouponUsed();
-        appliedCoupon = null;
-        updateCouponUI();
-        refreshAmounts();
+        try {
+          const response = await fetch(COUPON_API_ENDPOINTS.consume, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ code: appliedCoupon.code }),
+          });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "쿠폰 사용 처리에 실패했습니다.");
+          }
+          availableCoupons = availableCoupons.map((coupon) =>
+            coupon.code === appliedCoupon.code
+              ? { ...coupon, status: "used", canUse: false, usedAt: new Date().toISOString() }
+              : coupon
+          );
+        } catch (error) {
+          console.error("consume coupon error:", error);
+          alert(error.message || "쿠폰 사용 처리에 실패했습니다.");
+        } finally {
+          appliedCoupon = null;
+          updateCouponUI();
+          refreshAmounts();
+        }
       }
 
       function sanitizeDraftElement(element) {
@@ -821,7 +862,7 @@
         if (paymentAmount === 0) {
           alert("쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다.");
           sessionStorage.removeItem("fanletterDraft");
-          consumeCoupon();
+          await consumeCoupon();
           setTimeout(navigateToOrdersPage, 800);
           return;
         }
@@ -872,7 +913,7 @@
           if (paymentResult.status === "PAID") {
             alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
             sessionStorage.removeItem("fanletterDraft");
-            consumeCoupon();
+            await consumeCoupon();
             setTimeout(navigateToOrdersPage, 800);
           } else if (paymentResult.status === "READY") {
             alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
@@ -907,7 +948,8 @@
       draftData = loadDraft();
       renderSummary(draftData);
       refreshAmounts();
-      updateCouponUI();
+      setCouponLoadingState(true);
+      fetchCouponsFromServer();
       const existingProfile = loadBuyerProfile();
       if (existingProfile) {
         applyBuyerProfile(existingProfile);

@@ -34,6 +34,16 @@ const DEFAULT_STATIONERY = [
   },
 ];
 
+const DEFAULT_WELCOME_COUPON = Object.freeze({
+  code: "WELCOME-FREE",
+  name: "첫 결제 무료 쿠폰",
+  description: "기본 요금 2,000원 할인",
+  discountType: "amount",
+  discountValue: 2000,
+});
+
+let couponSetupPromise = null;
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
@@ -80,11 +90,18 @@ app.post("/api/signup", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    await pool.query(
+    const [result] = await pool.query(
       `INSERT INTO users (email, password_hash, name, phone, marketing_consent)
        VALUES (?, ?, ?, ?, ?)`,
       [email, passwordHash, name || null, phone || null, marketingConsent ? 1 : 0]
     );
+
+    const userId = result.insertId;
+    try {
+      await grantWelcomeCouponToUser(userId);
+    } catch (couponError) {
+      console.error("welcome coupon issue error:", couponError);
+    }
 
     res.status(201).json({ message: "회원가입이 완료되었습니다." });
   } catch (error) {
@@ -168,6 +185,13 @@ app.get("/api/admin/session", (req, res) => {
 function requireAdmin(req, res, next) {
   if (!req.session?.userId || !req.session?.isAdmin) {
     return res.status(403).json({ message: "관리자 권한이 필요합니다." });
+  }
+  next();
+}
+
+function requireLogin(req, res, next) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
   }
   next();
 }
@@ -554,6 +578,36 @@ app.get("/api/orders/my", async (req, res) => {
   }
 });
 
+app.get("/api/coupons/me", requireLogin, async (req, res) => {
+  try {
+    const coupons = await getUserCoupons(req.session.userId);
+    res.json(coupons);
+  } catch (error) {
+    console.error("user coupons fetch error:", error);
+    res.status(500).json({ message: "쿠폰 정보를 불러오지 못했습니다." });
+  }
+});
+
+app.post("/api/coupons/consume", requireLogin, async (req, res) => {
+  const code = req.body?.code?.trim();
+  if (!code) {
+    return res.status(400).json({ message: "쿠폰 코드를 입력해 주세요." });
+  }
+  try {
+    const result = await consumeUserCoupon(req.session.userId, code);
+    if (result.status === "not_found") {
+      return res.status(404).json({ message: "쿠폰을 찾을 수 없습니다." });
+    }
+    if (result.status === "invalid_status") {
+      return res.status(409).json({ message: "이미 사용했거나 사용할 수 없는 쿠폰입니다." });
+    }
+    res.json({ message: "쿠폰이 사용 처리되었습니다." });
+  } catch (error) {
+    console.error("coupon consume error:", error);
+    res.status(500).json({ message: "쿠폰을 사용 처리하는 중 오류가 발생했습니다." });
+  }
+});
+
 app.post("/api/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -662,6 +716,11 @@ async function findOrCreateSocialUser(provider, providerUserId, payload) {
       [email, passwordHash, nickname || null]
     );
     userId = userInsert.insertId;
+    try {
+      await grantWelcomeCouponToUser(userId);
+    } catch (couponError) {
+      console.error("social welcome coupon issue error:", couponError);
+    }
   }
 
   await pool.query(
@@ -686,6 +745,7 @@ async function initializeBootstrapTasks() {
   await ensureAdminUser();
   await ensureRecipientTaxonomy();
   await ensureStationeryTemplates();
+  await ensureCouponSetup();
 }
 
 async function ensureAdminUser() {
@@ -828,6 +888,199 @@ async function findOrCreateGroup(name, agencyId) {
     [trimmed, agencyId || null]
   );
   return result.insertId;
+}
+
+async function ensureCouponSetup() {
+  if (!couponSetupPromise) {
+    couponSetupPromise = (async () => {
+      await ensureCouponInfrastructure();
+      await ensureWelcomeCouponDefinition();
+    })().catch((error) => {
+      couponSetupPromise = null;
+      throw error;
+    });
+  }
+  return couponSetupPromise;
+}
+
+async function ensureCouponInfrastructure() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS coupons (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(50) NOT NULL UNIQUE,
+      name VARCHAR(120) NOT NULL,
+      description TEXT,
+      discount_type ENUM('amount','percent') NOT NULL DEFAULT 'amount',
+      discount_value INT UNSIGNED NOT NULL,
+      min_order_total INT UNSIGNED,
+      max_discount INT UNSIGNED,
+      starts_at DATETIME,
+      expires_at DATETIME,
+      usage_limit INT UNSIGNED,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS user_coupons (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      user_id BIGINT UNSIGNED NOT NULL,
+      coupon_id BIGINT UNSIGNED NOT NULL,
+      status ENUM('issued','used','expired','revoked') NOT NULL DEFAULT 'issued',
+      issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      used_at DATETIME,
+      expires_at DATETIME,
+      notes VARCHAR(255),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_user_coupon (user_id, coupon_id, status),
+      CONSTRAINT fk_user_coupons_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_user_coupons_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+  );
+}
+
+async function ensureWelcomeCouponDefinition() {
+  const [rows] = await pool.query("SELECT id FROM coupons WHERE code = ? LIMIT 1", [
+    DEFAULT_WELCOME_COUPON.code,
+  ]);
+  if (rows.length === 0) {
+    await pool.query(
+      `INSERT INTO coupons
+        (code, name, description, discount_type, discount_value, min_order_total, max_discount, starts_at, expires_at, usage_limit)
+       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 1)`,
+      [
+        DEFAULT_WELCOME_COUPON.code,
+        DEFAULT_WELCOME_COUPON.name,
+        DEFAULT_WELCOME_COUPON.description,
+        DEFAULT_WELCOME_COUPON.discountType,
+        DEFAULT_WELCOME_COUPON.discountValue,
+      ]
+    );
+  }
+}
+
+async function grantWelcomeCouponToUser(userId) {
+  if (!userId) return;
+  await ensureCouponSetup();
+  await issueCouponToUser(userId, DEFAULT_WELCOME_COUPON.code);
+}
+
+async function issueCouponToUser(userId, couponCode) {
+  if (!userId || !couponCode) return null;
+  await ensureCouponSetup();
+  const [couponRows] = await pool.query(
+    `SELECT id, expires_at FROM coupons WHERE code = ? LIMIT 1`,
+    [couponCode]
+  );
+  if (couponRows.length === 0) {
+    throw new Error(`coupon code ${couponCode} not found`);
+  }
+  const coupon = couponRows[0];
+  const [existing] = await pool.query(
+    `SELECT id FROM user_coupons WHERE user_id = ? AND coupon_id = ? LIMIT 1`,
+    [userId, coupon.id]
+  );
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
+  const [result] = await pool.query(
+    `INSERT INTO user_coupons (user_id, coupon_id, status, expires_at)
+     VALUES (?, ?, 'issued', ?)`,
+    [userId, coupon.id, coupon.expires_at || null]
+  );
+  return result.insertId;
+}
+
+async function getUserCoupons(userId) {
+  if (!userId) return [];
+  await ensureCouponSetup();
+  const [rows] = await pool.query(
+    `SELECT
+       c.code,
+       c.name,
+       c.description,
+       c.discount_type,
+       c.discount_value,
+       c.min_order_total,
+       c.max_discount,
+       uc.status,
+       uc.issued_at,
+       uc.used_at,
+       uc.expires_at
+     FROM user_coupons uc
+     INNER JOIN coupons c ON c.id = uc.coupon_id
+     WHERE uc.user_id = ?
+     ORDER BY uc.issued_at DESC, uc.id DESC`,
+    [userId]
+  );
+  return rows.map(mapCouponRow);
+}
+
+function mapCouponRow(row) {
+  const issuedAt = row.issued_at ? new Date(row.issued_at) : null;
+  const usedAt = row.used_at ? new Date(row.used_at) : null;
+  const expiresAt = row.expires_at ? new Date(row.expires_at) : null;
+  const now = Date.now();
+  const canUse = row.status === "issued" && (!expiresAt || expiresAt.getTime() > now);
+  return {
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    discountType: row.discount_type,
+    discountValue: row.discount_value,
+    minOrderTotal: row.min_order_total,
+    maxDiscount: row.max_discount,
+    status: row.status,
+    issuedAt: issuedAt ? issuedAt.toISOString() : null,
+    usedAt: usedAt ? usedAt.toISOString() : null,
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
+    canUse,
+  };
+}
+
+async function consumeUserCoupon(userId, couponCode) {
+  await ensureCouponSetup();
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.query(
+      `SELECT
+         uc.id,
+         uc.status,
+         uc.expires_at
+       FROM user_coupons uc
+       INNER JOIN coupons c ON c.id = uc.coupon_id
+       WHERE uc.user_id = ? AND c.code = ?
+       FOR UPDATE`,
+      [userId, couponCode]
+    );
+    if (rows.length === 0) {
+      await connection.rollback();
+      return { status: "not_found" };
+    }
+    const coupon = rows[0];
+    const isExpired =
+      coupon.expires_at && new Date(coupon.expires_at).getTime() <= Date.now();
+    if (coupon.status !== "issued" || isExpired) {
+      await connection.rollback();
+      return { status: "invalid_status" };
+    }
+    await connection.query(
+      `UPDATE user_coupons
+       SET status = 'used', used_at = NOW()
+       WHERE id = ?`,
+      [coupon.id]
+    );
+    await connection.commit();
+    return { status: "consumed" };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 app.listen(PORT, () => {
