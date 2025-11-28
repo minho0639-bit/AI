@@ -470,34 +470,6 @@
         alert("쿠폰이 적용되었습니다.");
       }
 
-      async function consumeCoupon() {
-        if (!appliedCoupon) return;
-        try {
-          const response = await fetch(COUPON_API_ENDPOINTS.consume, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code: appliedCoupon.code }),
-          });
-          if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            throw new Error(body.message || "쿠폰 사용 처리에 실패했습니다.");
-          }
-          availableCoupons = availableCoupons.map((coupon) =>
-            coupon.code === appliedCoupon.code
-              ? { ...coupon, status: "used", canUse: false, usedAt: new Date().toISOString() }
-              : coupon
-          );
-        } catch (error) {
-          console.error("consume coupon error:", error);
-          alert(error.message || "쿠폰 사용 처리에 실패했습니다.");
-        } finally {
-          appliedCoupon = null;
-          updateCouponUI();
-          refreshAmounts();
-        }
-      }
-
       async function submitOrderRequest(orderInput) {
         if (!draftData) {
           throw new Error("편지 데이터를 찾을 수 없습니다. 처음부터 다시 작성해 주세요.");
@@ -561,7 +533,10 @@
         if (options.successMessage) {
           alert(options.successMessage);
         }
-        await consumeCoupon();
+        appliedCoupon = null;
+        await fetchCouponsFromServer();
+        updateCouponUI();
+        refreshAmounts();
         sessionStorage.removeItem("fanletterDraft");
         closeModal();
         setTimeout(navigateToOrdersPage, 800);

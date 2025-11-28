@@ -875,12 +875,28 @@ app.post("/api/orders", requireLogin, async (req, res) => {
       ]
     );
 
+    if (payment.couponCode) {
+      const couponResult = await consumeCouponForUser(connection, req.session.userId, payment.couponCode);
+      if (couponResult.status !== "consumed") {
+        const couponError = new Error(
+          couponResult.status === "not_found"
+            ? "쿠폰 정보를 찾을 수 없습니다."
+            : "이미 사용했거나 사용할 수 없는 쿠폰입니다."
+        );
+        couponError.statusCode = couponResult.status === "not_found" ? 404 : 409;
+        throw couponError;
+      }
+    }
+
     await connection.commit();
     res.status(201).json({ id: letterId, status: "submitted" });
   } catch (error) {
     await connection.rollback();
     console.error("order create error:", error);
-    res.status(500).json({ message: "주문을 저장하는 중 오류가 발생했습니다." });
+    const statusCode = error.statusCode || 500;
+    res
+      .status(statusCode)
+      .json({ message: error.message || "주문을 저장하는 중 오류가 발생했습니다." });
   } finally {
     connection.release();
   }
@@ -1492,41 +1508,51 @@ function mapCouponRow(row) {
   };
 }
 
-async function consumeUserCoupon(userId, couponCode) {
+async function consumeCouponForUser(connection, userId, couponCode) {
+  if (!userId || !couponCode) {
+    return { status: "missing" };
+  }
   await ensureCouponSetup();
+  const [rows] = await connection.query(
+    `SELECT
+       uc.id,
+       uc.status,
+       uc.expires_at
+     FROM user_coupons uc
+     INNER JOIN coupons c ON c.id = uc.coupon_id
+     WHERE uc.user_id = ? AND c.code = ?
+     FOR UPDATE`,
+    [userId, couponCode]
+  );
+  if (rows.length === 0) {
+    return { status: "not_found" };
+  }
+  const coupon = rows[0];
+  const isExpired =
+    coupon.expires_at && new Date(coupon.expires_at).getTime() <= Date.now();
+  if (coupon.status !== "issued" || isExpired) {
+    return { status: "invalid_status" };
+  }
+  await connection.query(
+    `UPDATE user_coupons
+     SET status = 'used', used_at = NOW()
+     WHERE id = ?`,
+    [coupon.id]
+  );
+  return { status: "consumed", couponId: coupon.id };
+}
+
+async function consumeUserCoupon(userId, couponCode) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const [rows] = await connection.query(
-      `SELECT
-         uc.id,
-         uc.status,
-         uc.expires_at
-       FROM user_coupons uc
-       INNER JOIN coupons c ON c.id = uc.coupon_id
-       WHERE uc.user_id = ? AND c.code = ?
-       FOR UPDATE`,
-      [userId, couponCode]
-    );
-    if (rows.length === 0) {
+    const result = await consumeCouponForUser(connection, userId, couponCode);
+    if (result.status === "consumed") {
+      await connection.commit();
+    } else {
       await connection.rollback();
-      return { status: "not_found" };
     }
-    const coupon = rows[0];
-    const isExpired =
-      coupon.expires_at && new Date(coupon.expires_at).getTime() <= Date.now();
-    if (coupon.status !== "issued" || isExpired) {
-      await connection.rollback();
-      return { status: "invalid_status" };
-    }
-    await connection.query(
-      `UPDATE user_coupons
-       SET status = 'used', used_at = NOW()
-       WHERE id = ?`,
-      [coupon.id]
-    );
-    await connection.commit();
-    return { status: "consumed" };
+    return result;
   } catch (error) {
     await connection.rollback();
     throw error;
