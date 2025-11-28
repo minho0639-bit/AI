@@ -1597,12 +1597,12 @@
                   for (let i = 0; i < lines; i += 1) {
                     const guide = document.createElement("div");
                     guide.className = "preview-paper-guide";
-                    guide.style.top = `\${offset + i * spacing}px`;
+                    guide.style.top = (offset + i * spacing) + "px";
                     guides.appendChild(guide);
                   }
                   if (body) {
-                    body.style.lineHeight = `\${spacing}px`;
-                    body.style.marginTop = `\${offset - spacing / 3}px`;
+                    body.style.lineHeight = spacing + "px";
+                    body.style.marginTop = (offset - spacing / 3) + "px";
                   }
                 })();
               <\/script>
