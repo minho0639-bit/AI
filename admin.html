@@ -1507,12 +1507,10 @@
                 .preview-paper {
                   --paper-fill: #fff;
                   --paper-line-color: rgba(0, 0, 0, 0.08);
-                  --paper-line-spacing: 32px;
-                  width: 14cm;
-                  min-width: 14cm;
-                  height: 18cm;
-                  border: 1px solid rgba(17, 17, 17, 0.12);
-                  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+                  width: 17.6cm;
+                  min-width: 17.6cm;
+                  height: 25cm;
+                  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
                   position: relative;
                   padding: 2cm;
                   background: var(--paper-fill);
@@ -1600,10 +1598,10 @@
                   const paper = document.querySelector(".preview-paper");
                   const guides = document.querySelector(".preview-paper-guides");
                   if (!paper || !guides) return;
-                  const spacing = parseFloat(getComputedStyle(paper).getPropertyValue("--paper-line-spacing") || "32");
-                  const count = Math.ceil(paper.clientHeight / spacing) + 4;
+                  const lines = 16;
+                  const spacing = paper.clientHeight / lines;
                   guides.innerHTML = "";
-                  for (let i = 0; i < count; i += 1) {
+                  for (let i = 0; i < lines; i += 1) {
                     const guide = document.createElement("div");
                     guide.className = "preview-paper-guide";
                     guide.style.top = \`\${Math.round(i * spacing)}px\`;
