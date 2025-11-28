@@ -1476,46 +1476,73 @@
             ? order.letterContent
             : "<p>편지 내용이 없습니다.</p>";
         const stationeryClass = STATIONERY_CLASS_MAP[order.paperOption] || STATIONERY_CLASS_MAP.default;
-        const shipmentText = order.shipment?.status
-          ? `${order.shipment.status}${order.shipment.trackingCode ? ` (${order.shipment.trackingCode})` : ""}`
-          : "-";
         return `
           <html lang="ko">
             <head>
               <meta charset="utf-8" />
-              <title>주문 #${order.id} 출력</title>
+              <title>Fanletter Post 편지 출력</title>
               <style>
-                body { font-family: "Pretendard", "Noto Sans KR", sans-serif; padding: 32px; color: #111; background: #f7f8fb; }
-                h1 { font-size: 22px; margin-bottom: 16px; }
-                .meta { margin-bottom: 24px; font-size: 15px; }
-                .meta div { margin-bottom: 6px; }
-                .preview-paper {
-                  width: 100%;
-                  min-height: 600px;
-                  border-radius: 16px;
-                  border: 1px solid #d1d5db;
-                  background: #fff;
-                  padding: 32px;
-                  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+                @media print {
+                  body { margin: 0; }
                 }
-                .paper-lined { background: linear-gradient(#fff, #fff), repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(37,99,235,0.15) 31px, rgba(37,99,235,0.15) 32px); }
-                .paper-classic { background: #fdf9f2; border: 1px solid #e0d7c5; }
-                .paper-blossom { background: #fff6fa; border: 1px solid #f9cfe3; }
-                .paper-midnight { background: #0f172a; color: #fff; border: 1px solid #1e293b; }
-                .letter-body { font-size: 16px; line-height: 1.8; white-space: pre-wrap; }
+                body {
+                  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+                  margin: 0;
+                  padding: 48px;
+                  background: #f4f5fb;
+                  color: #111;
+                }
+                .preview-wrapper {
+                  display: flex;
+                  justify-content: center;
+                }
+                .preview-paper {
+                  width: 800px;
+                  min-height: 1100px;
+                  background: #fff;
+                  border-radius: 24px;
+                  border: 1px solid #d1d5db;
+                  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18);
+                  overflow: hidden;
+                }
+                .preview-paper-inner {
+                  padding: 64px 72px;
+                  position: relative;
+                  min-height: 1000px;
+                }
+                .preview-paper-body {
+                  font-size: 18px;
+                  line-height: 1.9;
+                  color: #1b1c1f;
+                }
+                .paper-lined {
+                  background: linear-gradient(#fff, #fff),
+                    repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(37, 99, 235, 0.1) 31px, rgba(37, 99, 235, 0.1) 32px);
+                }
+                .paper-classic {
+                  background: #fdf9f2;
+                  border-color: #e7dac1;
+                }
+                .paper-blossom {
+                  background: #fff5fa;
+                  border-color: #f6d7e8;
+                }
+                .paper-midnight {
+                  background: #0f172a;
+                  border-color: #1e293b;
+                }
+                .paper-midnight .preview-paper-body {
+                  color: #f8fafc;
+                }
               </style>
             </head>
             <body>
-              <h1>주문 #${order.id}</h1>
-              <div class="meta">
-                <div><strong>회원:</strong> ${order.user?.name || "-"} (${order.user?.email || "-"})</div>
-                <div><strong>편지 상태:</strong> ${order.letterStatus || "-"}</div>
-                <div><strong>결제 금액:</strong> ${formatAmount(order.payment?.amount || 0)} (${order.payment?.method || "-"} / ${order.payment?.status || "-"})</div>
-                <div><strong>배송 상태:</strong> ${shipmentText}</div>
-                <div><strong>제출 시각:</strong> ${formatDate(order.submittedAt)}</div>
-              </div>
-              <div class="preview-paper ${stationeryClass}">
-                <div class="letter-body">${letterHtml}</div>
+              <div class="preview-wrapper">
+                <div class="preview-paper ${stationeryClass}">
+                  <div class="preview-paper-inner">
+                    <div class="preview-paper-body">${letterHtml}</div>
+                  </div>
+                </div>
               </div>
             </body>
           </html>
