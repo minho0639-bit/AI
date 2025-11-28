@@ -352,6 +352,36 @@ select {
   gap: 20px;
 }
 
+#orderLetterPreview .letter-preview-body {
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+#orderLetterPreview .letter-preview-body.font-default {
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+}
+
+#orderLetterPreview .letter-preview-body.font-serif {
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+}
+
+#orderLetterPreview .letter-preview-body.font-handwriting {
+  font-family: "Nanum Pen Script", cursive;
+}
+
+#orderLetterPreview .letter-preview-body.font-gaegu {
+  font-family: "Gaegu", cursive;
+}
+
+#orderLetterPreview .letter-preview-body.font-dongle {
+  font-family: "Dongle", cursive;
+}
+
+#orderLetterPreview .letter-preview-body.font-singleDay {
+  font-family: "Single Day", cursive;
+}
+
 .order-detail-section {
   border: 1px solid #e5e7eb;
   border-radius: 12px;

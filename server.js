@@ -38,6 +38,8 @@ const LETTER_STATUSES = Object.freeze(["draft", "submitted", "printing", "shippe
 const LETTER_STATUS_SET = new Set(LETTER_STATUSES);
 const SHIPMENT_STATUSES = Object.freeze(["pending", "pickup", "in_transit", "delivered", "returned"]);
 const SHIPMENT_STATUS_SET = new Set(SHIPMENT_STATUSES);
+const LETTER_FONT_CLASSES = Object.freeze(["default", "serif", "handwriting", "gaegu", "dongle", "singleDay"]);
+const LETTER_FONT_SET = new Set(LETTER_FONT_CLASSES);
 const DEFAULT_WELCOME_COUPON = Object.freeze({
   code: "WELCOME-FREE",
   name: "첫 결제 무료 쿠폰",
@@ -950,6 +952,7 @@ app.post("/api/orders", requireLogin, async (req, res) => {
     team: target.team || payload.team || null,
   });
   const paperOption = draft.stationery ? truncate(draft.stationery, 60) : null;
+  const fontStyle = draft.font && LETTER_FONT_SET.has(draft.font) ? draft.font : "default";
   const paymentAmount = Math.max(0, Math.round(Number(payment.amount) || 0));
   const paymentMethod = normalizePaymentMethod(payment.method);
   const paymentStatus = normalizePaymentStatus(payment.status);
@@ -962,14 +965,15 @@ app.post("/api/orders", requireLogin, async (req, res) => {
 
     const [letterResult] = await connection.query(
       `INSERT INTO letters
-        (user_id, recipient_name, recipient_group, content, paper_option, attachment_url, status, submitted_at)
-       VALUES (?, ?, ?, ?, ?, NULL, 'submitted', ?)`,
+        (user_id, recipient_name, recipient_group, content, paper_option, font_style, attachment_url, status, submitted_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, 'submitted', ?)`,
       [
         req.session.userId,
         recipientName,
         recipientGroup,
         letterContent,
         paperOption,
+        fontStyle,
         submittedAt,
       ]
     );
@@ -1183,6 +1187,7 @@ async function initializeBootstrapTasks() {
   await ensureAdminUser();
   await ensureRecipientTaxonomy();
   await ensureStationeryTemplates();
+  await ensureLetterSchemaExtensions();
   await ensureCouponSetup();
 }
 
@@ -1293,6 +1298,16 @@ async function ensureStationeryTemplates() {
           templateId,
         ]
       );
+    }
+  }
+}
+
+async function ensureLetterSchemaExtensions() {
+  try {
+    await pool.query("ALTER TABLE letters ADD COLUMN font_style VARCHAR(60) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("letters font_style alter warn:", error.message || error);
     }
   }
 }
@@ -1468,6 +1483,7 @@ async function getAdminOrderDetail(letterId) {
        l.recipient_group,
        l.content,
        l.paper_option,
+       l.font_style,
        l.status AS letter_status,
        l.submitted_at,
        l.created_at,
@@ -1506,6 +1522,7 @@ async function getAdminOrderDetail(letterId) {
     letterStatus: row.letter_status,
     letterContent: row.content,
     paperOption: row.paper_option,
+    fontStyle: row.font_style,
     submittedAt: formatDateValue(row.submitted_at),
     createdAt: formatDateValue(row.created_at),
     updatedAt: formatDateValue(row.updated_at),

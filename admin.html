@@ -466,6 +466,7 @@
 
       const LETTER_STATUS_OPTIONS = ["draft", "submitted", "printing", "shipped"];
       const SHIPMENT_STATUS_OPTIONS = ["pending", "pickup", "in_transit", "delivered", "returned"];
+      const LETTER_FONT_CLASSES = ["default", "serif", "handwriting", "gaegu", "dongle", "singleDay"];
       const STATIONERY_CLASS_MAP = {
         basic: "paper-lined",
         classic: "paper-classic",
@@ -1352,6 +1353,7 @@
           order.letterContent && order.letterContent.trim().length > 0
             ? order.letterContent
             : '<p class="muted">편지 내용이 없습니다.</p>';
+        const fontClass = resolveFontClass(order.fontStyle);
         const shipment = order.shipment || {};
         orderDetailContent.innerHTML = `
           <section class="order-detail-section">
@@ -1383,7 +1385,11 @@
 
           <section class="order-detail-section">
             <h3>편지 내용</h3>
-            <div class="letter-preview" id="orderLetterPreview">${letterHtml}</div>
+            <div class="letter-preview" id="orderLetterPreview">
+              <div class="letter-preview-body font-${fontClass}">
+                ${letterHtml}
+              </div>
+            </div>
           </section>
 
           <section class="order-detail-section">
@@ -1443,6 +1449,11 @@
           .join("");
       }
 
+      function resolveFontClass(value) {
+        if (!value) return "default";
+        return LETTER_FONT_CLASSES.includes(value) ? value : "default";
+      }
+
       function formatInputDateTime(value) {
         if (!value) return "";
         const date = new Date(value);
@@ -1476,6 +1487,7 @@
             ? order.letterContent
             : "<p>편지 내용이 없습니다.</p>";
         const stationeryClass = STATIONERY_CLASS_MAP[order.paperOption] || STATIONERY_CLASS_MAP.default;
+        const fontClass = resolveFontClass(order.fontStyle);
         return `
           <html lang="ko">
             <head>
@@ -1567,7 +1579,7 @@
                 <div class="preview-paper ${stationeryClass}">
                   <div class="preview-paper-inner">
                     <div class="preview-paper-guides"></div>
-                    <div class="preview-paper-body font-default">${letterHtml}</div>
+                    <div class="preview-paper-body font-${fontClass}">${letterHtml}</div>
                   </div>
                 </div>
               </div>
@@ -1578,19 +1590,19 @@
                   if (!paper || !guides) return;
                   const lines = 16;
                   const body = document.querySelector(".preview-paper-body");
-                  const availableHeight = paper.clientHeight - 60; // leave top/bottom margin
+                  const availableHeight = paper.clientHeight - 50;
                   const spacing = availableHeight / (lines - 1);
-                  const offset = 30;
+                  const offset = 25;
                   guides.innerHTML = "";
                   for (let i = 0; i < lines; i += 1) {
                     const guide = document.createElement("div");
                     guide.className = "preview-paper-guide";
-                    guide.style.top = \`\${offset + i * spacing}px\`;
+                    guide.style.top = `${offset + i * spacing}px`;
                     guides.appendChild(guide);
                   }
                   if (body) {
-                    body.style.lineHeight = \`\${spacing}px\`;
-                    body.style.marginTop = \`\${offset - spacing / 4}px\`;
+                    body.style.lineHeight = `${spacing}px`;
+                    body.style.marginTop = `${offset - spacing / 3}px`;
                   }
                 })();
               <\/script>
