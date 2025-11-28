@@ -861,6 +861,14 @@
             return;
           }
           const formattedText = getAllBodyHtml();
+          const targetInfo = {
+            recipientId: params.get("recipientId") ? Number(params.get("recipientId")) : null,
+            recipientName: params.get("name") || null,
+            agency: params.get("agency") || null,
+            team: params.get("team") || null,
+            categoryLabel: params.get("categoryLabel") || null,
+            subcategoryLabel: params.get("subcategoryLabel") || null,
+          };
           const orderPayload = {
             text: fullText,
             formattedText,
@@ -870,6 +878,7 @@
             color: selectedColor,
             stationery: selectedStationery,
             createdAt: Date.now(),
+            target: targetInfo,
           };
           try {
             sessionStorage.setItem("fanletterDraft", JSON.stringify(orderPayload));

@@ -802,6 +802,90 @@ app.get("/api/orders/my", async (req, res) => {
   }
 });
 
+app.post("/api/orders", requireLogin, async (req, res) => {
+  const payload = req.body || {};
+  const draft = payload.draft || {};
+  const target = draft.target || payload.target || {};
+  const payment = payload.payment || {};
+
+  const plainText = (draft.text || "").trim();
+  const formattedText = draft.formattedText || "";
+  if (!plainText && !formattedText) {
+    return res.status(400).json({ message: "편지 내용을 찾을 수 없습니다." });
+  }
+
+  const recipientNameRaw =
+    target.recipientName ||
+    target.name ||
+    payload.recipientName ||
+    payload.recipient?.name ||
+    "";
+  const recipientName = truncate(recipientNameRaw.trim(), 120);
+  if (!recipientName) {
+    return res.status(400).json({ message: "수령인 정보를 찾을 수 없습니다." });
+  }
+
+  const sanitizedContent = sanitizeLetterContent(formattedText);
+  const letterContent = sanitizedContent || convertPlainTextToHtml(plainText);
+  if (!letterContent) {
+    return res.status(400).json({ message: "편지 내용을 저장할 수 없습니다." });
+  }
+
+  const recipientGroup = buildRecipientGroup({
+    agency: target.agency || payload.agency || null,
+    team: target.team || payload.team || null,
+  });
+  const paperOption = draft.stationery ? truncate(draft.stationery, 60) : null;
+  const paymentAmount = Math.max(0, Math.round(Number(payment.amount) || 0));
+  const paymentMethod = normalizePaymentMethod(payment.method);
+  const paymentStatus = normalizePaymentStatus(payment.status);
+  const pgTransactionId = payment.pgTransactionId ? truncate(payment.pgTransactionId, 190) : null;
+  const submittedAt = new Date();
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [letterResult] = await connection.query(
+      `INSERT INTO letters
+        (user_id, recipient_name, recipient_group, content, paper_option, attachment_url, status, submitted_at)
+       VALUES (?, ?, ?, ?, ?, NULL, 'submitted', ?)`,
+      [
+        req.session.userId,
+        recipientName,
+        recipientGroup,
+        letterContent,
+        paperOption,
+        submittedAt,
+      ]
+    );
+    const letterId = letterResult.insertId;
+
+    await connection.query(
+      `INSERT INTO payments
+        (letter_id, method, amount, currency, pg_transaction_id, status, paid_at)
+       VALUES (?, ?, ?, 'KRW', ?, ?, ?)`,
+      [
+        letterId,
+        paymentMethod,
+        paymentAmount,
+        pgTransactionId,
+        paymentStatus,
+        paymentStatus === "paid" ? submittedAt : null,
+      ]
+    );
+
+    await connection.commit();
+    res.status(201).json({ id: letterId, status: "submitted" });
+  } catch (error) {
+    await connection.rollback();
+    console.error("order create error:", error);
+    res.status(500).json({ message: "주문을 저장하는 중 오류가 발생했습니다." });
+  } finally {
+    connection.release();
+  }
+});
+
 app.get("/api/coupons/me", requireLogin, async (req, res) => {
   try {
     const coupons = await getUserCoupons(req.session.userId);
@@ -1162,6 +1246,66 @@ function mapAdminCouponIssue(row = {}) {
     discountType: row.discount_type,
     discountValue: row.discount_value != null ? Number(row.discount_value) : null,
   };
+}
+
+function sanitizeLetterContent(input) {
+  if (!input) return "";
+  let sanitized = String(input);
+  sanitized = sanitized.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+  sanitized = sanitized.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
+  sanitized = sanitized.replace(/on\w+="[^"]*"/gi, "");
+  sanitized = sanitized.replace(/javascript:/gi, "");
+  return sanitized;
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function convertPlainTextToHtml(text) {
+  if (!text) return "";
+  return escapeHtml(text).replace(/\r?\n/g, "<br>");
+}
+
+function truncate(value, maxLength) {
+  if (!value && value !== 0) return null;
+  const stringValue = String(value);
+  if (stringValue.length <= maxLength) return stringValue;
+  return stringValue.slice(0, maxLength);
+}
+
+function buildRecipientGroup(target = {}) {
+  const parts = [target.agency, target.team].filter(Boolean);
+  if (!parts.length) return null;
+  return truncate(parts.join(" · "), 120);
+}
+
+function normalizePaymentMethod(value) {
+  const normalized = String(value || "card").toLowerCase();
+  if (["card", "transfer", "virtual_account", "mobile"].includes(normalized)) {
+    return normalized;
+  }
+  if (normalized === "virtual-account" || normalized === "virtualaccount") {
+    return "virtual_account";
+  }
+  if (normalized === "mobile_phone" || normalized === "phone") {
+    return "mobile";
+  }
+  return "card";
+}
+
+function normalizePaymentStatus(value) {
+  const normalized = String(value || "paid").toLowerCase();
+  if (["pending", "paid", "failed", "refunded"].includes(normalized)) {
+    return normalized;
+  }
+  return "paid";
 }
 
 async function ensureCouponSetup() {

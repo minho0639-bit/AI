@@ -276,6 +276,9 @@
       let isCouponLoading = false;
       let couponLoadError = null;
       const ORDERS_PAGE_URL = "/profile.html#orders";
+      const ORDER_API_ENDPOINT = "/api/orders";
+      let manualPaymentContext = null;
+      let isSubmittingOrder = false;
 
       function getSelectedPayMethod() {
         const checked = Array.from(payMethodInputs).find((input) => input.checked);
@@ -492,6 +495,99 @@
           appliedCoupon = null;
           updateCouponUI();
           refreshAmounts();
+        }
+      }
+
+      async function submitOrderRequest(orderInput) {
+        if (!draftData) {
+          throw new Error("편지 데이터를 찾을 수 없습니다. 처음부터 다시 작성해 주세요.");
+        }
+        if (!draftData.target || !draftData.target.recipientName) {
+          throw new Error("수령인 정보가 유실되었습니다. 다시 대상 선택부터 진행해 주세요.");
+        }
+        if (isSubmittingOrder) {
+          throw new Error("주문을 처리 중입니다. 잠시만 기다려 주세요.");
+        }
+        isSubmittingOrder = true;
+        try {
+          const payload = {
+            draft: {
+              text: draftData.text || "",
+              formattedText: draftData.formattedText || "",
+              characters: draftData.characters || 0,
+              pages: draftData.pages || 1,
+              font: draftData.font || "default",
+              color: draftData.color || "#1b1c1f",
+              stationery: draftData.stationery || "basic",
+              createdAt: draftData.createdAt || Date.now(),
+              target: draftData.target,
+            },
+            payment: {
+              method: orderInput.paymentMethod,
+              amount: orderInput.paymentAmount,
+              status: orderInput.paymentStatus || "paid",
+              pgTransactionId: orderInput.pgTransactionId,
+              discountAmount: getCurrentDiscount(),
+              couponCode: appliedCoupon?.code || null,
+            },
+            buyer: getBuyerInfo(),
+          };
+
+          const response = await fetch(ORDER_API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          });
+
+          if (response.status === 401) {
+            alert("로그인이 필요합니다. 다시 로그인해 주세요.");
+            window.location.href = "/signup.html";
+            throw new Error("로그인이 필요합니다.");
+          }
+
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(body?.message || "주문을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          }
+          return body;
+        } finally {
+          isSubmittingOrder = false;
+        }
+      }
+
+      async function finalizeOrderFlow(orderInput, options = {}) {
+        const result = await submitOrderRequest(orderInput);
+        if (options.successMessage) {
+          alert(options.successMessage);
+        }
+        await consumeCoupon();
+        sessionStorage.removeItem("fanletterDraft");
+        closeModal();
+        setTimeout(navigateToOrdersPage, 800);
+        return result;
+      }
+
+      async function mockPaymentSuccess() {
+        if (!manualPaymentContext) {
+          closeModal();
+          return;
+        }
+        try {
+          confirmMockPayment.disabled = true;
+          await finalizeOrderFlow(
+            {
+              paymentMethod: manualPaymentContext.paymentMethod || "CARD",
+              paymentAmount: manualPaymentContext.paymentAmount || 0,
+              paymentStatus: "paid",
+              pgTransactionId: manualPaymentContext.orderId,
+            },
+            { successMessage: "결제가 완료되었습니다! (테스트 모드)" }
+          );
+        } catch (error) {
+          alert(error.message || "결제 처리를 완료하지 못했습니다. 다시 시도해 주세요.");
+        } finally {
+          confirmMockPayment.disabled = false;
         }
       }
 
@@ -742,13 +838,9 @@
       function closeModal() {
         paymentModal.classList.remove("visible");
         paymentModal.setAttribute("aria-hidden", "true");
+        manualPaymentContext = null;
       }
-
-      function mockPaymentSuccess() {
-        alert("결제가 완료되었습니다! (테스트 모드)");
-        sessionStorage.removeItem("fanletterDraft");
-        closeModal();
-      }
+*** End Patch
 
       let isProcessingPayment = false;
 
@@ -860,14 +952,28 @@
         const productType = payMethod === "MOBILE" ? "PRODUCT_TYPE_REAL" : undefined;
 
         if (paymentAmount === 0) {
-          alert("쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다.");
-          sessionStorage.removeItem("fanletterDraft");
-          await consumeCoupon();
-          setTimeout(navigateToOrdersPage, 800);
+          try {
+            await finalizeOrderFlow(
+              {
+                paymentMethod: payMethod,
+                paymentAmount,
+                paymentStatus: "paid",
+                pgTransactionId: orderId,
+              },
+              { successMessage: "쿠폰이 적용되어 무료로 처리되었습니다! 주문이 완료되었습니다." }
+            );
+          } catch (error) {
+            alert(error.message || "주문을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          }
           return;
         }
 
         if (!window.PortOne || typeof PortOne.requestPayment !== "function") {
+          manualPaymentContext = {
+            orderId,
+            paymentAmount,
+            paymentMethod: payMethod,
+          };
           openPaymentModal(orderId, paymentAmount);
           return;
         }
@@ -911,10 +1017,16 @@
           console.log("PortOne 응답", paymentResult);
 
           if (paymentResult.status === "PAID") {
-            alert("결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다.");
-            sessionStorage.removeItem("fanletterDraft");
-            await consumeCoupon();
-            setTimeout(navigateToOrdersPage, 800);
+            await finalizeOrderFlow(
+              {
+                paymentMethod: payMethod,
+                paymentAmount,
+                paymentStatus: "paid",
+                pgTransactionId: paymentResult.paymentId || orderId,
+              },
+              { successMessage: "결제가 완료되었습니다! 영수증은 추후 이메일로 발송됩니다." }
+            );
+            return;
           } else if (paymentResult.status === "READY") {
             alert("가상계좌가 발급되었습니다. 입금 완료 후 자동으로 처리됩니다.");
           } else if (paymentResult.status === "VIRTUAL_ACCOUNT_ISSUED") {
@@ -924,7 +1036,7 @@
           }
         } catch (error) {
           console.error(error);
-          alert("결제 도중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+          alert(error?.message || "결제 도중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         } finally {
           isProcessingPayment = false;
           requestPayment.disabled = false;
