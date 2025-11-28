@@ -96,28 +96,6 @@
         }
       }
 
-      function persistWelcomeCoupon() {
-        try {
-          const storageKey = "fanletterCoupons";
-          const raw = localStorage.getItem(storageKey);
-          const coupons = raw ? JSON.parse(raw) : [];
-          const exists = coupons.some((coupon) => coupon.code === "WELCOME-FREE");
-          if (exists) return;
-          coupons.push({
-            code: "WELCOME-FREE",
-            name: "첫 결제 무료 쿠폰",
-            type: "amount",
-            amount: 2000,
-            description: "기본 요금 2,000원 할인",
-            issuedAt: Date.now(),
-            used: false,
-          });
-          localStorage.setItem(storageKey, JSON.stringify(coupons));
-        } catch (error) {
-          console.warn("쿠폰 저장 실패:", error);
-        }
-      }
-
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         messageEl.textContent = "";
@@ -154,7 +132,6 @@
           messageEl.classList.remove("error");
           messageEl.classList.add("success");
           persistBuyerProfile({ name, email, phone });
-          persistWelcomeCoupon();
           form.reset();
 
           setTimeout(() => {

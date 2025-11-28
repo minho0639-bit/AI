@@ -38,6 +38,7 @@
           <button class="tab-button" data-tab="recipients">수령인 관리</button>
           <button class="tab-button" data-tab="stationery">편지지 관리</button>
           <button class="tab-button" data-tab="users">회원 목록</button>
+          <button class="tab-button" data-tab="coupons">쿠폰 관리</button>
         </nav>
 
         <div class="tab-panel active" data-panel="orders">
@@ -57,10 +58,23 @@
                     <th>결제</th>
                     <th>배송</th>
                     <th>작성일</th>
+                    <th>관리</th>
                   </tr>
                 </thead>
                 <tbody id="orders-body"></tbody>
               </table>
+            </div>
+            <div class="panel order-detail-panel" id="orderDetailPanel" hidden>
+              <div class="panel-header">
+                <h2>주문 상세</h2>
+                <div class="table-actions">
+                  <button type="button" class="btn-small" id="printOrderBtn" disabled>인쇄</button>
+                  <button type="button" class="btn-small btn-ghost" id="closeOrderDetail" disabled>닫기</button>
+                </div>
+              </div>
+              <div id="orderDetailContent" class="order-detail-content">
+                <p class="muted">주문을 선택하면 상세 정보가 표시됩니다.</p>
+              </div>
             </div>
           </section>
         </div>
@@ -233,6 +247,173 @@
             </div>
           </section>
         </div>
+
+        <div class="tab-panel" data-panel="coupons">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>쿠폰 정책</h2>
+              <span id="coupons-status" class="panel-status">-</span>
+            </div>
+            <div class="form-card">
+              <strong>쿠폰 생성</strong>
+              <p class="helper-text">
+                할인 타입과 값(금액/%)을 입력하고 필요한 조건(최소 결제 금액, 사용 기한 등)을 지정해 주세요.
+              </p>
+              <form id="coupon-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="coupon-code">쿠폰 코드 *</label>
+                    <input type="text" id="coupon-code" name="code" placeholder="WELCOME-FREE" required />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-name">쿠폰 이름 *</label>
+                    <input type="text" id="coupon-name" name="name" placeholder="첫 결제 무료 쿠폰" required />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-discount-type">할인 타입</label>
+                    <select id="coupon-discount-type" name="discountType">
+                      <option value="amount">정액 할인</option>
+                      <option value="percent">정률 할인</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="coupon-discount-value">할인 값 *</label>
+                    <input
+                      type="number"
+                      id="coupon-discount-value"
+                      name="discountValue"
+                      min="1"
+                      placeholder="2000"
+                      required
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-min-order">최소 결제 금액</label>
+                    <input type="number" id="coupon-min-order" name="minOrderTotal" min="0" placeholder="0" />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-max-discount">최대 할인 금액</label>
+                    <input type="number" id="coupon-max-discount" name="maxDiscount" min="0" placeholder="2000" />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-usage-limit">발급 제한 수량</label>
+                    <input type="number" id="coupon-usage-limit" name="usageLimit" min="0" placeholder="1" />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-starts-at">사용 가능 시작 시각</label>
+                    <input type="datetime-local" id="coupon-starts-at" name="startsAt" />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-expires-at">사용 가능 종료 시각</label>
+                    <input type="datetime-local" id="coupon-expires-at" name="expiresAt" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="coupon-description">설명</label>
+                  <textarea
+                    id="coupon-description"
+                    name="description"
+                    placeholder="예) 신규 가입 고객 대상 2,000원 할인"
+                  ></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">쿠폰 생성</button>
+                  <div id="coupon-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>쿠폰 정보</th>
+                    <th>혜택</th>
+                    <th>조건</th>
+                    <th>통계</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="coupons-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>쿠폰 발급 및 사용 현황</h2>
+              <span id="coupon-issues-status" class="panel-status">-</span>
+            </div>
+            <div class="form-card">
+              <strong>쿠폰 수동 발급</strong>
+              <p class="helper-text">
+                회원 ID 또는 이메일을 입력하면 해당 회원에게 선택한 쿠폰을 즉시 발급합니다. 이미 동일 쿠폰을
+                보유 중이면 발급되지 않습니다.
+              </p>
+              <form id="coupon-issue-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="coupon-issue-select">쿠폰 선택 *</label>
+                    <select id="coupon-issue-select" name="couponId">
+                      <option value="">쿠폰 정보를 불러오는 중...</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="coupon-issue-user-id">회원 ID</label>
+                    <input
+                      type="number"
+                      id="coupon-issue-user-id"
+                      name="userId"
+                      min="1"
+                      placeholder="예) 12"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-issue-user-email">회원 이메일</label>
+                    <input
+                      type="email"
+                      id="coupon-issue-user-email"
+                      name="userEmail"
+                      placeholder="user@example.com"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="coupon-issue-expires">개별 만료 시각</label>
+                    <input type="datetime-local" id="coupon-issue-expires" name="expiresAt" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="coupon-issue-notes">메모</label>
+                  <textarea
+                    id="coupon-issue-notes"
+                    name="notes"
+                    placeholder="발급 사유나 참고 사항을 입력해 주세요."
+                  ></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">쿠폰 발급</button>
+                  <div id="coupon-issue-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>발급 ID</th>
+                    <th>회원</th>
+                    <th>쿠폰</th>
+                    <th>상태</th>
+                    <th>발급 / 만료</th>
+                    <th>비고</th>
+                  </tr>
+                </thead>
+                <tbody id="coupon-issues-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
 
@@ -251,11 +432,19 @@
       const recipientsStatus = document.getElementById("recipients-status");
       const stationeryStatus = document.getElementById("stationery-status");
       const usersStatus = document.getElementById("users-status");
+      const couponsStatus = document.getElementById("coupons-status");
+      const couponIssuesStatus = document.getElementById("coupon-issues-status");
 
       const ordersBody = document.getElementById("orders-body");
+      const orderDetailPanel = document.getElementById("orderDetailPanel");
+      const orderDetailContent = document.getElementById("orderDetailContent");
+      const printOrderBtn = document.getElementById("printOrderBtn");
+      const closeOrderDetailBtn = document.getElementById("closeOrderDetail");
       const recipientsBody = document.getElementById("recipients-body");
       const stationeryBody = document.getElementById("stationery-body");
       const usersBody = document.getElementById("users-body");
+      const couponsBody = document.getElementById("coupons-body");
+      const couponIssuesBody = document.getElementById("coupon-issues-body");
 
       const recipientForm = document.getElementById("recipient-form");
       const recipientFormStatus = document.getElementById("recipient-form-status");
@@ -267,6 +456,27 @@
       const stationeryForm = document.getElementById("stationery-form");
       const stationeryFormStatus = document.getElementById("stationery-form-status");
       const stationeryStatusSelect = document.getElementById("stationery-status-select");
+      const couponForm = document.getElementById("coupon-form");
+      const couponFormStatus = document.getElementById("coupon-form-status");
+      const couponIssueForm = document.getElementById("coupon-issue-form");
+      const couponIssueStatus = document.getElementById("coupon-issue-status");
+      const couponIssueSelect = document.getElementById("coupon-issue-select");
+      const couponIssueUserIdInput = document.getElementById("coupon-issue-user-id");
+      const couponIssueUserEmailInput = document.getElementById("coupon-issue-user-email");
+
+      const LETTER_STATUS_OPTIONS = ["draft", "submitted", "printing", "shipped"];
+      const SHIPMENT_STATUS_OPTIONS = ["pending", "pickup", "in_transit", "delivered", "returned"];
+      const LETTER_FONT_CLASSES = ["default", "serif", "handwriting", "gaegu", "dongle", "singleDay"];
+      const STATIONERY_CLASS_MAP = {
+        basic: "paper-lined",
+        classic: "paper-classic",
+        blossom: "paper-blossom",
+        midnight: "paper-midnight",
+        default: "paper-lined",
+      };
+
+      printOrderBtn?.setAttribute("disabled", "true");
+      closeOrderDetailBtn?.setAttribute("disabled", "true");
 
       const state = {
         metaLoaded: false,
@@ -275,6 +485,9 @@
           subcategories: [],
         },
         stationery: [],
+        coupons: [],
+        couponIssues: [],
+        currentOrderDetail: null,
       };
 
       loginForm.addEventListener("submit", async (event) => {
@@ -322,6 +535,66 @@
         }
       });
 
+      ordersBody.addEventListener("click", async (event) => {
+        const detailBtn = event.target.closest("[data-order-detail]");
+        if (detailBtn) {
+          await loadOrderDetail(detailBtn.dataset.orderDetail);
+        }
+      });
+
+      orderDetailContent?.addEventListener("submit", async (event) => {
+        if (event.target.matches("#letterStatusForm")) {
+          event.preventDefault();
+          if (!state.currentOrderDetail) return;
+          const formData = new FormData(event.target);
+          const status = formData.get("status");
+          try {
+            await updateLetterStatus(state.currentOrderDetail.id, status);
+            await loadOrderDetail(state.currentOrderDetail.id);
+            await loadAdminData();
+          } catch (error) {
+            alert(error.message);
+          }
+        }
+        if (event.target.matches("#shipmentForm")) {
+          event.preventDefault();
+          if (!state.currentOrderDetail) return;
+          const formData = new FormData(event.target);
+          const payload = {
+            status: formData.get("status"),
+            carrier: formData.get("carrier"),
+            trackingCode: formData.get("trackingCode"),
+            shippedAt: formData.get("shippedAt"),
+            deliveredAt: formData.get("deliveredAt"),
+          };
+          try {
+            await updateShipment(state.currentOrderDetail.id, payload);
+            await loadOrderDetail(state.currentOrderDetail.id);
+            await loadAdminData();
+          } catch (error) {
+            alert(error.message);
+          }
+        }
+      });
+
+      printOrderBtn?.addEventListener("click", handleOrderPrint);
+      closeOrderDetailBtn?.addEventListener("click", () => {
+        state.currentOrderDetail = null;
+        if (orderDetailPanel) {
+          orderDetailPanel.hidden = true;
+        }
+        if (orderDetailContent) {
+          orderDetailContent.innerHTML =
+            '<p class="muted">주문을 선택하면 상세 정보가 표시됩니다.</p>';
+        }
+        if (printOrderBtn) {
+          printOrderBtn.disabled = true;
+        }
+        if (closeOrderDetailBtn) {
+          closeOrderDetailBtn.disabled = true;
+        }
+      });
+
       stationeryForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await handleStationeryCreate(new FormData(stationeryForm));
@@ -350,6 +623,31 @@
           } catch (error) {
             alert(error.message);
           }
+        }
+      });
+
+      couponForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleCouponCreate(new FormData(couponForm));
+      });
+
+      couponIssueForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleCouponIssue(new FormData(couponIssueForm));
+      });
+
+      couponsBody?.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-coupon-delete]");
+        if (!deleteBtn) return;
+        const couponId = deleteBtn.dataset.couponDelete;
+        const couponName = deleteBtn.dataset.couponName || "";
+        const confirmed = window.confirm(`${couponName} 쿠폰을 삭제할까요?`);
+        if (!confirmed) return;
+        try {
+          await deleteCoupon(couponId);
+          await loadCouponsOnly();
+        } catch (error) {
+          alert(error.message);
         }
       });
 
@@ -433,22 +731,36 @@
         recipientsStatus.textContent = "불러오는 중...";
         stationeryStatus.textContent = "불러오는 중...";
         usersStatus.textContent = "불러오는 중...";
+        if (couponsStatus) {
+          couponsStatus.textContent = "불러오는 중...";
+        }
+        if (couponIssuesStatus) {
+          couponIssuesStatus.textContent = "불러오는 중...";
+        }
         try {
           await ensureRecipientMetaLoaded(refreshMeta);
-          const [orders, recipients, users, stationery] = await Promise.all([
+          const [orders, recipients, users, stationery, couponBundle] = await Promise.all([
             fetchJson("/api/admin/orders"),
             fetchJson("/api/admin/recipients"),
             fetchJson("/api/admin/users"),
             fetchJson("/api/admin/stationery"),
+            fetchJson("/api/admin/coupons"),
           ]);
           renderOrders(orders);
           renderRecipients(recipients);
           renderStationery(stationery);
           renderUsers(users);
+          renderCouponsBundle(couponBundle);
           ordersStatus.textContent = `${orders.length}건`;
           recipientsStatus.textContent = `${recipients.length}명`;
           stationeryStatus.textContent = `${stationery.length}종`;
           usersStatus.textContent = `${users.length}명`;
+          if (couponsStatus) {
+            couponsStatus.textContent = `${(couponBundle?.coupons || []).length}종`;
+          }
+          if (couponIssuesStatus) {
+            couponIssuesStatus.textContent = `${(couponBundle?.issues || []).length}건`;
+          }
         } catch (error) {
           console.error(error);
           const message = error.message || "데이터를 불러오지 못했습니다.";
@@ -456,6 +768,12 @@
           recipientsStatus.textContent = message;
           stationeryStatus.textContent = message;
           usersStatus.textContent = message;
+          if (couponsStatus) {
+            couponsStatus.textContent = message;
+          }
+          if (couponIssuesStatus) {
+            couponIssuesStatus.textContent = message;
+          }
         }
       }
 
@@ -478,6 +796,33 @@
           stationeryStatus.textContent = `${stationery.length}종`;
         } catch (error) {
           stationeryStatus.textContent = error.message || "편지지를 불러오지 못했습니다.";
+        }
+      }
+
+      async function loadCouponsOnly() {
+        if (couponsStatus) {
+          couponsStatus.textContent = "불러오는 중...";
+        }
+        if (couponIssuesStatus) {
+          couponIssuesStatus.textContent = "불러오는 중...";
+        }
+        try {
+          const bundle = await fetchJson("/api/admin/coupons");
+          renderCouponsBundle(bundle);
+          if (couponsStatus) {
+            couponsStatus.textContent = `${(bundle.coupons || []).length}종`;
+          }
+          if (couponIssuesStatus) {
+            couponIssuesStatus.textContent = `${(bundle.issues || []).length}건`;
+          }
+        } catch (error) {
+          const message = error.message || "쿠폰 정보를 불러오지 못했습니다.";
+          if (couponsStatus) {
+            couponsStatus.textContent = message;
+          }
+          if (couponIssuesStatus) {
+            couponIssuesStatus.textContent = message;
+          }
         }
       }
 
@@ -629,6 +974,283 @@
         }
       }
 
+      async function handleCouponCreate(formData) {
+        if (!couponFormStatus) return;
+        couponFormStatus.textContent = "생성 중...";
+        couponFormStatus.classList.remove("error", "success");
+        const payload = {
+          code: formData.get("code")?.trim(),
+          name: formData.get("name")?.trim(),
+          discountType: formData.get("discountType") || "amount",
+          discountValue: Number(formData.get("discountValue")),
+          description: formData.get("description")?.trim() || null,
+          minOrderTotal: toNumberOrNull(formData.get("minOrderTotal")),
+          maxDiscount: toNumberOrNull(formData.get("maxDiscount")),
+          usageLimit: toNumberOrNull(formData.get("usageLimit")),
+          startsAt: formData.get("startsAt") || null,
+          expiresAt: formData.get("expiresAt") || null,
+        };
+        try {
+          const response = await fetch("/api/admin/coupons", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "쿠폰을 생성하지 못했습니다.");
+          }
+          couponForm?.reset();
+          couponFormStatus.textContent = "쿠폰을 생성했습니다.";
+          couponFormStatus.classList.add("success");
+          await loadCouponsOnly();
+        } catch (error) {
+          couponFormStatus.textContent = error.message;
+          couponFormStatus.classList.add("error");
+        }
+      }
+
+      async function handleCouponIssue(formData) {
+        if (!couponIssueStatus) return;
+        couponIssueStatus.textContent = "발급 중...";
+        couponIssueStatus.classList.remove("error", "success");
+        const payload = {
+          couponId: formData.get("couponId"),
+          userId: formData.get("userId"),
+          userEmail: formData.get("userEmail"),
+          expiresAt: formData.get("expiresAt") || null,
+          notes: formData.get("notes")?.trim() || null,
+        };
+        if (!payload.couponId) {
+          couponIssueStatus.textContent = "쿠폰을 선택해 주세요.";
+          couponIssueStatus.classList.add("error");
+          return;
+        }
+        if (!payload.userId && !payload.userEmail) {
+          couponIssueStatus.textContent = "회원 ID 또는 이메일을 입력해 주세요.";
+          couponIssueStatus.classList.add("error");
+          return;
+        }
+        try {
+          const response = await fetch("/api/admin/coupons/issue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "쿠폰을 발급하지 못했습니다.");
+          }
+          couponIssueForm?.reset();
+          couponIssueStatus.textContent = "쿠폰을 발급했습니다.";
+          couponIssueStatus.classList.add("success");
+          await loadCouponsOnly();
+        } catch (error) {
+          couponIssueStatus.textContent = error.message;
+          couponIssueStatus.classList.add("error");
+        }
+      }
+
+      async function deleteCoupon(couponId) {
+        const response = await fetch(`/api/admin/coupons/${couponId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "쿠폰을 삭제하지 못했습니다.");
+        }
+      }
+
+      function renderCouponsBundle(bundle) {
+        state.coupons = Array.isArray(bundle?.coupons) ? bundle.coupons : [];
+        state.couponIssues = Array.isArray(bundle?.issues) ? bundle.issues : [];
+        renderCouponDefinitions();
+        renderCouponIssues();
+        hydrateCouponIssueSelect();
+      }
+
+      function renderCouponDefinitions() {
+        if (!couponsBody) return;
+        if (state.coupons.length === 0) {
+          couponsBody.innerHTML =
+            '<tr><td colspan="7" class="text-muted">등록된 쿠폰이 없습니다.</td></tr>';
+          return;
+        }
+        couponsBody.innerHTML = state.coupons
+          .map((coupon) => {
+            return `
+            <tr>
+              <td>#${coupon.id}</td>
+              <td>
+                <div>${coupon.name}</div>
+                <div class="text-muted">${coupon.code}</div>
+              </td>
+              <td>${formatCouponBenefit(coupon)}</td>
+              <td>${formatCouponConditions(coupon)}</td>
+              <td>
+                <div>총 ${coupon.totalIssued}회 발급</div>
+                <div class="text-muted">사용 ${coupon.usedCount} · 미사용 ${coupon.activeCount}</div>
+              </td>
+              <td>${formatDate(coupon.updatedAt)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-coupon-delete="${coupon.id}"
+                    data-coupon-name="${coupon.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+          })
+          .join("");
+      }
+
+      function renderCouponIssues() {
+        if (!couponIssuesBody) return;
+        if (state.couponIssues.length === 0) {
+          couponIssuesBody.innerHTML =
+            '<tr><td colspan="6" class="text-muted">최근 발급 내역이 없습니다.</td></tr>';
+          return;
+        }
+        couponIssuesBody.innerHTML = state.couponIssues
+          .map((issue) => {
+            return `
+            <tr>
+              <td>#${issue.id}</td>
+              <td>
+                <div>${issue.userName || "-"}</div>
+                <div class="text-muted">${issue.userEmail || issue.userId}</div>
+              </td>
+              <td>
+                <div>${issue.couponName || "-"}</div>
+                <div class="text-muted">${issue.couponCode}</div>
+              </td>
+              <td>${formatCouponStatusBadge(issue.status)}</td>
+              <td>
+                <div>발급: ${formatDate(issue.issuedAt)}</div>
+                <div class="text-muted">만료: ${formatDate(issue.expiresAt) || "-"}</div>
+              </td>
+              <td>${issue.notes || "-"}</td>
+            </tr>
+          `;
+          })
+          .join("");
+      }
+
+      function hydrateCouponIssueSelect() {
+        if (!couponIssueSelect) return;
+        if (state.coupons.length === 0) {
+          couponIssueSelect.innerHTML = '<option value="">등록된 쿠폰이 없습니다.</option>';
+          couponIssueSelect.disabled = true;
+          return;
+        }
+        couponIssueSelect.disabled = false;
+        couponIssueSelect.innerHTML =
+          '<option value="">쿠폰 선택</option>' +
+          state.coupons
+            .map(
+              (coupon) =>
+                `<option value="${coupon.id}">
+                  ${coupon.name} (${coupon.code})
+                </option>`
+            )
+            .join("");
+      }
+
+      function formatCouponBenefit(coupon) {
+        if (!coupon) return "-";
+        if (coupon.discountType === "percent") {
+          return `${coupon.discountValue}% 할인`;
+        }
+        return coupon.discountValue != null ? formatAmount(coupon.discountValue) + " 할인" : "-";
+      }
+
+      function formatCouponConditions(coupon) {
+        if (!coupon) return "-";
+        const conditions = [];
+        if (coupon.minOrderTotal) {
+          conditions.push(`최소 ${formatAmount(coupon.minOrderTotal)}`);
+        }
+        if (coupon.maxDiscount) {
+          conditions.push(`최대 ${formatAmount(coupon.maxDiscount)} 까지`);
+        }
+        if (coupon.usageLimit) {
+          conditions.push(`총 ${coupon.usageLimit}회`);
+        }
+        const windowText = formatCouponWindow(coupon.startsAt, coupon.expiresAt);
+        if (windowText) {
+          conditions.push(windowText);
+        }
+        return conditions.length > 0 ? conditions.join("<br />") : "-";
+      }
+
+      function formatCouponWindow(startsAt, expiresAt) {
+        if (!startsAt && !expiresAt) return "";
+        const startText = startsAt ? formatDate(startsAt) : "상시";
+        const endText = expiresAt ? formatDate(expiresAt) : "상시";
+        return `기간 ${startText} ~ ${endText}`;
+      }
+
+      function formatCouponStatusBadge(status) {
+        if (!status) return '<span class="badge">-</span>';
+        let className = "badge";
+        if (status === "issued") {
+          className += " success";
+        } else if (status === "used") {
+          className += " warning";
+        } else if (status === "expired" || status === "revoked") {
+          className += " danger";
+        }
+        const labelMap = {
+          issued: "사용 가능",
+          used: "사용 완료",
+          expired: "만료",
+          revoked: "회수",
+        };
+        return `<span class="${className}">${labelMap[status] || status}</span>`;
+      }
+
+      function formatLetterStatusBadge(status) {
+        if (!status) return '<span class="badge">-</span>';
+        const labelMap = {
+          draft: "임시 저장",
+          submitted: "접수 완료",
+          printing: "인쇄 중",
+          shipped: "발송 완료",
+        };
+        let className = "badge";
+        if (status === "printing") className += " warning";
+        if (status === "shipped") className += " success";
+        return `<span class="${className}">${labelMap[status] || status}</span>`;
+      }
+
+      function formatShipmentStatusBadge(status) {
+        if (!status) return '<span class="badge">-</span>';
+        const labelMap = {
+          pending: "준비 중",
+          pickup: "수거 중",
+          in_transit: "배송 중",
+          delivered: "배송 완료",
+          returned: "반송",
+        };
+        let className = "badge";
+        if (status === "in_transit") className += " warning";
+        if (status === "delivered") className += " success";
+        if (status === "returned") className += " danger";
+        return `<span class="${className}">${labelMap[status] || status}</span>`;
+      }
+
+      function toNumberOrNull(value) {
+        if (value === null || value === undefined || value === "") return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
       async function fetchJson(url) {
         const response = await fetch(url);
         if (!response.ok) {
@@ -654,7 +1276,7 @@
                   <div class="text-muted">${order.recipient_group || ""}</div>
                 </td>
                 <td>
-                  <div class="badge">${order.status}</div>
+                  ${formatLetterStatusBadge(order.letter_status)}
                   <div class="text-muted">${formatDate(order.submitted_at)}</div>
                 </td>
                 <td>
@@ -662,14 +1284,331 @@
                   <div class="text-muted">${order.payment_method || ""} ${paymentAmount}</div>
                 </td>
                 <td>
-                  <div>${order.shipment_status || "-"}</div>
+                  ${formatShipmentStatusBadge(order.shipment_status)}
                   <div class="text-muted">${[order.carrier, order.tracking_code].filter(Boolean).join(" ")}</div>
                 </td>
                 <td>${formatDate(order.created_at)}</td>
+                <td>
+                  <div class="table-actions">
+                    <button
+                      type="button"
+                      class="btn-small btn-ghost"
+                      data-order-detail="${order.id}"
+                    >
+                      상세
+                    </button>
+                  </div>
+                </td>
               </tr>
             `;
           })
           .join("");
+      }
+
+      async function loadOrderDetail(orderId) {
+        if (!orderDetailPanel || !orderDetailContent) return;
+        orderDetailPanel.hidden = false;
+        orderDetailContent.innerHTML = '<p class="muted">주문 상세를 불러오는 중입니다...</p>';
+        if (printOrderBtn) printOrderBtn.disabled = true;
+        if (closeOrderDetailBtn) closeOrderDetailBtn.disabled = false;
+        try {
+          const detail = await fetchJson(`/api/admin/orders/${orderId}`);
+          state.currentOrderDetail = detail;
+          renderOrderDetail(detail);
+          if (printOrderBtn) printOrderBtn.disabled = false;
+        } catch (error) {
+          orderDetailContent.innerHTML = `<p class="error">${error.message}</p>`;
+        }
+      }
+
+      async function updateLetterStatus(orderId, status) {
+        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "편지 상태를 업데이트하지 못했습니다.");
+        }
+        return response.json();
+      }
+
+      async function updateShipment(orderId, payload) {
+        const response = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "배송 정보를 업데이트하지 못했습니다.");
+        }
+        return response.json();
+      }
+
+      function renderOrderDetail(order) {
+        if (!orderDetailContent) return;
+        const letterHtml =
+          order.letterContent && order.letterContent.trim().length > 0
+            ? order.letterContent
+            : '<p class="muted">편지 내용이 없습니다.</p>';
+        const fontClass = resolveFontClass(order.fontStyle);
+        const shipment = order.shipment || {};
+        orderDetailContent.innerHTML = `
+          <section class="order-detail-section">
+            <div class="order-detail-grid">
+              <div>
+                <p class="label">주문 번호</p>
+                <strong>#${order.id}</strong>
+              </div>
+              <div>
+                <p class="label">회원</p>
+                <strong>${order.user?.name || "-"} (${order.user?.email || "-"})</strong>
+                <div class="text-muted">${order.user?.phone || "-"}</div>
+              </div>
+              <div>
+                <p class="label">편지 상태</p>
+                ${formatLetterStatusBadge(order.letterStatus)}
+              </div>
+              <div>
+                <p class="label">결제 금액</p>
+                <strong>${formatAmount(order.payment?.amount || 0)}</strong>
+                <div class="text-muted">${order.payment?.method || "-"} / ${order.payment?.status || "-"}</div>
+              </div>
+              <div>
+                <p class="label">제출 시각</p>
+                <strong>${formatDate(order.submittedAt)}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>편지 내용</h3>
+            <div class="letter-preview" id="orderLetterPreview">
+              <div class="letter-preview-body font-${fontClass}">
+                ${letterHtml}
+              </div>
+            </div>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>편지 상태 업데이트</h3>
+            <form id="letterStatusForm">
+              <label class="sr-only" for="letterStatusSelect">편지 상태</label>
+              <select id="letterStatusSelect" name="status">
+                ${buildStatusOptions(LETTER_STATUS_OPTIONS, order.letterStatus)}
+              </select>
+              <button type="submit" class="btn-small">상태 변경</button>
+            </form>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>배송 정보</h3>
+            <form id="shipmentForm">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="shipmentStatusSelect">배송 상태</label>
+                  <select id="shipmentStatusSelect" name="status">
+                    ${buildStatusOptions(SHIPMENT_STATUS_OPTIONS, shipment.status)}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="shipmentCarrier">배송사</label>
+                  <input type="text" id="shipmentCarrier" name="carrier" value="${shipment.carrier || ""}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentTracking">송장 번호</label>
+                  <input type="text" id="shipmentTracking" name="trackingCode" value="${shipment.trackingCode || ""}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentShippedAt">발송 시각</label>
+                  <input type="datetime-local" id="shipmentShippedAt" name="shippedAt" value="${formatInputDateTime(
+                    shipment.shippedAt
+                  )}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentDeliveredAt">배송 완료 시각</label>
+                  <input type="datetime-local" id="shipmentDeliveredAt" name="deliveredAt" value="${formatInputDateTime(
+                    shipment.deliveredAt
+                  )}" />
+                </div>
+              </div>
+              <button type="submit" class="btn-small">배송 정보 저장</button>
+            </form>
+          </section>
+        `;
+      }
+
+      function buildStatusOptions(options, selected) {
+        return options
+          .map(
+            (value) =>
+              `<option value="${value}" ${value === selected ? "selected" : ""}>${value}</option>`
+          )
+          .join("");
+      }
+
+      function resolveFontClass(value) {
+        if (!value) return "default";
+        return LETTER_FONT_CLASSES.includes(value) ? value : "default";
+      }
+
+      function formatInputDateTime(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "";
+        }
+        return date.toISOString().slice(0, 16);
+      }
+
+      function handleOrderPrint() {
+        const detail = state.currentOrderDetail;
+        if (!detail) return;
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+          alert("브라우저에서 팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 시도해 주세요.");
+          return;
+        }
+        const printHtml = buildPrintableHtml(detail);
+        printWindow.document.open();
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 200);
+      }
+
+      function buildPrintableHtml(order) {
+        const letterHtml =
+          order.letterContent && order.letterContent.trim().length > 0
+            ? order.letterContent
+            : "<p>편지 내용이 없습니다.</p>";
+        const stationeryClass = STATIONERY_CLASS_MAP[order.paperOption] || STATIONERY_CLASS_MAP.default;
+        const fontClass = resolveFontClass(order.fontStyle);
+        return `
+          <html lang="ko">
+            <head>
+              <meta charset="utf-8" />
+              <title>Fanletter Post 편지 출력</title>
+              <link rel="preconnect" href="https://fonts.googleapis.com" />
+              <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+              <link
+                href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&family=Dongle:wght@300;400;700&family=Gaegu:wght@300;400;700&family=Single+Day&display=swap"
+                rel="stylesheet"
+              />
+              <style>
+                @page { size: A4; margin: 0; }
+                @media print { body { margin: 0; } }
+                body {
+                  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+                  margin: 0;
+                  padding: 0;
+                  background: #f4f5f7;
+                  color: #111;
+                }
+                .preview {
+                  min-height: 100vh;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  padding: 0;
+                }
+                .preview-paper {
+                  --paper-fill: #fff;
+                  --paper-line-color: rgba(0, 0, 0, 0.42);
+                  width: 11cm;
+                  height: 13.5cm;
+                  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+                  position: relative;
+                  padding: 1.5cm;
+                  background: var(--paper-fill);
+                  overflow: hidden;
+                }
+                .preview-paper-inner {
+                  position: relative;
+                  width: 100%;
+                  height: 100%;
+                }
+                .preview-paper-guides {
+                  position: absolute;
+                  inset: 0;
+                  pointer-events: none;
+                  z-index: 0;
+                }
+                .preview-paper-guide {
+                  position: absolute;
+                  left: 0;
+                  right: 0;
+                  height: 1px;
+                  background: var(--paper-line-color);
+                }
+                .preview-paper-body {
+                  position: relative;
+                  z-index: 1;
+                  font-size: 15.5px;
+                  line-height: 1;
+                  height: 100%;
+                  overflow: hidden;
+                  color: inherit;
+                }
+                .paper-lined,
+                .paper-classic,
+                .paper-blossom {
+                  --paper-fill: #fff;
+                  --paper-line-spacing: 28px;
+                }
+                .paper-midnight {
+                  --paper-fill: #0f1c2c;
+                  --paper-line-color: rgba(255, 255, 255, 0.35);
+                  --paper-line-spacing: 28px;
+                  color: #f3f4f8;
+                }
+                .preview-paper-body.font-default { font-family: "Pretendard", "Noto Sans KR", sans-serif; }
+                .preview-paper-body.font-serif { font-family: "Cormorant Garamond", "Times New Roman", serif; }
+                .preview-paper-body.font-handwriting { font-family: "Nanum Pen Script", cursive; }
+                .preview-paper-body.font-gaegu { font-family: "Gaegu", cursive; }
+                .preview-paper-body.font-dongle { font-family: "Dongle", cursive; }
+                .preview-paper-body.font-singleDay { font-family: "Single Day", cursive; }
+              </style>
+            </head>
+            <body>
+              <div class="preview">
+                <div class="preview-paper ${stationeryClass}">
+                  <div class="preview-paper-inner">
+                    <div class="preview-paper-guides"></div>
+                    <div class="preview-paper-body font-${fontClass}">${letterHtml}</div>
+                  </div>
+                </div>
+              </div>
+              <script>
+                (function () {
+                  const paper = document.querySelector(".preview-paper");
+                  const guides = document.querySelector(".preview-paper-guides");
+                  if (!paper || !guides) return;
+                  const lines = 16;
+                  const body = document.querySelector(".preview-paper-body");
+                  const availableHeight = paper.clientHeight - 50;
+                  const spacing = availableHeight / (lines - 1);
+                  const offset = 25;
+                  guides.innerHTML = "";
+                  for (let i = 0; i < lines; i += 1) {
+                    const guide = document.createElement("div");
+                    guide.className = "preview-paper-guide";
+                    guide.style.top = (offset + i * spacing) + "px";
+                    guides.appendChild(guide);
+                  }
+                  if (body) {
+                    body.style.lineHeight = spacing + "px";
+                    body.style.marginTop = (offset - spacing / 3) + "px";
+                  }
+                })();
+              <\/script>
+            </body>
+          </html>
+        `;
       }
 
       function renderRecipients(recipients) {
