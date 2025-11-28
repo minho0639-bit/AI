@@ -1455,9 +1455,9 @@
       function handleOrderPrint() {
         const detail = state.currentOrderDetail;
         if (!detail) return;
-        const printWindow = window.open("", "_blank", "noopener");
+        const printWindow = window.open("", "_blank");
         if (!printWindow) {
-          alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.");
+          alert("브라우저에서 팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 시도해 주세요.");
           return;
         }
         const printHtml = buildPrintableHtml(detail);
@@ -1465,9 +1465,9 @@
         printWindow.document.write(printHtml);
         printWindow.document.close();
         printWindow.focus();
-        printWindow.onload = () => {
+        setTimeout(() => {
           printWindow.print();
-        };
+        }, 200);
       }
 
       function buildPrintableHtml(order) {
