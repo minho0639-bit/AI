@@ -34,6 +34,10 @@ const DEFAULT_STATIONERY = [
   },
 ];
 
+const LETTER_STATUSES = Object.freeze(["draft", "submitted", "printing", "shipped"]);
+const LETTER_STATUS_SET = new Set(LETTER_STATUSES);
+const SHIPMENT_STATUSES = Object.freeze(["pending", "pickup", "in_transit", "delivered", "returned"]);
+const SHIPMENT_STATUS_SET = new Set(SHIPMENT_STATUSES);
 const DEFAULT_WELCOME_COUPON = Object.freeze({
   code: "WELCOME-FREE",
   name: "첫 결제 무료 쿠폰",
@@ -204,7 +208,7 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
          l.id,
          l.recipient_name,
          l.recipient_group,
-         l.status,
+         l.status AS letter_status,
          l.submitted_at,
          l.created_at,
          u.email AS user_email,
@@ -227,6 +231,112 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("admin orders fetch error:", error);
     res.status(500).json({ message: "주문 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.get("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+  const letterId = Number(req.params.id);
+  if (!letterId) {
+    return res.status(400).json({ message: "잘못된 주문 ID입니다." });
+  }
+  try {
+    const order = await getAdminOrderDetail(letterId);
+    if (!order) {
+      return res.status(404).json({ message: "주문을 찾을 수 없습니다." });
+    }
+    res.json(order);
+  } catch (error) {
+    console.error("admin order detail error:", error);
+    res.status(500).json({ message: "주문 상세를 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.put("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
+  const letterId = Number(req.params.id);
+  if (!letterId) {
+    return res.status(400).json({ message: "잘못된 주문 ID입니다." });
+  }
+  const normalizedStatus = normalizeLetterStatus(req.body?.status);
+  if (!normalizedStatus) {
+    return res.status(400).json({ message: "유효한 편지 상태를 입력해 주세요." });
+  }
+  try {
+    const [result] = await pool.query("UPDATE letters SET status = ? WHERE id = ?", [
+      normalizedStatus,
+      letterId,
+    ]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "주문을 찾을 수 없습니다." });
+    }
+    const order = await getAdminOrderDetail(letterId);
+    res.json(order);
+  } catch (error) {
+    console.error("admin order status update error:", error);
+    res.status(500).json({ message: "편지 상태를 업데이트하지 못했습니다." });
+  }
+});
+
+app.put("/api/admin/orders/:id/shipment", requireAdmin, async (req, res) => {
+  const letterId = Number(req.params.id);
+  if (!letterId) {
+    return res.status(400).json({ message: "잘못된 주문 ID입니다." });
+  }
+  const payload = req.body || {};
+  const normalizedStatus = normalizeShipmentStatus(payload.status);
+  if (!normalizedStatus) {
+    return res.status(400).json({ message: "유효한 배송 상태를 입력해 주세요." });
+  }
+  const trackingCode = payload.trackingCode?.trim() || null;
+  const carrier = payload.carrier?.trim() || null;
+  const shippedAt = parseDateInput(payload.shippedAt);
+  const deliveredAt = parseDateInput(payload.deliveredAt);
+  try {
+    const [letterRows] = await pool.query("SELECT id FROM letters WHERE id = ? LIMIT 1", [letterId]);
+    if (letterRows.length === 0) {
+      return res.status(404).json({ message: "주문을 찾을 수 없습니다." });
+    }
+    const [existing] = await pool.query(
+      "SELECT id, shipped_at, delivered_at FROM shipments WHERE letter_id = ? LIMIT 1",
+      [letterId]
+    );
+    const appliedShippedAt =
+      shippedAt !== null ? shippedAt : existing.length ? existing[0].shipped_at : null;
+    const appliedDeliveredAt =
+      deliveredAt !== null ? deliveredAt : existing.length ? existing[0].delivered_at : null;
+    if (existing.length === 0) {
+      await pool.query(
+        `INSERT INTO shipments
+         (letter_id, tracking_code, carrier, status, shipped_at, delivered_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          letterId,
+          trackingCode,
+          carrier,
+          normalizedStatus,
+          appliedShippedAt,
+          appliedDeliveredAt,
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE shipments
+         SET tracking_code = ?, carrier = ?, status = ?, shipped_at = ?, delivered_at = ?
+         WHERE id = ?`,
+        [
+          trackingCode,
+          carrier,
+          normalizedStatus,
+          appliedShippedAt,
+          appliedDeliveredAt,
+          existing[0].id,
+        ]
+      );
+    }
+    const order = await getAdminOrderDetail(letterId);
+    res.json(order);
+  } catch (error) {
+    console.error("admin shipment update error:", error);
+    res.status(500).json({ message: "배송 정보를 업데이트하지 못했습니다." });
   }
 });
 
@@ -785,11 +895,15 @@ app.get("/api/orders/my", async (req, res) => {
       `SELECT
          l.id,
          l.recipient_name,
+         l.status AS letter_status,
          l.created_at,
          p.status AS payment_status,
-         p.amount AS payment_amount
+         p.amount AS payment_amount,
+         s.status AS shipment_status,
+         s.tracking_code
        FROM letters l
        LEFT JOIN payments p ON p.letter_id = l.id
+       LEFT JOIN shipments s ON s.letter_id = l.id
        WHERE l.user_id = ?
        ORDER BY l.created_at DESC
        LIMIT 20`,
@@ -1322,6 +1436,102 @@ function normalizePaymentStatus(value) {
     return normalized;
   }
   return "paid";
+}
+
+function normalizeLetterStatus(value) {
+  if (!value) return null;
+  const normalized = String(value).toLowerCase();
+  return LETTER_STATUS_SET.has(normalized) ? normalized : null;
+}
+
+function normalizeShipmentStatus(value) {
+  if (!value) return null;
+  const normalized = String(value).toLowerCase();
+  return SHIPMENT_STATUS_SET.has(normalized) ? normalized : null;
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+async function getAdminOrderDetail(letterId) {
+  const [rows] = await pool.query(
+    `SELECT
+       l.id,
+       l.user_id,
+       l.recipient_name,
+       l.recipient_group,
+       l.content,
+       l.paper_option,
+       l.status AS letter_status,
+       l.submitted_at,
+       l.created_at,
+       l.updated_at,
+       u.email AS user_email,
+       u.name AS user_name,
+       u.phone AS user_phone,
+       p.method AS payment_method,
+       p.amount AS payment_amount,
+       p.status AS payment_status,
+       p.pg_transaction_id,
+       p.paid_at,
+       s.id AS shipment_id,
+       s.status AS shipment_status,
+       s.tracking_code,
+       s.carrier,
+       s.shipped_at,
+       s.delivered_at
+     FROM letters l
+     LEFT JOIN users u ON l.user_id = u.id
+     LEFT JOIN payments p ON p.letter_id = l.id
+     LEFT JOIN shipments s ON s.letter_id = l.id
+     WHERE l.id = ?
+     LIMIT 1`,
+    [letterId]
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  const row = rows[0];
+  return {
+    id: row.id,
+    userId: row.user_id,
+    recipientName: row.recipient_name,
+    recipientGroup: row.recipient_group,
+    letterStatus: row.letter_status,
+    letterContent: row.content,
+    paperOption: row.paper_option,
+    submittedAt: formatDateValue(row.submitted_at),
+    createdAt: formatDateValue(row.created_at),
+    updatedAt: formatDateValue(row.updated_at),
+    user: {
+      email: row.user_email,
+      name: row.user_name,
+      phone: row.user_phone,
+    },
+    payment: {
+      method: row.payment_method,
+      amount: row.payment_amount,
+      status: row.payment_status,
+      transactionId: row.pg_transaction_id,
+      paidAt: formatDateValue(row.paid_at),
+    },
+    shipment: row.shipment_id
+      ? {
+          id: row.shipment_id,
+          status: row.shipment_status,
+          trackingCode: row.tracking_code,
+          carrier: row.carrier,
+          shippedAt: formatDateValue(row.shipped_at),
+          deliveredAt: formatDateValue(row.delivered_at),
+        }
+      : null,
+  };
 }
 
 async function ensureCouponSetup() {

@@ -226,6 +226,8 @@
                 <th>제목</th>
                 <th>결제 금액</th>
                 <th>결제 상태</th>
+                <th>편지 상태</th>
+                <th>배송 상태</th>
                 <th>작성일</th>
               </tr>
             </thead>
@@ -233,12 +235,17 @@
               ${orders
                 .map((order) => {
                   const paid = order.payment_status || "미결제";
+                  const letterStatus = order.letter_status || "-";
+                  const shipmentStatus = order.shipment_status || "-";
+                  const tracking = order.tracking_code ? ` (${order.tracking_code})` : "";
                   return `
                     <tr>
                       <td>${order.id}</td>
                       <td>${order.recipient_name || "편지"}</td>
                       <td>${(order.payment_amount || 0).toLocaleString("ko-KR")}원</td>
-                      <td class="${paid === "PAID" ? "status-paid" : "status-pending"}">${paid}</td>
+                      <td class="${paid === "paid" ? "status-paid" : "status-pending"}">${paid}</td>
+                      <td>${letterStatus}</td>
+                      <td>${shipmentStatus}${tracking}</td>
                       <td>${order.created_at ? new Date(order.created_at).toLocaleDateString("ko-KR") : "-"}</td>
                     </tr>
                   `;

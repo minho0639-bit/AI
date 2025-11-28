@@ -61,6 +61,17 @@ main {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .login-card {
   max-width: 420px;
   margin: 80px auto;
@@ -329,4 +340,62 @@ select {
   background: #fff;
   object-fit: cover;
   display: block;
+}
+
+.order-detail-panel {
+  margin-top: 20px;
+}
+
+.order-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-detail-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fdfdfd;
+}
+
+.order-detail-section h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.order-detail-content .label {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.letter-preview {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 360px;
+  overflow: auto;
+  background: #fff;
+}
+
+#letterStatusForm,
+#shipmentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#letterStatusForm select,
+#shipmentForm select,
+#shipmentForm input[type="text"],
+#shipmentForm input[type="datetime-local"] {
+  width: 100%;
 }

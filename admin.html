@@ -58,10 +58,23 @@
                     <th>결제</th>
                     <th>배송</th>
                     <th>작성일</th>
+                    <th>관리</th>
                   </tr>
                 </thead>
                 <tbody id="orders-body"></tbody>
               </table>
+            </div>
+            <div class="panel order-detail-panel" id="orderDetailPanel" hidden>
+              <div class="panel-header">
+                <h2>주문 상세</h2>
+                <div class="table-actions">
+                  <button type="button" class="btn-small" id="printOrderBtn" disabled>인쇄</button>
+                  <button type="button" class="btn-small btn-ghost" id="closeOrderDetail" disabled>닫기</button>
+                </div>
+              </div>
+              <div id="orderDetailContent" class="order-detail-content">
+                <p class="muted">주문을 선택하면 상세 정보가 표시됩니다.</p>
+              </div>
             </div>
           </section>
         </div>
@@ -423,6 +436,10 @@
       const couponIssuesStatus = document.getElementById("coupon-issues-status");
 
       const ordersBody = document.getElementById("orders-body");
+      const orderDetailPanel = document.getElementById("orderDetailPanel");
+      const orderDetailContent = document.getElementById("orderDetailContent");
+      const printOrderBtn = document.getElementById("printOrderBtn");
+      const closeOrderDetailBtn = document.getElementById("closeOrderDetail");
       const recipientsBody = document.getElementById("recipients-body");
       const stationeryBody = document.getElementById("stationery-body");
       const usersBody = document.getElementById("users-body");
@@ -447,6 +464,12 @@
       const couponIssueUserIdInput = document.getElementById("coupon-issue-user-id");
       const couponIssueUserEmailInput = document.getElementById("coupon-issue-user-email");
 
+      const LETTER_STATUS_OPTIONS = ["draft", "submitted", "printing", "shipped"];
+      const SHIPMENT_STATUS_OPTIONS = ["pending", "pickup", "in_transit", "delivered", "returned"];
+
+      printOrderBtn?.setAttribute("disabled", "true");
+      closeOrderDetailBtn?.setAttribute("disabled", "true");
+
       const state = {
         metaLoaded: false,
         meta: {
@@ -456,6 +479,7 @@
         stationery: [],
         coupons: [],
         couponIssues: [],
+        currentOrderDetail: null,
       };
 
       loginForm.addEventListener("submit", async (event) => {
@@ -500,6 +524,66 @@
           await loadRecipientsOnly();
         } catch (error) {
           alert(error.message);
+        }
+      });
+
+      ordersBody.addEventListener("click", async (event) => {
+        const detailBtn = event.target.closest("[data-order-detail]");
+        if (detailBtn) {
+          await loadOrderDetail(detailBtn.dataset.orderDetail);
+        }
+      });
+
+      orderDetailContent?.addEventListener("submit", async (event) => {
+        if (event.target.matches("#letterStatusForm")) {
+          event.preventDefault();
+          if (!state.currentOrderDetail) return;
+          const formData = new FormData(event.target);
+          const status = formData.get("status");
+          try {
+            await updateLetterStatus(state.currentOrderDetail.id, status);
+            await loadOrderDetail(state.currentOrderDetail.id);
+            await loadAdminData();
+          } catch (error) {
+            alert(error.message);
+          }
+        }
+        if (event.target.matches("#shipmentForm")) {
+          event.preventDefault();
+          if (!state.currentOrderDetail) return;
+          const formData = new FormData(event.target);
+          const payload = {
+            status: formData.get("status"),
+            carrier: formData.get("carrier"),
+            trackingCode: formData.get("trackingCode"),
+            shippedAt: formData.get("shippedAt"),
+            deliveredAt: formData.get("deliveredAt"),
+          };
+          try {
+            await updateShipment(state.currentOrderDetail.id, payload);
+            await loadOrderDetail(state.currentOrderDetail.id);
+            await loadAdminData();
+          } catch (error) {
+            alert(error.message);
+          }
+        }
+      });
+
+      printOrderBtn?.addEventListener("click", handleOrderPrint);
+      closeOrderDetailBtn?.addEventListener("click", () => {
+        state.currentOrderDetail = null;
+        if (orderDetailPanel) {
+          orderDetailPanel.hidden = true;
+        }
+        if (orderDetailContent) {
+          orderDetailContent.innerHTML =
+            '<p class="muted">주문을 선택하면 상세 정보가 표시됩니다.</p>';
+        }
+        if (printOrderBtn) {
+          printOrderBtn.disabled = true;
+        }
+        if (closeOrderDetailBtn) {
+          closeOrderDetailBtn.disabled = true;
         }
       });
 
@@ -1123,6 +1207,36 @@
         return `<span class="${className}">${labelMap[status] || status}</span>`;
       }
 
+      function formatLetterStatusBadge(status) {
+        if (!status) return '<span class="badge">-</span>';
+        const labelMap = {
+          draft: "임시 저장",
+          submitted: "접수 완료",
+          printing: "인쇄 중",
+          shipped: "발송 완료",
+        };
+        let className = "badge";
+        if (status === "printing") className += " warning";
+        if (status === "shipped") className += " success";
+        return `<span class="${className}">${labelMap[status] || status}</span>`;
+      }
+
+      function formatShipmentStatusBadge(status) {
+        if (!status) return '<span class="badge">-</span>';
+        const labelMap = {
+          pending: "준비 중",
+          pickup: "수거 중",
+          in_transit: "배송 중",
+          delivered: "배송 완료",
+          returned: "반송",
+        };
+        let className = "badge";
+        if (status === "in_transit") className += " warning";
+        if (status === "delivered") className += " success";
+        if (status === "returned") className += " danger";
+        return `<span class="${className}">${labelMap[status] || status}</span>`;
+      }
+
       function toNumberOrNull(value) {
         if (value === null || value === undefined || value === "") return null;
         const parsed = Number(value);
@@ -1154,7 +1268,7 @@
                   <div class="text-muted">${order.recipient_group || ""}</div>
                 </td>
                 <td>
-                  <div class="badge">${order.status}</div>
+                  ${formatLetterStatusBadge(order.letter_status)}
                   <div class="text-muted">${formatDate(order.submitted_at)}</div>
                 </td>
                 <td>
@@ -1162,14 +1276,217 @@
                   <div class="text-muted">${order.payment_method || ""} ${paymentAmount}</div>
                 </td>
                 <td>
-                  <div>${order.shipment_status || "-"}</div>
+                  ${formatShipmentStatusBadge(order.shipment_status)}
                   <div class="text-muted">${[order.carrier, order.tracking_code].filter(Boolean).join(" ")}</div>
                 </td>
                 <td>${formatDate(order.created_at)}</td>
+                <td>
+                  <div class="table-actions">
+                    <button
+                      type="button"
+                      class="btn-small btn-ghost"
+                      data-order-detail="${order.id}"
+                    >
+                      상세
+                    </button>
+                  </div>
+                </td>
               </tr>
             `;
           })
           .join("");
+      }
+
+      async function loadOrderDetail(orderId) {
+        if (!orderDetailPanel || !orderDetailContent) return;
+        orderDetailPanel.hidden = false;
+        orderDetailContent.innerHTML = '<p class="muted">주문 상세를 불러오는 중입니다...</p>';
+        if (printOrderBtn) printOrderBtn.disabled = true;
+        if (closeOrderDetailBtn) closeOrderDetailBtn.disabled = false;
+        try {
+          const detail = await fetchJson(`/api/admin/orders/${orderId}`);
+          state.currentOrderDetail = detail;
+          renderOrderDetail(detail);
+          if (printOrderBtn) printOrderBtn.disabled = false;
+        } catch (error) {
+          orderDetailContent.innerHTML = `<p class="error">${error.message}</p>`;
+        }
+      }
+
+      async function updateLetterStatus(orderId, status) {
+        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "편지 상태를 업데이트하지 못했습니다.");
+        }
+        return response.json();
+      }
+
+      async function updateShipment(orderId, payload) {
+        const response = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || "배송 정보를 업데이트하지 못했습니다.");
+        }
+        return response.json();
+      }
+
+      function renderOrderDetail(order) {
+        if (!orderDetailContent) return;
+        const letterHtml =
+          order.letterContent && order.letterContent.trim().length > 0
+            ? order.letterContent
+            : '<p class="muted">편지 내용이 없습니다.</p>';
+        const shipment = order.shipment || {};
+        orderDetailContent.innerHTML = `
+          <section class="order-detail-section">
+            <div class="order-detail-grid">
+              <div>
+                <p class="label">주문 번호</p>
+                <strong>#${order.id}</strong>
+              </div>
+              <div>
+                <p class="label">회원</p>
+                <strong>${order.user?.name || "-"} (${order.user?.email || "-"})</strong>
+                <div class="text-muted">${order.user?.phone || "-"}</div>
+              </div>
+              <div>
+                <p class="label">편지 상태</p>
+                ${formatLetterStatusBadge(order.letterStatus)}
+              </div>
+              <div>
+                <p class="label">결제 금액</p>
+                <strong>${formatAmount(order.payment?.amount || 0)}</strong>
+                <div class="text-muted">${order.payment?.method || "-"} / ${order.payment?.status || "-"}</div>
+              </div>
+              <div>
+                <p class="label">제출 시각</p>
+                <strong>${formatDate(order.submittedAt)}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>편지 내용</h3>
+            <div class="letter-preview" id="orderLetterPreview">${letterHtml}</div>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>편지 상태 업데이트</h3>
+            <form id="letterStatusForm">
+              <label class="sr-only" for="letterStatusSelect">편지 상태</label>
+              <select id="letterStatusSelect" name="status">
+                ${buildStatusOptions(LETTER_STATUS_OPTIONS, order.letterStatus)}
+              </select>
+              <button type="submit" class="btn-small">상태 변경</button>
+            </form>
+          </section>
+
+          <section class="order-detail-section">
+            <h3>배송 정보</h3>
+            <form id="shipmentForm">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="shipmentStatusSelect">배송 상태</label>
+                  <select id="shipmentStatusSelect" name="status">
+                    ${buildStatusOptions(SHIPMENT_STATUS_OPTIONS, shipment.status)}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="shipmentCarrier">배송사</label>
+                  <input type="text" id="shipmentCarrier" name="carrier" value="${shipment.carrier || ""}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentTracking">송장 번호</label>
+                  <input type="text" id="shipmentTracking" name="trackingCode" value="${shipment.trackingCode || ""}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentShippedAt">발송 시각</label>
+                  <input type="datetime-local" id="shipmentShippedAt" name="shippedAt" value="${formatInputDateTime(
+                    shipment.shippedAt
+                  )}" />
+                </div>
+                <div class="field">
+                  <label for="shipmentDeliveredAt">배송 완료 시각</label>
+                  <input type="datetime-local" id="shipmentDeliveredAt" name="deliveredAt" value="${formatInputDateTime(
+                    shipment.deliveredAt
+                  )}" />
+                </div>
+              </div>
+              <button type="submit" class="btn-small">배송 정보 저장</button>
+            </form>
+          </section>
+        `;
+      }
+
+      function buildStatusOptions(options, selected) {
+        return options
+          .map(
+            (value) =>
+              `<option value="${value}" ${value === selected ? "selected" : ""}>${value}</option>`
+          )
+          .join("");
+      }
+
+      function formatInputDateTime(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "";
+        }
+        return date.toISOString().slice(0, 16);
+      }
+
+      function handleOrderPrint() {
+        const detail = state.currentOrderDetail;
+        if (!detail) return;
+        const printWindow = window.open("", "_blank", "noopener");
+        if (!printWindow) {
+          alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.");
+          return;
+        }
+        const letterHtml =
+          detail.letterContent && detail.letterContent.trim().length > 0
+            ? detail.letterContent
+            : "<p>편지 내용이 없습니다.</p>";
+        printWindow.document.write(`
+          <html lang="ko">
+            <head>
+              <meta charset="utf-8" />
+              <title>주문 #${detail.id} 출력</title>
+              <style>
+                body { font-family: "Pretendard", "Noto Sans KR", sans-serif; padding: 24px; color: #111; }
+                h1 { font-size: 20px; margin-bottom: 16px; }
+                .meta { margin-bottom: 24px; }
+                .meta div { margin-bottom: 4px; }
+                .letter-content { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+              </style>
+            </head>
+            <body>
+              <h1>주문 #${detail.id}</h1>
+              <div class="meta">
+                <div><strong>회원:</strong> ${detail.user?.name || "-"} (${detail.user?.email || "-"})</div>
+                <div><strong>편지 상태:</strong> ${detail.letterStatus}</div>
+                <div><strong>제출 시각:</strong> ${formatDate(detail.submittedAt)}</div>
+                <div><strong>배송 상태:</strong> ${detail.shipment?.status || "-"}</div>
+              </div>
+              <div class="letter-content">
+                ${letterHtml}
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
       }
 
       function renderRecipients(recipients) {
