@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 한 번에 팬레터 보내기</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top-nav">
+      <div class="brand">팬레터포스트</div>
+      <div class="user-controls">
+        <span class="user-nickname">Guest</span>
+        <button id="profileBtn" class="quiet tiny" type="button">내 정보</button>
+        <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="intro" class="canvas">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="tag">오늘 접수 · 이번 주 전달</p>
+            <h1>마음을 담은 손 편지</h1>
+            <p>
+              온라인에서 정성껏 작성한 편지를 팬레터포스트가 손 편지로 만들어
+              좋아하는 스타에게 안전하게 전달합니다. 로그인 후 바로 편지를 써 보세요.
+            </p>
+            <div class="highlight">
+              <span>12,842통 전달 완료</span>
+              <span>평균 배송 36시간</span>
+            </div>
+          </div>
+
+          <div class="panel login-panel">
+            <div class="panel-head">
+              <span>로그인</span>
+              <button class="quiet tiny" type="button">비밀번호 찾기</button>
+            </div>
+            <form id="login-form" class="form auth-form">
+              <label>
+                이메일
+                <input type="email" name="email" placeholder="fan@letter.com" required />
+              </label>
+              <label>
+                비밀번호
+                <input type="password" name="password" placeholder="영문+숫자 8자" required />
+              </label>
+              <button class="primary full" type="submit">로그인하기</button>
+            </form>
+            <p id="loginMessage" class="message"></p>
+            <button class="ghost full" type="button" onclick="window.location.href='signup.html'">
+              신규 회원가입
+            </button>
+            <div class="divider">
+              <span>SNS로 가입 / 로그인</span>
+            </div>
+            <div class="social-login">
+              <button type="button" class="social kakao" onclick="window.location.href='/auth/kakao'">
+                카카오로 시작하기
+              </button>
+              <button type="button" class="social naver">네이버로 시작하기</button>
+              <button type="button" class="social google">Google로 시작하기</button>
+            </div>
+          </div>
+
+          <div class="home-visual">
+            <div class="home-visual__image"></div>
+            <div class="home-visual__text">
+              <p>“팬레터포스트가 직접 인쇄하고 封합니다.”</p>
+              <span>실시간 제작 현황 · 배송 트래킹</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="home-actions">
+        <p>새로운 편지를 작성해 오늘 접수 리스트에 올려보세요.</p>
+        <button id="writeLetterBtn" class="primary letter-cta" type="button">편지 쓰기</button>
+      </section>
+    </main>
+
+      <footer class="footer">
+        <div>
+          <strong>주식회사 비아이티 팬레터포스트</strong>
+          <p>경기도 수원시 신원로250번길 2 엘타워 8층</p>
+        </div>
+        <div class="footer-links">
+          <a href="#">서비스 정책</a>
+          <a href="#">개인정보 처리방침</a>
+          <a id="contact" href="mailto:sales@b-itsolution.com">문의 sales@b-itsolution.com</a>
+        </div>
+      </footer>
+    <script>
+      const nicknameEl = document.querySelector(".user-nickname");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const profileBtn = document.getElementById("profileBtn");
+      const letterBtn = document.getElementById("writeLetterBtn");
+      const loginPanel = document.querySelector(".login-panel");
+      const loginForm = document.getElementById("login-form");
+      const loginMessage = document.getElementById("loginMessage");
+
+      function applySession(user) {
+        document.body.classList.add("logged-in");
+        nicknameEl.textContent = user?.name || user?.email || "팬";
+        if (loginMessage) loginMessage.textContent = "";
+      }
+
+      function clearSessionState() {
+        document.body.classList.remove("logged-in");
+        nicknameEl.textContent = "Guest";
+      }
+
+      async function fetchSession() {
+        try {
+          const res = await fetch("/api/me");
+          const data = await res.json();
+          if (data.loggedIn) {
+            applySession(data.user);
+          } else {
+            clearSessionState();
+          }
+        } catch (error) {
+          console.error("세션 정보를 가져오지 못했습니다.", error);
+        }
+      }
+
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (error) {
+          console.error("로그아웃 실패", error);
+        } finally {
+          window.location.reload();
+        }
+      });
+
+      profileBtn.addEventListener("click", () => {
+        if (document.body.classList.contains("logged-in")) {
+          window.location.href = "/profile.html";
+        } else {
+          alert("로그인 후 이용할 수 있습니다.");
+        }
+      });
+
+      letterBtn.addEventListener("click", () => {
+        if (document.body.classList.contains("logged-in")) {
+          window.location.href = "/letter.html";
+        } else {
+          alert("편지 쓰기는 로그인 후 이용할 수 있습니다.");
+        }
+      });
+
+      if (loginForm) {
+        loginForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          loginMessage.textContent = "";
+          loginMessage.classList.remove("error", "success");
+          const formData = new FormData(loginForm);
+          const payload = Object.fromEntries(formData.entries());
+          try {
+            const res = await fetch("/api/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              throw new Error(data.message || "로그인에 실패했습니다.");
+            }
+            loginMessage.textContent = data.message;
+            loginMessage.classList.add("success");
+            applySession(data.user);
+            loginForm.reset();
+          } catch (error) {
+            loginMessage.textContent = error.message;
+            loginMessage.classList.add("error");
+          }
+        });
+      }
+
+      fetchSession();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팬레터포스트 | 편지 작성</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=Nanum+Pen+Script&family=Dongle:wght@300;400;700&family=Gaegu:wght@300;400;700&family=Single+Day&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="letter-compose.css" />
+  </head>
+  <body>
+      <header class="compose-nav">
+        <div class="brand">팬레터포스트</div>
+        <div class="nav-actions">
+          <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
+          <button type="button" class="ghost tiny" id="backHome">홈으로</button>
+        </div>
+      </header>
+
+      <main class="compose-main">
+        <section class="compose-controls" aria-label="서식 설정">
+          <div class="control-group">
+            <p class="group-label">폰트</p>
+            <div class="chip-group" id="fontChips"></div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">텍스트 스타일</p>
+            <div class="format-toolbar" id="formatToolbar" role="group" aria-label="텍스트 스타일 버튼">
+              <button type="button" class="format-btn" data-command="bold" aria-label="굵게">
+                <span class="format-btn__icon format-btn__icon--bold" aria-hidden="true">가</span>
+                <span class="format-btn__label">굵게</span>
+              </button>
+              <button type="button" class="format-btn" data-command="italic" aria-label="기울임">
+                <span class="format-btn__icon format-btn__icon--italic" aria-hidden="true">가</span>
+                <span class="format-btn__label">기울임</span>
+              </button>
+              <button type="button" class="format-btn" data-command="underline" aria-label="밑줄">
+                <span class="format-btn__icon format-btn__icon--underline" aria-hidden="true">가</span>
+                <span class="format-btn__label">밑줄</span>
+              </button>
+            </div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">폰트 색상</p>
+            <div class="color-palette" id="colorPalette"></div>
+          </div>
+          <div class="control-group emoji-group">
+            <p class="group-label">이모티콘</p>
+            <button type="button" class="emoji-toggle" id="emojiToggle" aria-expanded="false">
+              이모티콘 선택
+            </button>
+            <div class="emoji-palette" id="emojiPalette" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="compose-editor">
+          <div class="write-panel">
+            <div class="paper-stack" id="paperStack" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="compose-actions">
+          <button type="button" class="ghost" id="saveDraft">임시 저장</button>
+          <button type="button" class="primary" id="toSummary">다음 단계</button>
+        </section>
+      </main>
+
+      <script>
+        const params = new URLSearchParams(window.location.search);
+        const paperStack = document.getElementById("paperStack");
+        const backToSelect = document.getElementById("backToSelect");
+        const backHome = document.getElementById("backHome");
+        const saveDraft = document.getElementById("saveDraft");
+        const toSummary = document.getElementById("toSummary");
+        const fontChips = document.getElementById("fontChips");
+        const colorPalette = document.getElementById("colorPalette");
+        const emojiPalette = document.getElementById("emojiPalette");
+        const emojiToggle = document.getElementById("emojiToggle");
+        const formatToolbar = document.getElementById("formatToolbar");
+
+        const MAX_BODY = 1500;
+        const MAX_LINES_PER_PAGE = 16;
+        const BASE_FONT_SIZE = 18;
+        const HANDWRITING_FONT_IDS = new Set(["handwriting", "gaegu", "dongle", "singleDay"]);
+        const RICH_TEXT_PAGE_DELIMITERS = ['<div data-page-break="true"></div>', '<div><br /></div>'];
+        const PRIMARY_PAGE_DELIMITER = RICH_TEXT_PAGE_DELIMITERS[0];
+        const EMOJI_LIST = [
+          "😊",
+          "🥰",
+          "😍",
+          "🤩",
+          "😘",
+          "😄",
+          "😁",
+          "😢",
+          "😭",
+          "😌",
+          "😉",
+          "🤗",
+          "😎",
+          "🌟",
+          "💖",
+          "💘",
+          "💌",
+          "✨",
+          "💫",
+          "🎉",
+          "🎀",
+          "🎶",
+          "🍀",
+          "🌈",
+          "🌸",
+          "🔥",
+          "👍",
+          "🙏",
+          "💪",
+          "🙌",
+        ];
+        const FORBIDDEN_WORDS = [
+          "씨발",
+          "시발",
+          "씨팔",
+          "좆",
+          "좇",
+          "개새끼",
+          "개새",
+          "병신",
+          "븅신",
+          "꺼져",
+          "닥쳐",
+          "존나",
+          "좆같",
+          "좇같",
+          "fuck",
+          "shit",
+          "bitch",
+          "asshole",
+          "bastard",
+        ];
+
+        const stationeryThemes = {
+          basic: {
+            label: "기본 편지지",
+            className: "paper-lined",
+          },
+        };
+
+        const fontOptions = [
+          { id: "default", label: "Pretendard", className: "font-default" },
+          { id: "serif", label: "Cormorant", className: "font-serif" },
+          { id: "handwriting", label: "나눔펜", className: "font-handwriting" },
+          { id: "gaegu", label: "개구", className: "font-gaegu" },
+          { id: "dongle", label: "동글", className: "font-dongle" },
+          { id: "singleDay", label: "싱글데이", className: "font-singleDay" },
+        ];
+
+        const colorOptions = [
+          { id: "ink", label: "잉크 블랙", value: "#1b1c1f" },
+          { id: "navy", label: "네이비", value: "#1f3a93" },
+          { id: "rose", label: "로즈", value: "#d94b8c" },
+          { id: "forest", label: "포레스트", value: "#1f7a54" },
+          { id: "sunset", label: "선셋", value: "#ff7a45" },
+          { id: "cloud", label: "크림 화이트", value: "#f9f6ef" },
+        ];
+        const COLOR_VALUE_WHITELIST = new Set(colorOptions.map((option) => option.value.toLowerCase()));
+
+        let paperBodies = [];
+        let activeBody = null;
+        let selectedStationery = params.get("stationery") || "basic";
+        if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
+        let selectedFont = "default";
+        let selectedColorId = colorOptions[0].id;
+        let selectedColor = colorOptions[0].value;
+        let lastValidSnapshot = [];
+        let lastSelectionRange = null;
+        const storedDraftData = readDraftFromStorage();
+        applyDraftMetadata(storedDraftData);
+
+        function renderFontOptions() {
+          fontChips.innerHTML = "";
+          fontOptions.forEach((option) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `chip-option ${option.className} ${option.id === selectedFont ? "active" : ""}`;
+            button.textContent = option.label;
+            button.addEventListener("click", () => {
+              selectedFont = option.id;
+              renderFontOptions();
+              applyTypography();
+            });
+            fontChips.appendChild(button);
+          });
+        }
+
+        function renderColorPalette() {
+          colorPalette.innerHTML = "";
+          colorOptions.forEach((option) => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = `color-swatch ${option.id === selectedColorId ? "active" : ""}`;
+            swatch.style.setProperty("--swatch-color", option.value);
+            swatch.setAttribute("aria-label", `${option.label} 색 적용`);
+            swatch.innerHTML = "<span></span>";
+            swatch.addEventListener("mousedown", (event) => event.preventDefault());
+            swatch.addEventListener("click", () => applyColorSelection(option.id, option.value));
+            colorPalette.appendChild(swatch);
+          });
+        }
+
+        function renderEmojiPalette() {
+          emojiPalette.innerHTML = "";
+          EMOJI_LIST.forEach((symbol) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "emoji-button";
+            button.textContent = symbol;
+            button.addEventListener("click", (event) => {
+              event.stopPropagation();
+              insertEmoji(symbol);
+              setEmojiPaletteState(false);
+            });
+            emojiPalette.appendChild(button);
+          });
+        }
+
+        function setEmojiPaletteState(isOpen) {
+          if (!emojiPalette || !emojiToggle) return;
+          emojiPalette.classList.toggle("visible", isOpen);
+          emojiToggle.classList.toggle("active", isOpen);
+          emojiToggle.setAttribute("aria-expanded", String(isOpen));
+          emojiPalette.setAttribute("aria-hidden", String(!isOpen));
+        }
+
+        function getPlaceholderText() {
+          return HANDWRITING_FONT_IDS.has(selectedFont)
+            ? "따뜻한 손글씨 느낌으로 마음을 적어 보세요."
+            : "편지 내용을 입력하세요.";
+        }
+
+        function applyTypographyToBody(body) {
+          body.className = `paper-body font-${selectedFont}`;
+          body.style.fontSize = `${BASE_FONT_SIZE}px`;
+          body.style.color = selectedColor;
+          body.dataset.placeholder = getPlaceholderText();
+        }
+
+        function applyTypography() {
+          paperBodies.forEach((body) => applyTypographyToBody(body));
+        }
+
+        function applyColorSelection(colorId, colorValue) {
+          if (!paperBodies.length) return;
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          target.focus();
+          restoreSelectionRange(target);
+
+          const selectionState = getSelectionState();
+          if (!selectionState.withinEditor) {
+            placeCursorEnd(target);
+          }
+
+          try {
+            document.execCommand("styleWithCSS", false, true);
+          } catch (error) {
+            // no-op
+          }
+          document.execCommand("foreColor", false, colorValue);
+          try {
+            document.execCommand("styleWithCSS", false, false);
+          } catch (error) {
+            // no-op
+          }
+
+          if (selectionState.collapsed) {
+            selectedColorId = colorId;
+            selectedColor = colorValue;
+            applyTypography();
+          }
+
+          renderColorPalette();
+          captureSnapshot();
+          updateFormatToolbarState();
+        }
+
+        function getSelectionState() {
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            return { withinEditor: false, collapsed: true };
+          }
+          const range = selection.getRangeAt(0);
+          const withinEditor = !!paperStack && paperStack.contains(range.commonAncestorContainer);
+          return { withinEditor, collapsed: range.collapsed };
+        }
+
+        function applyStationeryStyles() {
+          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
+          paperBodies.forEach((body) => {
+            const page = body.closest(".letter-paper");
+            if (page) {
+              page.className = `letter-paper ${theme.className || ""}`.trim();
+              page.style.backgroundImage = "";
+            }
+          });
+        }
+
+        function readDraftFromStorage() {
+          try {
+            const raw = sessionStorage.getItem("fanletterDraft");
+            return raw ? JSON.parse(raw) : null;
+          } catch (error) {
+            console.warn("draft load error:", error);
+            return null;
+          }
+        }
+
+        function applyDraftMetadata(draft) {
+          if (!draft) return;
+          if (draft.font && fontOptions.some((option) => option.id === draft.font)) {
+            selectedFont = draft.font;
+          }
+          if (draft.stationery && stationeryThemes[draft.stationery]) {
+            selectedStationery = draft.stationery;
+          }
+          if (draft.color) {
+            const match = colorOptions.find(
+              (option) => option.value.toLowerCase() === draft.color.toLowerCase()
+            );
+            if (match) {
+              selectedColorId = match.id;
+              selectedColor = match.value;
+            }
+          }
+        }
+
+        function sanitizeRichText(html) {
+          const template = document.createElement("template");
+          template.innerHTML = html;
+          const allowedTags = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV", "SPAN"]);
+
+          function clean(node) {
+            Array.from(node.childNodes).forEach((child) => {
+              if (child.nodeType === Node.ELEMENT_NODE) {
+                clean(child);
+                if (!allowedTags.has(child.tagName)) {
+                  const fragment = document.createDocumentFragment();
+                  while (child.firstChild) {
+                    fragment.appendChild(child.firstChild);
+                  }
+                  child.replaceWith(fragment);
+                } else {
+                  sanitizeElementAttributes(child);
+                }
+              } else if (child.nodeType === Node.COMMENT_NODE) {
+                child.remove();
+              }
+            });
+          }
+
+          clean(template.content);
+          return template.innerHTML;
+        }
+
+        function sanitizeElementAttributes(element) {
+          if (element.tagName === "SPAN") {
+            const sanitizedStyle = extractAllowedColorStyle(element.getAttribute("style"));
+            if (sanitizedStyle) {
+              element.setAttribute("style", sanitizedStyle);
+            } else {
+              element.removeAttribute("style");
+            }
+            removeDisallowedAttributes(element, ["style"]);
+            return;
+          }
+          removeAllAttributes(element);
+        }
+
+        function removeAllAttributes(element) {
+          while (element.attributes.length > 0) {
+            element.removeAttribute(element.attributes[0].name);
+          }
+        }
+
+        function removeDisallowedAttributes(element, allowedAttributeNames = []) {
+          const whitelist = new Set(allowedAttributeNames.map((name) => name.toLowerCase()));
+          Array.from(element.attributes).forEach((attr) => {
+            if (!whitelist.has(attr.name.toLowerCase())) {
+              element.removeAttribute(attr.name);
+            }
+          });
+        }
+
+        function extractAllowedColorStyle(styleValue) {
+          if (!styleValue) return null;
+          const declarations = styleValue
+            .split(";")
+            .map((decl) => decl.trim())
+            .filter(Boolean);
+          let colorValue = null;
+          declarations.forEach((decl) => {
+            const [prop, value] = decl.split(":");
+            if (!prop || !value) return;
+            if (prop.trim().toLowerCase() === "color") {
+              const normalized = normalizeAllowedColor(value.trim());
+              if (normalized) {
+                colorValue = normalized;
+              }
+            }
+          });
+          return colorValue ? `color: ${colorValue}` : null;
+        }
+
+        function normalizeAllowedColor(value) {
+          if (!value) return null;
+          const trimmed = value.replace(/\s+/g, "").toLowerCase();
+          if (COLOR_VALUE_WHITELIST.has(trimmed)) {
+            return trimmed;
+          }
+          if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+            return COLOR_VALUE_WHITELIST.has(trimmed) ? trimmed : null;
+          }
+          const rgbMatch = trimmed.match(
+            /^rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})(?:,(0|1|0?\.\d+))?\)$/i
+          );
+          if (!rgbMatch) {
+            return null;
+          }
+          const [, r, g, b] = rgbMatch;
+          const hex = rgbToHex(r, g, b);
+          return COLOR_VALUE_WHITELIST.has(hex) ? hex : null;
+        }
+
+        function rgbToHex(r, g, b) {
+          const clamp = (value) => {
+            const num = Math.max(0, Math.min(255, parseInt(value, 10) || 0));
+            return num.toString(16).padStart(2, "0");
+          };
+          return `#${clamp(r)}${clamp(g)}${clamp(b)}`;
+        }
+
+        function getAllBodyHtml() {
+          const sanitizedPages = paperBodies.map((body) => sanitizeRichText(body.innerHTML));
+          return sanitizedPages.join(PRIMARY_PAGE_DELIMITER);
+        }
+
+        function splitFormattedPages(formattedText) {
+          if (!formattedText) return [];
+          for (const delimiter of RICH_TEXT_PAGE_DELIMITERS) {
+            if (formattedText.includes(delimiter)) {
+              return formattedText.split(delimiter).map((chunk) => chunk || "");
+            }
+          }
+          return [formattedText];
+        }
+
+        function resetPaperStack() {
+          if (!paperStack) return;
+          paperStack.innerHTML = "";
+          paperBodies = [];
+          activeBody = null;
+        }
+
+        function replacePagesWithHtml(pagesHtml) {
+          resetPaperStack();
+          pagesHtml.forEach((html) => {
+            const body = createPaperPage();
+            if (!body) return;
+            body.innerHTML = html || "";
+          });
+          activeBody = paperBodies[paperBodies.length - 1] || null;
+        }
+
+        function replacePagesWithPlainText(text) {
+          resetPaperStack();
+          const lines = text.split(/\r?\n/);
+          let buffer = [];
+          const pages = [];
+          lines.forEach((line, index) => {
+            buffer.push(line);
+            if (buffer.length >= MAX_LINES_PER_PAGE) {
+              pages.push(buffer.join("\n"));
+              buffer = [];
+            }
+          });
+          if (buffer.length) {
+            pages.push(buffer.join("\n"));
+          }
+          if (pages.length === 0) {
+            pages.push("");
+          }
+          pages.forEach((content) => {
+            const body = createPaperPage();
+            if (!body) return;
+            body.innerText = content;
+          });
+          activeBody = paperBodies[paperBodies.length - 1] || null;
+        }
+
+        function hydrateDraftContent(draft) {
+          if (!draft) return;
+          if (draft.formattedText) {
+            const pagesHtml = splitFormattedPages(draft.formattedText);
+            if (pagesHtml.length > 0) {
+              replacePagesWithHtml(pagesHtml);
+              cleanupEmptyPages();
+              return;
+            }
+          }
+          if (draft.text) {
+            replacePagesWithPlainText(draft.text);
+            cleanupEmptyPages();
+          }
+        }
+
+        function captureSnapshot() {
+          lastValidSnapshot = paperBodies.map((body) => body.innerHTML);
+        }
+
+        function restoreSnapshot() {
+          if (!lastValidSnapshot.length) {
+            return;
+          }
+          while (paperBodies.length < lastValidSnapshot.length) {
+            createPaperPage();
+          }
+          paperBodies.forEach((body, index) => {
+            if (index < lastValidSnapshot.length) {
+              body.innerHTML = lastValidSnapshot[index];
+            } else {
+              const page = body.closest(".letter-paper");
+              page?.remove();
+            }
+          });
+          paperBodies = paperBodies.slice(0, lastValidSnapshot.length);
+          activeBody = paperBodies[paperBodies.length - 1] || null;
+        }
+
+        function getPlainText(element) {
+          return element.innerText.replace(/\r?\n/g, "\n");
+        }
+
+        function createPaperPage(initialContent = null) {
+          if (!paperStack) return null;
+          const page = document.createElement("div");
+          page.className = "letter-paper";
+          const body = document.createElement("div");
+          body.className = "paper-body";
+          body.contentEditable = "true";
+          body.dataset.placeholder = getPlaceholderText();
+          body.addEventListener("focus", () => {
+            activeBody = body;
+            updateFormatToolbarState();
+          });
+          body.addEventListener("click", () => {
+            activeBody = body;
+            updateFormatToolbarState();
+          });
+          body.addEventListener("keydown", (event) => handleBodyKeydown(event, body));
+          body.addEventListener("input", () => handleBodyInput(body));
+          page.appendChild(body);
+          paperStack.appendChild(page);
+          paperBodies.push(body);
+          applyTypographyToBody(body);
+          applyStationeryStyles();
+          if (initialContent?.html) {
+            body.innerHTML = initialContent.html;
+          } else if (initialContent?.text) {
+            body.innerText = initialContent.text;
+          }
+          if (!activeBody) {
+            activeBody = body;
+          }
+          return body;
+        }
+
+        function handleBodyInput(body) {
+          activeBody = body;
+          if (!enforceCharacterLimit(body)) {
+            return;
+          }
+          if (!enforceLineLimit(body)) {
+            return;
+          }
+          cleanupEmptyPages();
+          captureSnapshot();
+        }
+
+        function handleBodyKeydown(event, body) {
+          if (event.key !== "Enter") return;
+          const text = getPlainText(body);
+          const lines = text.split("\n");
+          const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
+          const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
+          if (effectiveCount < MAX_LINES_PER_PAGE) {
+            return;
+          }
+          event.preventDefault();
+          let nextBody = getNextBody(body);
+          if (!nextBody) {
+            nextBody = createPaperPage();
+          }
+          if (!nextBody) return;
+          activeBody = nextBody;
+          nextBody.focus();
+          placeCursorEnd(nextBody);
+        }
+
+        function getTotalCharacterCount() {
+          return paperBodies.reduce((sum, body) => sum + getPlainText(body).length, 0);
+        }
+
+        function enforceCharacterLimit(body) {
+          const total = getTotalCharacterCount();
+          if (total <= MAX_BODY) {
+            return true;
+          }
+          alert("1,500자 제한을 초과하여 더 입력할 수 없습니다.");
+          restoreSnapshot();
+          const fallbackBody = paperBodies[Math.max(0, paperBodies.length - 1)] || null;
+          if (fallbackBody) {
+            placeCursorEnd(fallbackBody);
+          }
+          return false;
+        }
+
+        function getNextBody(body) {
+          const index = paperBodies.indexOf(body);
+          if (index === -1) return null;
+          return paperBodies[index + 1] || null;
+        }
+
+        function enforceLineLimit(body) {
+          if (!body) return true;
+          const text = getPlainText(body);
+          if (!text) return true;
+          const lines = text.split("\n");
+          const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
+          const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
+          if (effectiveCount <= MAX_LINES_PER_PAGE) {
+            return true;
+          }
+          alert("한 페이지에는 15줄까지만 작성할 수 있습니다. 새 페이지로 이동해 주세요.");
+          restoreSnapshot();
+          const fallbackBody = paperBodies[Math.max(0, paperBodies.length - 1)] || null;
+          if (fallbackBody) {
+            placeCursorEnd(fallbackBody);
+          }
+          return false;
+        }
+
+        function cleanupEmptyPages() {
+          for (let i = paperBodies.length - 1; i > 0; i--) {
+            const body = paperBodies[i];
+            if (getPlainText(body).trim().length === 0) {
+              const page = body.closest(".letter-paper");
+              paperBodies.splice(i, 1);
+              if (activeBody === body) {
+                activeBody = paperBodies[i - 1] || paperBodies[0] || null;
+              }
+              page?.remove();
+            } else {
+              break;
+            }
+          }
+        }
+
+        function placeCursorEnd(el) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        function getAllBodyText() {
+          return paperBodies.map((body) => getPlainText(body)).join("\n").trim();
+        }
+
+        const FORBIDDEN_REGEXES = FORBIDDEN_WORDS.map((word) => {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const loose = escaped
+            .split("")
+            .map((char) => (/[a-z0-9]/i.test(char) ? char : `${char}`))
+            .join("\\s*");
+          return { word, pattern: new RegExp(loose, "i") };
+        });
+
+        function hasForbiddenContent() {
+          const text = getAllBodyText();
+          if (!text) return null;
+          for (const { word, pattern } of FORBIDDEN_REGEXES) {
+            if (pattern.test(text)) {
+              return word;
+            }
+          }
+          return null;
+        }
+
+        function insertEmoji(symbol) {
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          if (getTotalCharacterCount() + [...symbol].length > MAX_BODY) {
+            alert("1,500자 제한을 초과하여 이모티콘을 추가할 수 없습니다.");
+            return;
+          }
+
+          target.focus();
+          const selection = window.getSelection();
+          let range = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
+
+          if (!range || !target.contains(range.commonAncestorContainer)) {
+            range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+          }
+
+          range.deleteContents();
+          range.insertNode(document.createTextNode(symbol));
+          range.collapse(false);
+
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          if (!enforceLineLimit(target)) {
+            return;
+          }
+          cleanupEmptyPages();
+          captureSnapshot();
+          updateFormatToolbarState();
+        }
+
+        function applyTextStyle(command) {
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          target.focus();
+          restoreSelectionRange(target);
+          try {
+            if (
+              typeof document.queryCommandSupported === "function" &&
+              document.queryCommandSupported("styleWithCSS")
+            ) {
+              document.execCommand("styleWithCSS", false, false);
+            }
+          } catch (error) {
+            console.warn("styleWithCSS 명령을 설정할 수 없습니다.", error);
+          }
+          document.execCommand(command, false, null);
+          captureSnapshot();
+          updateFormatToolbarState();
+        }
+
+        function isSelectionInsideEditor() {
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) return false;
+          const anchor = selection.anchorNode;
+          return !!anchor && paperStack?.contains(anchor);
+        }
+
+        function restoreSelectionRange(target) {
+          if (!lastSelectionRange) return false;
+          const container = lastSelectionRange.commonAncestorContainer;
+          if (!container || !target.contains(container)) {
+            return false;
+          }
+          const selection = window.getSelection();
+          if (!selection) return false;
+          selection.removeAllRanges();
+          selection.addRange(lastSelectionRange);
+          return true;
+        }
+
+        function updateFormatToolbarState() {
+          if (!formatToolbar) return;
+          const buttons = formatToolbar.querySelectorAll("button[data-command]");
+          buttons.forEach((button) => {
+            const command = button.dataset.command;
+            let isActive = false;
+            if (isSelectionInsideEditor() && document.queryCommandState) {
+              try {
+                isActive = document.queryCommandState(command);
+              } catch (error) {
+                isActive = false;
+              }
+            }
+            button.classList.toggle("active", !!isActive);
+          });
+        }
+
+        emojiToggle?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const willOpen = !emojiPalette.classList.contains("visible");
+          setEmojiPaletteState(willOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!emojiPalette || !emojiToggle) return;
+          if (!emojiPalette.classList.contains("visible")) return;
+          if (emojiPalette.contains(event.target) || emojiToggle.contains(event.target)) return;
+          setEmojiPaletteState(false);
+        });
+
+        document.addEventListener("selectionchange", () => {
+          if (isSelectionInsideEditor()) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+              lastSelectionRange = selection.getRangeAt(0).cloneRange();
+            }
+            updateFormatToolbarState();
+          } else {
+            lastSelectionRange = null;
+          }
+        });
+
+        formatToolbar?.addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-command]");
+          if (!button) return;
+          event.preventDefault();
+          applyTextStyle(button.dataset.command);
+        });
+
+        formatToolbar
+          ?.querySelectorAll("button")
+          .forEach((button) => button.addEventListener("mousedown", (event) => event.preventDefault()));
+
+        backToSelect.addEventListener("click", () => {
+          const category = params.get("category");
+          const categoryLabel = params.get("categoryLabel") || "";
+          if (category) {
+            const targetParams = new URLSearchParams({
+              category,
+              categoryLabel,
+            });
+            window.location.href = `/letter-target.html?${targetParams.toString()}`;
+          } else {
+            window.location.href = "/letter.html";
+          }
+        });
+
+        backHome.addEventListener("click", () => {
+          window.location.href = "/";
+        });
+
+        saveDraft.addEventListener("click", () => {
+          alert("임시 저장 기능은 곧 제공될 예정입니다.");
+        });
+
+        toSummary.addEventListener("click", () => {
+          const detectedWord = hasForbiddenContent();
+          if (detectedWord) {
+            alert(`부적절한 표현("${detectedWord}")이 포함되어 있어 다음 단계로 이동할 수 없습니다. 내용을 수정해 주세요.`);
+            return;
+          }
+          const fullText = getAllBodyText();
+          if (!fullText) {
+            alert("먼저 편지 내용을 작성해 주세요.");
+            return;
+          }
+          const formattedText = getAllBodyHtml();
+          const targetInfo = {
+            recipientId: params.get("recipientId") ? Number(params.get("recipientId")) : null,
+            recipientName: params.get("name") || null,
+            agency: params.get("agency") || null,
+            team: params.get("team") || null,
+            categoryLabel: params.get("categoryLabel") || null,
+            subcategoryLabel: params.get("subcategoryLabel") || null,
+          };
+          const orderPayload = {
+            text: fullText,
+            formattedText,
+            characters: getTotalCharacterCount(),
+            pages: paperBodies.length,
+            font: selectedFont,
+            color: selectedColor,
+            stationery: selectedStationery,
+            createdAt: Date.now(),
+            target: targetInfo,
+          };
+          try {
+            sessionStorage.setItem("fanletterDraft", JSON.stringify(orderPayload));
+          } catch (error) {
+            console.error("세션 저장 중 오류:", error);
+          }
+          window.location.href = "/letter-payment.html";
+        });
+
+        renderFontOptions();
+        renderColorPalette();
+        renderEmojiPalette();
+        setEmojiPaletteState(false);
+
+        if (storedDraftData) {
+          hydrateDraftContent(storedDraftData);
+        }
+
+        if (paperBodies.length === 0) {
+          createPaperPage();
+        }
+
+        applyStationeryStyles();
+        applyTypography();
+        captureSnapshot();
+        updateFormatToolbarState();
+      </script>
+  </body>
+</html>
