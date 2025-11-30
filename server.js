@@ -1,5 +1,6 @@
 require("dotenv").config();
 const path = require("path");
+const fs = require("fs").promises;
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -77,8 +78,8 @@ app.use(
     },
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname)));
 
 app.post("/api/signup", async (req, res) => {
@@ -1008,8 +1009,23 @@ app.post("/api/orders", requireLogin, async (req, res) => {
       }
     }
 
+    let attachmentUrl = null;
+    if (payload.letterImage) {
+      try {
+        attachmentUrl = await saveLetterImage(req.session.userId, letterId, payload.letterImage);
+        if (attachmentUrl) {
+          await connection.query("UPDATE letters SET attachment_url = ? WHERE id = ?", [
+            attachmentUrl,
+            letterId,
+          ]);
+        }
+      } catch (imageError) {
+        console.error("letter image save error:", imageError);
+      }
+    }
+
     await connection.commit();
-    res.status(201).json({ id: letterId, status: "submitted" });
+    res.status(201).json({ id: letterId, status: "submitted", attachmentUrl });
   } catch (error) {
     await connection.rollback();
     console.error("order create error:", error);
@@ -1494,6 +1510,7 @@ async function getAdminOrderDetail(letterId) {
        l.paper_option,
        l.font_style,
        l.text_color,
+       l.attachment_url,
        l.status AS letter_status,
        l.submitted_at,
        l.created_at,
@@ -1534,6 +1551,7 @@ async function getAdminOrderDetail(letterId) {
     paperOption: row.paper_option,
     fontStyle: row.font_style,
     textColor: row.text_color,
+    attachmentUrl: row.attachment_url,
     submittedAt: formatDateValue(row.submitted_at),
     createdAt: formatDateValue(row.created_at),
     updatedAt: formatDateValue(row.updated_at),
@@ -1796,6 +1814,29 @@ async function consumeUserCoupon(userId, couponCode) {
     throw error;
   } finally {
     connection.release();
+  }
+}
+
+async function saveLetterImage(userId, letterId, base64Image) {
+  try {
+    if (!base64Image || typeof base64Image !== "string") {
+      return null;
+    }
+    const base64Data = base64Image.replace(/^data:image\/png;base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const userDir = path.join(__dirname, "assets", "letters", `user${userId}`);
+    await fs.mkdir(userDir, { recursive: true });
+
+    const filename = `letter-${letterId}-${Date.now()}.png`;
+    const filepath = path.join(userDir, filename);
+    await fs.writeFile(filepath, buffer);
+
+    const relativePath = `assets/letters/user${userId}/${filename}`;
+    return relativePath;
+  } catch (error) {
+    console.error("saveLetterImage error:", error);
+    return null;
   }
 }
 

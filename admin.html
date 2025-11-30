@@ -1363,6 +1363,7 @@
         const stationeryClass = STATIONERY_CLASS_MAP[order.paperOption] || STATIONERY_CLASS_MAP.default;
         const textColor = order.textColor || "#1b1c1f";
         const shipment = order.shipment || {};
+        const hasImage = order.attachmentUrl && order.attachmentUrl.trim().length > 0;
         orderDetailContent.innerHTML = `
           <section class="order-detail-section">
             <div class="order-detail-grid">
@@ -1393,6 +1394,11 @@
 
           <section class="order-detail-section">
             <h3>편지 내용</h3>
+            ${hasImage ? `
+            <div class="letter-preview" id="orderLetterPreview">
+              <img src="/${order.attachmentUrl}" alt="편지 이미지" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+            </div>
+            ` : `
             <div class="letter-preview" id="orderLetterPreview">
               <div class="preview-paper ${stationeryClass}">
                 <div class="preview-paper-inner">
@@ -1423,6 +1429,7 @@
                 }
               })();
             </script>
+            `}
           </section>
 
           <section class="order-detail-section">
@@ -1515,6 +1522,39 @@
       }
 
       function buildPrintableHtml(order) {
+        const hasImage = order.attachmentUrl && order.attachmentUrl.trim().length > 0;
+        if (hasImage) {
+          return `
+          <html lang="ko">
+            <head>
+              <meta charset="utf-8" />
+              <title>Fanletter Post 편지 출력</title>
+              <style>
+                @page { size: A4; margin: 0; }
+                @media print { body { margin: 0; } }
+                body {
+                  margin: 0;
+                  padding: 20px;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  min-height: 100vh;
+                  background: #f4f5f7;
+                }
+                img {
+                  max-width: 100%;
+                  height: auto;
+                  display: block;
+                  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+                }
+              </style>
+            </head>
+            <body>
+              <img src="/${order.attachmentUrl}" alt="편지 이미지" />
+            </body>
+          </html>
+        `;
+        }
         const letterHtml =
           order.letterContent && order.letterContent.trim().length > 0
             ? order.letterContent

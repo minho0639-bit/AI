@@ -482,6 +482,22 @@
         }
         isSubmittingOrder = true;
         try {
+          let letterImageBase64 = null;
+          try {
+            const previewPaper = document.querySelector(".preview .preview-paper");
+            if (previewPaper && typeof html2canvas === "function") {
+              const canvas = await html2canvas(previewPaper, {
+                backgroundColor: "#ffffff",
+                scale: Math.min(3, window.devicePixelRatio ? window.devicePixelRatio + 1 : 2),
+                logging: false,
+                useCORS: true,
+              });
+              letterImageBase64 = canvas.toDataURL("image/png", 1);
+            }
+          } catch (imageError) {
+            console.warn("편지 이미지 생성 실패:", imageError);
+          }
+
           const payload = {
             draft: {
               text: draftData.text || "",
@@ -503,6 +519,7 @@
               couponCode: appliedCoupon?.code || null,
             },
             buyer: getBuyerInfo(),
+            letterImage: letterImageBase64,
           };
 
           const response = await fetch(ORDER_API_ENDPOINT, {
