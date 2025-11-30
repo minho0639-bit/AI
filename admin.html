@@ -1353,6 +1353,24 @@
         return response.json();
       }
 
+      function renderPreviewGuides(previewPaper) {
+        if (!previewPaper) return;
+        const guidesContainer = previewPaper.querySelector(".preview-paper-guides");
+        if (!guidesContainer) return;
+        const computed = getComputedStyle(previewPaper);
+        const spacingValue = parseFloat((computed.getPropertyValue("--paper-line-spacing") || "32").replace("px", ""));
+        const lineColor = computed.getPropertyValue("--paper-line-color") || "rgba(0,0,0,0.08)";
+        const lineCount = 16;
+        guidesContainer.innerHTML = "";
+        for (let index = 0; index < lineCount; index += 1) {
+          const guide = document.createElement("div");
+          guide.className = "preview-paper-guide";
+          guide.style.top = Math.round(spacingValue * index) + "px";
+          guide.style.backgroundColor = lineColor;
+          guidesContainer.appendChild(guide);
+        }
+      }
+
       function renderOrderDetail(order) {
         if (!orderDetailContent) return;
         const letterHtml =
@@ -1409,26 +1427,6 @@
                 </div>
               </div>
             </div>
-            <script>
-              (function() {
-                const previewPaper = document.querySelector("#orderLetterPreview .preview-paper");
-                if (!previewPaper) return;
-                const guidesContainer = previewPaper.querySelector(".preview-paper-guides");
-                if (!guidesContainer) return;
-                const computed = getComputedStyle(previewPaper);
-                const spacingValue = parseFloat((computed.getPropertyValue("--paper-line-spacing") || "32").replace("px", ""));
-                const lineColor = computed.getPropertyValue("--paper-line-color") || "rgba(0,0,0,0.08)";
-                const lineCount = 16;
-                guidesContainer.innerHTML = "";
-                for (let index = 0; index < lineCount; index += 1) {
-                  const guide = document.createElement("div");
-                  guide.className = "preview-paper-guide";
-                  guide.style.top = Math.round(spacingValue * index) + "px";
-                  guide.style.backgroundColor = lineColor;
-                  guidesContainer.appendChild(guide);
-                }
-              })();
-            </script>
             `}
           </section>
 
@@ -1478,6 +1476,14 @@
             </form>
           </section>
         `;
+        if (!hasImage) {
+          setTimeout(() => {
+            const previewPaper = document.querySelector("#orderLetterPreview .preview-paper");
+            if (previewPaper) {
+              renderPreviewGuides(previewPaper);
+            }
+          }, 0);
+        }
       }
 
       function buildStatusOptions(options, selected) {
