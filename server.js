@@ -390,7 +390,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
-  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address, imageData } = req.body;
+  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address, imageData, agencyImageData, groupImageData } = req.body;
   if (!name?.trim() || !categoryId) {
     return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
   }
@@ -398,8 +398,8 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
     return res.status(400).json({ message: "중분류를 선택해 주세요." });
   }
   try {
-    const agencyId = await findOrCreateAgency(agencyName);
-    const groupId = await findOrCreateGroup(groupName, agencyId);
+    const agencyId = await findOrCreateAgency(agencyName, agencyImageData);
+    const groupId = await findOrCreateGroup(groupName, agencyId, groupImageData);
     const payload = [
       name.trim(),
       Number(categoryId),
@@ -849,7 +849,9 @@ app.get("/api/recipients/by-subcategory/:subcategoryId", async (req, res) => {
          r.is_active,
          r.image_url AS image_url,
          COALESCE(a.name, "") AS agency,
-         COALESCE(rg.name, "") AS group_name
+         a.image_url AS agency_image_url,
+         COALESCE(rg.name, "") AS group_name,
+         rg.image_url AS group_image_url
        FROM recipients r
        LEFT JOIN agencies a ON a.id = r.agency_id
        LEFT JOIN recipient_groups rg ON rg.id = r.group_id
@@ -1359,21 +1361,46 @@ async function ensureRecipientSchemaExtensions() {
       console.warn("recipients image_url alter warn:", error.message || error);
     }
   }
+  try {
+    await pool.query("ALTER TABLE agencies ADD COLUMN image_url VARCHAR(255) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("agencies image_url alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE recipient_groups ADD COLUMN image_url VARCHAR(255) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("recipient_groups image_url alter warn:", error.message || error);
+    }
+  }
 }
 
-async function findOrCreateAgency(name) {
+async function findOrCreateAgency(name, imageData = null) {
   if (!name) return null;
   const trimmed = name.trim();
   if (!trimmed) return null;
   const [rows] = await pool.query("SELECT id FROM agencies WHERE name = ?", [trimmed]);
+  let agencyId;
   if (rows.length > 0) {
-    return rows[0].id;
+    agencyId = rows[0].id;
+  } else {
+    const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [trimmed]);
+    agencyId = result.insertId;
   }
-  const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [trimmed]);
-  return result.insertId;
+  
+  if (imageData && agencyId) {
+    const imageUrl = await saveAgencyImage(agencyId, imageData);
+    if (imageUrl) {
+      await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+    }
+  }
+  
+  return agencyId;
 }
 
-async function findOrCreateGroup(name, agencyId) {
+async function findOrCreateGroup(name, agencyId, imageData = null) {
   if (!name) return null;
   const trimmed = name.trim();
   if (!trimmed) return null;
@@ -1382,14 +1409,25 @@ async function findOrCreateGroup(name, agencyId) {
     ? "SELECT id FROM recipient_groups WHERE name = ? AND agency_id = ?"
     : "SELECT id FROM recipient_groups WHERE name = ? AND agency_id IS NULL";
   const [rows] = await pool.query(query, params);
+  let groupId;
   if (rows.length > 0) {
-    return rows[0].id;
+    groupId = rows[0].id;
+  } else {
+    const [result] = await pool.query(
+      "INSERT INTO recipient_groups (name, agency_id) VALUES (?, ?)",
+      [trimmed, agencyId || null]
+    );
+    groupId = result.insertId;
   }
-  const [result] = await pool.query(
-    "INSERT INTO recipient_groups (name, agency_id) VALUES (?, ?)",
-    [trimmed, agencyId || null]
-  );
-  return result.insertId;
+  
+  if (imageData && groupId) {
+    const imageUrl = await saveGroupImage(groupId, imageData);
+    if (imageUrl) {
+      await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+    }
+  }
+  
+  return groupId;
 }
 
 
@@ -1883,6 +1921,52 @@ async function saveRecipientImage(recipientId, base64Image) {
     return relativePath;
   } catch (error) {
     console.error("saveRecipientImage error:", error);
+    return null;
+  }
+}
+
+async function saveAgencyImage(agencyId, base64Image) {
+  try {
+    if (!base64Image || typeof base64Image !== "string") {
+      return null;
+    }
+    const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const agenciesDir = path.join(__dirname, "assets", "agencies");
+    await fs.mkdir(agenciesDir, { recursive: true });
+
+    const filename = `agency-${agencyId}-${Date.now()}.png`;
+    const filepath = path.join(agenciesDir, filename);
+    await fs.writeFile(filepath, buffer);
+
+    const relativePath = `assets/agencies/${filename}`;
+    return relativePath;
+  } catch (error) {
+    console.error("saveAgencyImage error:", error);
+    return null;
+  }
+}
+
+async function saveGroupImage(groupId, base64Image) {
+  try {
+    if (!base64Image || typeof base64Image !== "string") {
+      return null;
+    }
+    const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const groupsDir = path.join(__dirname, "assets", "groups");
+    await fs.mkdir(groupsDir, { recursive: true });
+
+    const filename = `group-${groupId}-${Date.now()}.png`;
+    const filepath = path.join(groupsDir, filename);
+    await fs.writeFile(filepath, buffer);
+
+    const relativePath = `assets/groups/${filename}`;
+    return relativePath;
+  } catch (error) {
+    console.error("saveGroupImage error:", error);
     return null;
   }
 }

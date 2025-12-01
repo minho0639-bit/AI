@@ -115,10 +115,18 @@
                   <div class="field">
                     <label for="recipient-agency">소속사</label>
                     <input type="text" id="recipient-agency" name="agencyName" placeholder="예) HYBE" />
+                    <input type="file" id="recipient-agency-image" name="agencyImage" accept="image/*" style="margin-top: 8px;" />
+                    <div id="recipient-agency-image-preview" style="margin-top: 10px; display: none;">
+                      <img id="recipient-agency-image-preview-img" src="" alt="소속사 미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                    </div>
                   </div>
                   <div class="field">
                     <label for="recipient-group">그룹 / 팀</label>
                     <input type="text" id="recipient-group" name="groupName" placeholder="예) 뉴진스" />
+                    <input type="file" id="recipient-group-image" name="groupImage" accept="image/*" style="margin-top: 8px;" />
+                    <div id="recipient-group-image-preview" style="margin-top: 10px; display: none;">
+                      <img id="recipient-group-image-preview-img" src="" alt="팀 미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                    </div>
                   </div>
                   <div class="field">
                     <label for="recipient-status-select">상태</label>
@@ -546,6 +554,42 @@
         }
       });
 
+      const recipientAgencyImageInput = document.getElementById("recipient-agency-image");
+      const recipientAgencyImagePreview = document.getElementById("recipient-agency-image-preview");
+      const recipientAgencyImagePreviewImg = document.getElementById("recipient-agency-image-preview-img");
+      
+      recipientAgencyImageInput?.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            recipientAgencyImagePreviewImg.src = e.target.result;
+            recipientAgencyImagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          recipientAgencyImagePreview.style.display = "none";
+        }
+      });
+
+      const recipientGroupImageInput = document.getElementById("recipient-group-image");
+      const recipientGroupImagePreview = document.getElementById("recipient-group-image-preview");
+      const recipientGroupImagePreviewImg = document.getElementById("recipient-group-image-preview-img");
+      
+      recipientGroupImageInput?.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            recipientGroupImagePreviewImg.src = e.target.result;
+            recipientGroupImagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          recipientGroupImagePreview.style.display = "none";
+        }
+      });
+
       recipientForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await handleRecipientCreate(new FormData(recipientForm));
@@ -933,6 +977,10 @@
           recipientForm.reset();
           recipientImagePreview.style.display = "none";
           recipientImagePreviewImg.src = "";
+          recipientAgencyImagePreview.style.display = "none";
+          recipientAgencyImagePreviewImg.src = "";
+          recipientGroupImagePreview.style.display = "none";
+          recipientGroupImagePreviewImg.src = "";
           recipientCategorySelect.value = "";
           updateSubcategoryOptions();
           recipientStatusSelect.value = "1";
