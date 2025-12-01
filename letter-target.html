@@ -256,6 +256,18 @@
             card.classList.add("active");
             state.selectedAgency = agency.name;
             populateGroupSelect();
+            // 다음 섹션으로 부드럽게 스크롤
+            setTimeout(() => {
+              const groupContainer = document.getElementById("groupCardsContainer");
+              if (groupContainer && groupContainer.style.display !== "none") {
+                groupContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+              } else {
+                const recipientContainer = document.getElementById("recipientCardsContainer");
+                if (recipientContainer && recipientContainer.style.display !== "none") {
+                  recipientContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }
+            }, 100);
           });
           agencyCardsGrid.appendChild(card);
         });
@@ -275,6 +287,18 @@
               if (matchingCard) {
                 matchingCard.classList.add("active");
                 populateGroupSelect();
+                // 다음 섹션으로 부드럽게 스크롤
+                setTimeout(() => {
+                  const groupContainer = document.getElementById("groupCardsContainer");
+                  if (groupContainer && groupContainer.style.display !== "none") {
+                    groupContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                  } else {
+                    const recipientContainer = document.getElementById("recipientCardsContainer");
+                    if (recipientContainer && recipientContainer.style.display !== "none") {
+                      recipientContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }
+                }, 200);
               }
             }, 100);
             return;
@@ -315,6 +339,13 @@
           state.selectedGroup = null;
           selectionPreview.textContent = "팀/그룹 정보가 없습니다. 이름을 바로 선택해 주세요.";
           populateNameSelect();
+          // 이름 선택 섹션으로 부드럽게 스크롤
+          setTimeout(() => {
+            const recipientContainer = document.getElementById("recipientCardsContainer");
+            if (recipientContainer && recipientContainer.style.display !== "none") {
+              recipientContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }, 100);
         } else {
           groupCardsContainer.style.display = "block";
           groupCardsGrid.innerHTML = "";
@@ -335,6 +366,13 @@
               card.classList.add("active");
               state.selectedGroup = group.name;
               populateNameSelect();
+              // 다음 섹션으로 부드럽게 스크롤
+              setTimeout(() => {
+                const recipientContainer = document.getElementById("recipientCardsContainer");
+                if (recipientContainer && recipientContainer.style.display !== "none") {
+                  recipientContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }, 100);
             });
             groupCardsGrid.appendChild(card);
           });

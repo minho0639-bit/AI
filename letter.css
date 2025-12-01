@@ -18,6 +18,7 @@ body {
   background: var(--bg);
   color: var(--text);
   padding: 24px clamp(20px, 7vw, 120px) 80px;
+  padding-top: 100px;
 }
 
 .muted {
@@ -25,10 +26,18 @@ body {
 }
 
 .write-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 24px clamp(20px, 7vw, 120px);
+  margin-bottom: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .brand {

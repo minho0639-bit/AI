@@ -205,6 +205,12 @@
                       <img id="agency-image-preview-img" src="" alt="미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
                     </div>
                   </div>
+                  <div class="field">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                      <input type="checkbox" id="agency-is-popular" name="isPopular" />
+                      <span>인기 소속사로 지정</span>
+                    </label>
+                  </div>
                 </div>
                 <div class="form-actions">
                   <button type="submit">소속사 추가</button>
@@ -220,6 +226,7 @@
                     <th>ID</th>
                     <th>소속사</th>
                     <th>대분류</th>
+                    <th>인기</th>
                     <th>사진</th>
                     <th>수령인 수</th>
                     <th>업데이트</th>
@@ -1332,6 +1339,7 @@
           name: formData.get("name"),
           categoryId: formData.get("categoryId"),
           imageData: imageData,
+          isPopular: formData.get("isPopular") === "on",
         };
         try {
           const response = await fetch("/api/admin/agencies", {
@@ -1346,6 +1354,7 @@
           agencyForm.reset();
           agencyImagePreview.style.display = "none";
           agencyImagePreviewImg.src = "";
+          document.getElementById("agency-is-popular").checked = false;
           await loadAgencyCategoryOptions();
           agencyFormStatus.textContent = "소속사를 추가했습니다.";
           agencyFormStatus.classList.add("success");
@@ -2244,6 +2253,17 @@
               <td>${agency.name}</td>
               <td>${agency.category_name || "-"}</td>
               <td>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input 
+                    type="checkbox" 
+                    class="agency-popular-checkbox" 
+                    data-agency-id="${agency.id}"
+                    ${agency.is_popular ? "checked" : ""}
+                  />
+                  <span>인기</span>
+                </label>
+              </td>
+              <td>
                 ${agency.image_url ? `<img src="/${agency.image_url}" alt="${agency.name}" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px;" />` : '<span class="text-muted">이미지 없음</span>'}
               </td>
               <td>${agency.recipient_count || 0}명</td>
@@ -2264,6 +2284,35 @@
           `
           )
           .join("");
+        
+        // 인기 소속사 체크박스 이벤트 리스너 추가
+        document.querySelectorAll(".agency-popular-checkbox").forEach((checkbox) => {
+          checkbox.addEventListener("change", async (event) => {
+            const agencyId = event.target.dataset.agencyId;
+            const isPopular = event.target.checked;
+            try {
+              // 인기 소속사만 업데이트 (다른 필드는 기존 값 유지)
+              const response = await fetch(`/api/admin/agencies/${agencyId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  isPopular: isPopular,
+                }),
+              });
+              
+              if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                throw new Error(errorBody.message || "인기 소속사 설정을 업데이트하지 못했습니다.");
+              }
+              
+              await loadAgenciesOnly();
+            } catch (error) {
+              alert(error.message);
+              // 체크박스 상태 복원
+              event.target.checked = !isPopular;
+            }
+          });
+        });
       }
 
       function renderGroups(groups) {

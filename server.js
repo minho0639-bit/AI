@@ -479,6 +479,7 @@ app.get("/api/admin/agencies", requireAdmin, async (req, res) => {
          a.name,
          a.image_url,
          a.category_id,
+         a.is_popular,
          rc.name AS category_name,
          (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
          a.created_at,
@@ -495,7 +496,7 @@ app.get("/api/admin/agencies", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
-  const { name, categoryId, imageData } = req.body;
+  const { name, categoryId, imageData, isPopular } = req.body;
   if (!name?.trim()) {
     return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
   }
@@ -503,7 +504,11 @@ app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
     return res.status(400).json({ message: "대분류를 선택해 주세요." });
   }
   try {
-    const [result] = await pool.query("INSERT INTO agencies (name, category_id) VALUES (?, ?)", [name.trim(), Number(categoryId)]);
+    const [result] = await pool.query("INSERT INTO agencies (name, category_id, is_popular) VALUES (?, ?, ?)", [
+      name.trim(), 
+      Number(categoryId),
+      isPopular ? 1 : 0
+    ]);
     const agencyId = result.insertId;
     
     let imageUrl = null;
@@ -520,6 +525,7 @@ app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
          a.name,
          a.image_url,
          a.category_id,
+         a.is_popular,
          rc.name AS category_name,
          (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
          a.created_at,
@@ -538,18 +544,46 @@ app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
 
 app.put("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
   const agencyId = Number(req.params.id);
-  const { name, categoryId, imageData } = req.body;
+  const { name, categoryId, imageData, isPopular } = req.body;
   if (!agencyId) {
     return res.status(400).json({ message: "잘못된 소속사 ID입니다." });
   }
-  if (!name?.trim()) {
-    return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
-  }
-  if (!categoryId) {
-    return res.status(400).json({ message: "대분류를 선택해 주세요." });
-  }
+  
   try {
-    await pool.query("UPDATE agencies SET name = ?, category_id = ? WHERE id = ?", [name.trim(), Number(categoryId), agencyId]);
+    // 기존 소속사 정보 가져오기
+    const [existingRows] = await pool.query(
+      "SELECT name, category_id, is_popular FROM agencies WHERE id = ?",
+      [agencyId]
+    );
+    if (existingRows.length === 0) {
+      return res.status(404).json({ message: "소속사를 찾을 수 없습니다." });
+    }
+    
+    const existing = existingRows[0];
+    // 제공된 값이 없으면 기존 값 사용
+    // name이 undefined이거나 null이면 기존 값 사용
+    let finalName;
+    if (name === undefined || name === null) {
+      // name이 제공되지 않았으면 기존 이름 사용 (검증 건너뜀)
+      finalName = existing.name;
+    } else {
+      // name이 제공되었으면 검증
+      const trimmedName = String(name).trim();
+      if (!trimmedName) {
+        return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
+      }
+      finalName = trimmedName;
+    }
+    
+    const finalCategoryId = categoryId !== undefined && categoryId !== null ? Number(categoryId) : existing.category_id;
+    const finalIsPopular = isPopular !== undefined && isPopular !== null ? (isPopular ? 1 : 0) : (existing.is_popular || 0);
+    
+    await pool.query("UPDATE agencies SET name = ?, category_id = ?, is_popular = ? WHERE id = ?", [
+      finalName, 
+      finalCategoryId, 
+      finalIsPopular,
+      agencyId
+    ]);
     
     if (imageData) {
       const imageUrl = await saveAgencyImage(agencyId, imageData);
@@ -564,6 +598,7 @@ app.put("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
          a.name,
          a.image_url,
          a.category_id,
+         a.is_popular,
          rc.name AS category_name,
          (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
          a.created_at,
@@ -1099,19 +1134,28 @@ app.get("/api/stationery", async (req, res) => {
 
 app.get("/api/agencies", async (req, res) => {
   const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
+  const popularOnly = req.query.popularOnly === "true";
   try {
     let query = `SELECT
          a.id,
          a.name,
          a.image_url,
-         a.category_id
+         a.category_id,
+         a.is_popular
        FROM agencies a`;
     const params = [];
+    const conditions = [];
     if (categoryId) {
-      query += " WHERE a.category_id = ?";
+      conditions.push("a.category_id = ?");
       params.push(categoryId);
     }
-    query += " ORDER BY a.name ASC";
+    if (popularOnly) {
+      conditions.push("a.is_popular = 1");
+    }
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    query += " ORDER BY a.is_popular DESC, a.name ASC";
     const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (error) {
@@ -1714,6 +1758,13 @@ async function ensureRecipientSchemaExtensions() {
   } catch (error) {
     if (error.code !== "ER_DUP_FIELDNAME") {
       console.warn("agencies category_id alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE agencies ADD COLUMN is_popular TINYINT(1) NOT NULL DEFAULT 0");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("agencies is_popular alter warn:", error.message || error);
     }
   }
 }

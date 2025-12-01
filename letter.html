@@ -14,28 +14,28 @@
   </head>
   <body>
     <header class="write-nav">
-      <div class="brand">팬레터포스트</div>
+      <div class="brand"></div>
       <button type="button" id="backHome" class="ghost tiny">홈으로</button>
     </header>
 
     <main class="write-main">
       <section class="intro">
-        <h1>편지를 전하고 싶은 대상의 분야를 선택해 주세요</h1>
-        <p>대분류를 먼저 선택하면 세부 카테고리 페이지로 이동해 더 정확하게 대상을 찾을 수 있습니다.</p>
+        <h1>소속사를 선택 해 주세요</h1>
+        <p>소속사를 선택하시면 해당 소속사의 아이돌 및 가수를 찾을 수 있습니다.</p>
         <div class="search-box">
           <input type="text" id="artistSearch" placeholder="이름이나 팀을 검색해 주세요" />
           <button type="button" id="searchBtn" class="primary">검색</button>
         </div>
       </section>
 
-      <section class="agency-section" id="agencySection" style="display: none;">
-        <p class="section-title">인기 소속사 선택 (선택사항)</p>
+      <section class="agency-section" id="agencySection">
+        <p class="section-title">편지를 보내고 싶은 스타의 소속사와 그룹을 선택 해 주세요</p>
         <div class="agency-grid" id="agencyGrid">
-          <p class="muted">대분류를 선택하면 해당 분야의 인기 소속사가 표시됩니다.</p>
+          <p class="muted">인기 소속사를 불러오는 중...</p>
         </div>
       </section>
 
-      <section class="category-grid">
+      <section class="category-grid" style="display: none;">
         <article class="category-card" data-category="entertainment">
           <div class="badge">Entertainment</div>
           <h2>엔터테인먼트</h2>
@@ -60,6 +60,19 @@
       backHome.addEventListener("click", () => {
         window.location.href = "/";
       });
+
+      // 인기 소속사 목록 로드 (모든 대분류)
+      async function loadPopularAgencies() {
+        try {
+          const response = await fetch("/api/agencies?popularOnly=true");
+          if (!response.ok) throw new Error("인기 소속사 목록을 불러오지 못했습니다.");
+          const agencies = await response.json();
+          renderAgencies(agencies, true);
+        } catch (error) {
+          console.error("Failed to load popular agencies:", error);
+          agencyGrid.innerHTML = '<p class="muted">인기 소속사 목록을 불러오지 못했습니다.</p>';
+        }
+      }
 
       // 소속사 목록 로드 (대분류별로 필터링)
       async function loadAgencies(categoryKey) {
@@ -89,16 +102,20 @@
           const response = await fetch(`/api/agencies?categoryId=${category.id}`);
           if (!response.ok) throw new Error("소속사 목록을 불러오지 못했습니다.");
           const agencies = await response.json();
-          renderAgencies(agencies);
+          renderAgencies(agencies, false);
         } catch (error) {
           console.error("Failed to load agencies:", error);
           agencyGrid.innerHTML = '<p class="muted">소속사 목록을 불러오지 못했습니다.</p>';
         }
       }
 
-      function renderAgencies(agencies) {
+      function renderAgencies(agencies, isPopularOnly = false) {
         if (agencies.length === 0) {
-          agencyGrid.innerHTML = '<p class="muted">등록된 소속사가 없습니다.</p>';
+          if (isPopularOnly) {
+            agencyGrid.innerHTML = '<p class="muted">등록된 인기 소속사가 없습니다.</p>';
+          } else {
+            agencyGrid.innerHTML = '<p class="muted">등록된 소속사가 없습니다.</p>';
+          }
           return;
         }
 
@@ -118,45 +135,18 @@
             card.classList.add("active");
             selectedAgencyId = card.dataset.agencyId;
             
-            // 소속사 선택 후 letter-target.html로 이동
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoryKey = urlParams.get("category") || 
-              Array.from(document.querySelectorAll(".category-card")).find(c => c.classList.contains("active"))?.dataset.category;
-            if (categoryKey) {
-              const label = categories[categoryKey];
-              const params = new URLSearchParams({
-                category: categoryKey,
-                categoryLabel: label,
-                agencyId: selectedAgencyId,
-              });
-              window.location.href = `/letter-target.html?${params.toString()}`;
-            }
+            // 소속사 선택 후 letter-target.html로 이동 (엔터테인먼트로 고정)
+            const categoryKey = "entertainment";
+            const label = categories[categoryKey];
+            const params = new URLSearchParams({
+              category: categoryKey,
+              categoryLabel: label,
+              agencyId: selectedAgencyId,
+            });
+            window.location.href = `/letter-target.html?${params.toString()}`;
           });
         });
         
-        // 소속사 선택 없이 대분류만 선택하고 다음 단계로 이동하는 버튼 추가 (이미 있으면 추가하지 않음)
-        if (!document.getElementById("skipAgencyBtn")) {
-          const skipAgencyBtn = document.createElement("button");
-          skipAgencyBtn.id = "skipAgencyBtn";
-          skipAgencyBtn.type = "button";
-          skipAgencyBtn.className = "ghost full";
-          skipAgencyBtn.textContent = "소속사 선택 없이 계속하기";
-          skipAgencyBtn.style.marginTop = "16px";
-          skipAgencyBtn.addEventListener("click", () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoryKey = urlParams.get("category") || 
-              Array.from(document.querySelectorAll(".category-card")).find(c => c.classList.contains("active"))?.dataset.category;
-            if (categoryKey) {
-              const label = categories[categoryKey];
-              const params = new URLSearchParams({
-                category: categoryKey,
-                categoryLabel: label,
-              });
-              window.location.href = `/letter-target.html?${params.toString()}`;
-            }
-          });
-          agencyGrid.parentElement.appendChild(skipAgencyBtn);
-        }
       }
 
       const categories = {
@@ -169,12 +159,21 @@
           const key = card.dataset.category;
           const label = categories[key];
           
-          // 대분류 선택 시 해당 대분류의 소속사 로드 및 표시
-          document.getElementById("agencySection").style.display = "block";
-          await loadAgencies(key);
-          
-          // 소속사 선택 대기 (소속사 선택 후 letter-target.html로 이동)
-          // 소속사 선택 이벤트는 renderAgencies에서 처리됨
+          // 엔터테인먼트 선택 시 소속사 선택 화면으로 이동
+          if (key === "entertainment") {
+            // 대분류 선택 시 해당 대분류의 소속사 로드 및 표시
+            document.getElementById("agencySection").style.display = "block";
+            await loadAgencies(key);
+            // 소속사 선택 대기 (소속사 선택 후 letter-target.html로 이동)
+            // 소속사 선택 이벤트는 renderAgencies에서 처리됨
+          } else {
+            // 다른 대분류는 기존처럼 letter-target.html로 바로 이동
+            const params = new URLSearchParams({
+              category: key,
+              categoryLabel: label,
+            });
+            window.location.href = `/letter-target.html?${params.toString()}`;
+          }
         });
       });
 
@@ -195,7 +194,8 @@
         }
       });
 
-      // 페이지 로드 시에는 소속사 목록을 표시하지 않음 (대분류 선택 후 표시)
+      // 페이지 로드 시 인기 소속사 목록 로드
+      loadPopularAgencies();
 
       // URL 파라미터에서 선택된 소속사 확인
       const urlParams = new URLSearchParams(window.location.search);
