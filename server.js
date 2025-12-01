@@ -1381,19 +1381,25 @@ async function findOrCreateAgency(name, imageData = null) {
   if (!name) return null;
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const [rows] = await pool.query("SELECT id FROM agencies WHERE name = ?", [trimmed]);
+  const [rows] = await pool.query("SELECT id, image_url FROM agencies WHERE name = ?", [trimmed]);
   let agencyId;
   if (rows.length > 0) {
     agencyId = rows[0].id;
+    // 이미지가 제공되면 항상 업데이트 (기존 이미지가 없거나 새 이미지를 제공한 경우)
+    if (imageData) {
+      const imageUrl = await saveAgencyImage(agencyId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+      }
+    }
   } else {
     const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [trimmed]);
     agencyId = result.insertId;
-  }
-  
-  if (imageData && agencyId) {
-    const imageUrl = await saveAgencyImage(agencyId, imageData);
-    if (imageUrl) {
-      await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+    if (imageData && agencyId) {
+      const imageUrl = await saveAgencyImage(agencyId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+      }
     }
   }
   
@@ -1406,24 +1412,30 @@ async function findOrCreateGroup(name, agencyId, imageData = null) {
   if (!trimmed) return null;
   const params = agencyId ? [trimmed, agencyId] : [trimmed];
   const query = agencyId
-    ? "SELECT id FROM recipient_groups WHERE name = ? AND agency_id = ?"
-    : "SELECT id FROM recipient_groups WHERE name = ? AND agency_id IS NULL";
+    ? "SELECT id, image_url FROM recipient_groups WHERE name = ? AND agency_id = ?"
+    : "SELECT id, image_url FROM recipient_groups WHERE name = ? AND agency_id IS NULL";
   const [rows] = await pool.query(query, params);
   let groupId;
   if (rows.length > 0) {
     groupId = rows[0].id;
+    // 이미지가 제공되면 항상 업데이트 (기존 이미지가 없거나 새 이미지를 제공한 경우)
+    if (imageData) {
+      const imageUrl = await saveGroupImage(groupId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+      }
+    }
   } else {
     const [result] = await pool.query(
       "INSERT INTO recipient_groups (name, agency_id) VALUES (?, ?)",
       [trimmed, agencyId || null]
     );
     groupId = result.insertId;
-  }
-  
-  if (imageData && groupId) {
-    const imageUrl = await saveGroupImage(groupId, imageData);
-    if (imageUrl) {
-      await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+    if (imageData && groupId) {
+      const imageUrl = await saveGroupImage(groupId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+      }
     }
   }
   

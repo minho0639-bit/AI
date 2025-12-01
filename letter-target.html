@@ -255,6 +255,12 @@
               name: agencyName,
               image_url: recipient.agency_image_url || null,
             });
+          } else {
+            // 이미지가 없는 경우에만 업데이트 (null이 아닌 값이 있으면 유지)
+            const existing = agencyMap.get(agencyName);
+            if (!existing.image_url && recipient.agency_image_url) {
+              existing.image_url = recipient.agency_image_url;
+            }
           }
         });
 
@@ -308,6 +314,12 @@
                 name: groupName,
                 image_url: recipient.group_image_url || null,
               });
+            } else {
+              // 이미지가 없는 경우에만 업데이트 (null이 아닌 값이 있으면 유지)
+              const existing = groupMap.get(groupName);
+              if (!existing.image_url && recipient.group_image_url) {
+                existing.image_url = recipient.group_image_url;
+              }
             }
           });
 
