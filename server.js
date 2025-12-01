@@ -608,7 +608,7 @@ app.get("/api/admin/groups", requireAdmin, async (req, res) => {
     `;
     const params = [];
     if (agencyId) {
-      query += " WHERE rg.agency_id = ?";
+      query += " WHERE rg.agency_id = ? OR rg.agency_id IS NULL";
       params.push(agencyId);
     }
     query += " ORDER BY a.name ASC, rg.name ASC";
