@@ -44,12 +44,10 @@
               <option value="">소속사를 선택하세요</option>
             </select>
           </label>
-          <label>
-            이름
-            <select id="nameSelect" disabled>
-              <option value="">팀을 선택하세요</option>
-            </select>
-          </label>
+        </div>
+        <div class="recipient-cards-container" id="recipientCardsContainer" style="display: none; margin-top: 24px;">
+          <p class="section-title" style="margin-bottom: 16px;">수령인을 선택하세요</p>
+          <div class="recipient-cards-grid" id="recipientCardsGrid"></div>
         </div>
       </section>
 
@@ -141,7 +139,6 @@
       const detailsSection = document.getElementById("detailsSection");
       const agencySelect = document.getElementById("agencySelect");
       const teamSelect = document.getElementById("teamSelect");
-      const nameSelect = document.getElementById("nameSelect");
       const selectionPreview = document.getElementById("selectionPreview");
       const nextButton = document.getElementById("nextStep");
 
@@ -243,8 +240,7 @@
         agencySelect.disabled = true;
         teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
         teamSelect.disabled = true;
-        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-        nameSelect.disabled = true;
+        document.getElementById("recipientCardsContainer").style.display = "none";
         try {
           const response = await fetch(`/api/recipients/by-subcategory/${subcategoryId}`);
           if (!response.ok) {
@@ -258,8 +254,7 @@
           agencySelect.disabled = true;
           teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
           teamSelect.disabled = true;
-          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-          nameSelect.disabled = true;
+          document.getElementById("recipientCardsContainer").style.display = "none";
         }
       }
 
@@ -333,19 +328,38 @@
           return sameAgency && groupName === state.selectedGroup;
         });
 
-        nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-        filteredRecipients.forEach((recipient) => {
-          const option = document.createElement("option");
-          option.value = recipient.id;
-          option.textContent = recipient.name;
-          option.dataset.agency = normalizeAgency(recipient.agency);
-          option.dataset.group = recipient.group_name?.trim() || "";
-          nameSelect.appendChild(option);
-        });
-        nameSelect.disabled = filteredRecipients.length === 0;
+        const recipientCardsContainer = document.getElementById("recipientCardsContainer");
+        const recipientCardsGrid = document.getElementById("recipientCardsGrid");
+        
         if (filteredRecipients.length === 0) {
+          recipientCardsContainer.style.display = "none";
           selectionPreview.textContent = "해당 조건의 수령인이 없습니다.";
+          return;
         }
+        
+        recipientCardsContainer.style.display = "block";
+        recipientCardsGrid.innerHTML = "";
+        
+        filteredRecipients.forEach((recipient) => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "recipient-card";
+          card.dataset.recipientId = recipient.id;
+          card.innerHTML = `
+            <div class="recipient-card-image">
+              ${recipient.image_url ? `<img src="/${recipient.image_url}" alt="${recipient.name}" />` : '<div class="recipient-card-placeholder">👤</div>'}
+            </div>
+            <div class="recipient-card-name">${recipient.name}</div>
+          `;
+          card.addEventListener("click", () => {
+            document.querySelectorAll(".recipient-card").forEach(c => c.classList.remove("active"));
+            card.classList.add("active");
+            const recipientId = Number(card.dataset.recipientId);
+            state.selectedRecipient = state.recipients.find((r) => r.id === recipientId) || null;
+            updateSelectionPreview();
+          });
+          recipientCardsGrid.appendChild(card);
+        });
       }
 
       function normalizeAgency(value) {
@@ -357,11 +371,10 @@
         state.selectedGroup = null;
         state.selectedRecipient = null;
         teamSelect.value = "";
-        nameSelect.value = "";
         nextButton.disabled = true;
         if (!state.selectedAgency) {
           teamSelect.disabled = true;
-          nameSelect.disabled = true;
+          document.getElementById("recipientCardsContainer").style.display = "none";
           selectionPreview.textContent = "소속사를 다시 선택해 주세요.";
           return;
         }
@@ -371,16 +384,10 @@
       teamSelect.addEventListener("change", () => {
         state.selectedGroup = teamSelect.value || null;
         state.selectedRecipient = null;
-        nameSelect.value = "";
         nextButton.disabled = true;
         populateNameSelect();
       });
 
-      nameSelect.addEventListener("change", () => {
-        const recipientId = Number(nameSelect.value);
-        state.selectedRecipient = state.recipients.find((recipient) => recipient.id === recipientId) || null;
-        updateSelectionPreview();
-      });
 
       function updateSelectionPreview() {
         if (!state.selectedRecipient || !state.selectedSubcategory) {
@@ -412,19 +419,16 @@
           agencySelect.disabled = true;
           teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
           teamSelect.disabled = true;
-          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-          nameSelect.disabled = true;
+          document.getElementById("recipientCardsContainer").style.display = "none";
         } else if (level === "agency") {
           state.selectedGroup = null;
           state.selectedRecipient = null;
           teamSelect.innerHTML = '<option value="">팀/그룹을 선택하세요</option>';
           teamSelect.disabled = true;
-          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-          nameSelect.disabled = true;
+          document.getElementById("recipientCardsContainer").style.display = "none";
         } else if (level === "team") {
           state.selectedRecipient = null;
-          nameSelect.innerHTML = '<option value="">이름을 선택하세요</option>';
-          nameSelect.disabled = true;
+          document.getElementById("recipientCardsContainer").style.display = "none";
         }
         selectionPreview.textContent = "아직 선택되지 않았습니다.";
         nextButton.disabled = true;

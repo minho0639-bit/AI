@@ -136,6 +136,13 @@
                     placeholder="예) 서울특별시 용산구 한강대로 100"
                   ></textarea>
                 </div>
+                <div class="field">
+                  <label for="recipient-image">수령인 사진 (3cm x 3cm)</label>
+                  <input type="file" id="recipient-image" name="image" accept="image/*" />
+                  <div id="recipient-image-preview" style="margin-top: 10px; display: none;">
+                    <img id="recipient-image-preview-img" src="" alt="미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                  </div>
+                </div>
                 <div class="form-actions">
                   <button type="submit">수령인 추가</button>
                   <div id="recipient-form-status" class="status-text"></div>
@@ -521,6 +528,24 @@
         updateSubcategoryOptions();
       });
 
+      const recipientImageInput = document.getElementById("recipient-image");
+      const recipientImagePreview = document.getElementById("recipient-image-preview");
+      const recipientImagePreviewImg = document.getElementById("recipient-image-preview-img");
+      
+      recipientImageInput?.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            recipientImagePreviewImg.src = e.target.result;
+            recipientImagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          recipientImagePreview.style.display = "none";
+        }
+      });
+
       recipientForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await handleRecipientCreate(new FormData(recipientForm));
@@ -873,6 +898,18 @@
       async function handleRecipientCreate(formData) {
         recipientFormStatus.textContent = "추가 중...";
         recipientFormStatus.classList.remove("error", "success");
+        
+        let imageData = null;
+        const imageFile = recipientImageInput?.files[0];
+        if (imageFile) {
+          imageData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(imageFile);
+          });
+        }
+        
         const payload = {
           name: formData.get("name"),
           categoryId: formData.get("categoryId"),
@@ -881,6 +918,7 @@
           groupName: formData.get("groupName") || null,
           isActive: formData.get("isActive") === "1",
           address: formData.get("address") || null,
+          imageData: imageData,
         };
         try {
           const response = await fetch("/api/admin/recipients", {
@@ -893,6 +931,8 @@
             throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
           }
           recipientForm.reset();
+          recipientImagePreview.style.display = "none";
+          recipientImagePreviewImg.src = "";
           recipientCategorySelect.value = "";
           updateSubcategoryOptions();
           recipientStatusSelect.value = "1";
@@ -1603,7 +1643,7 @@
                   height: 13.5cm;
                   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
                   position: relative;
-                  padding: 1.5cm;
+                  padding: 1cm;
                   background: var(--paper-fill);
                   overflow: hidden;
                 }
@@ -1697,7 +1737,12 @@
             (recipient) => `
             <tr>
               <td>#${recipient.id}</td>
-              <td>${recipient.name}</td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  ${recipient.image_url ? `<img src="/${recipient.image_url}" alt="${recipient.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" />` : ""}
+                  <span>${recipient.name}</span>
+                </div>
+              </td>
               <td>
                 <div>${recipient.category || "-"}</div>
                 <div class="text-muted">${recipient.subcategory || ""}</div>

@@ -429,7 +429,7 @@ select {
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: var(--paper-fill);
   position: relative;
-  padding: 2cm;
+  padding: 1cm;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }

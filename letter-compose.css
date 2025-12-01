@@ -167,7 +167,7 @@ button:active {
 .letter-paper {
   flex: 0 0 auto;
   border-radius: 0;
-  padding: 2cm;
+  padding: 1cm;
   width: 14cm;
   min-width: 14cm;
   max-width: 14cm;
@@ -214,7 +214,7 @@ button:active {
 .letter-paper.paper-lined::after {
   content: "";
   position: absolute;
-  inset: 2cm;
+  inset: 1cm;
   border-radius: 0;
   background: repeating-linear-gradient(
     to bottom,
@@ -548,7 +548,7 @@ button:active {
     justify-content: flex-start;
   }
   .letter-paper {
-    padding: 2cm;
+    padding: 1cm;
     border-radius: 0;
   }
   .compose-actions button {

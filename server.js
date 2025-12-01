@@ -370,6 +370,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
          a.name AS agency,
          rg.name AS group_name,
          r.notes AS address,
+         r.image_url AS image_url,
          r.is_active,
          r.updated_at
        FROM recipients r
@@ -389,7 +390,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
-  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address } = req.body;
+  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address, imageData } = req.body;
   if (!name?.trim() || !categoryId) {
     return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
   }
@@ -407,14 +408,24 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
       groupId,
       typeof isActive === "boolean" ? (isActive ? 1 : 0) : 1,
       address?.trim() ? address.trim() : null,
+      null, // image_url은 나중에 업데이트
     ];
     const [result] = await pool.query(
       `INSERT INTO recipients
-       (name, category_id, subcategory_id, agency_id, group_id, is_active, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (name, category_id, subcategory_id, agency_id, group_id, is_active, notes, image_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       payload
     );
     const insertedId = result.insertId;
+    
+    let imageUrl = null;
+    if (imageData) {
+      imageUrl = await saveRecipientImage(insertedId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE recipients SET image_url = ? WHERE id = ?", [imageUrl, insertedId]);
+      }
+    }
+    
     const [rows] = await pool.query(
       `SELECT
          r.id,
@@ -424,6 +435,7 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
          a.name AS agency,
          rg.name AS group_name,
          r.notes AS address,
+         r.image_url AS image_url,
          r.is_active,
          r.updated_at
        FROM recipients r
@@ -835,6 +847,7 @@ app.get("/api/recipients/by-subcategory/:subcategoryId", async (req, res) => {
          r.id,
          r.name,
          r.is_active,
+         r.image_url AS image_url,
          COALESCE(a.name, "") AS agency,
          COALESCE(rg.name, "") AS group_name
        FROM recipients r
@@ -1206,6 +1219,7 @@ async function initializeBootstrapTasks() {
   await ensureRecipientTaxonomy();
   await ensureStationeryTemplates();
   await ensureLetterSchemaExtensions();
+  await ensureRecipientSchemaExtensions();
   await ensureCouponSetup();
 }
 
@@ -1333,6 +1347,16 @@ async function ensureLetterSchemaExtensions() {
   } catch (error) {
     if (error.code !== "ER_DUP_FIELDNAME") {
       console.warn("letters text_color alter warn:", error.message || error);
+    }
+  }
+}
+
+async function ensureRecipientSchemaExtensions() {
+  try {
+    await pool.query("ALTER TABLE recipients ADD COLUMN image_url VARCHAR(255) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("recipients image_url alter warn:", error.message || error);
     }
   }
 }
@@ -1836,6 +1860,29 @@ async function saveLetterImage(userId, letterId, base64Image) {
     return relativePath;
   } catch (error) {
     console.error("saveLetterImage error:", error);
+    return null;
+  }
+}
+
+async function saveRecipientImage(recipientId, base64Image) {
+  try {
+    if (!base64Image || typeof base64Image !== "string") {
+      return null;
+    }
+    const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const recipientsDir = path.join(__dirname, "assets", "recipients");
+    await fs.mkdir(recipientsDir, { recursive: true });
+
+    const filename = `recipient-${recipientId}-${Date.now()}.png`;
+    const filepath = path.join(recipientsDir, filename);
+    await fs.writeFile(filepath, buffer);
+
+    const relativePath = `assets/recipients/${filename}`;
+    return relativePath;
+  } catch (error) {
+    console.error("saveRecipientImage error:", error);
     return null;
   }
 }
