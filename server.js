@@ -1636,6 +1636,34 @@ async function ensureRecipientSchemaExtensions() {
       console.warn("recipient_groups image_url alter warn:", error.message || error);
     }
   }
+  try {
+    await pool.query("ALTER TABLE agencies ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("agencies created_at alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE agencies ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("agencies updated_at alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE recipient_groups ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("recipient_groups created_at alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE recipient_groups ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("recipient_groups updated_at alter warn:", error.message || error);
+    }
+  }
 }
 
 async function findOrCreateAgency(name, imageData = null) {
