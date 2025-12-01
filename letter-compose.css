@@ -1,5 +1,5 @@
 :root {
-  --bg: #f6f5f2;
+  --bg: #ffffff;
   --card: #ffffff;
   --text: #1b1c1f;
   --muted: #6c6e75;
@@ -30,6 +30,16 @@ body {
 .brand {
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+.logo-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  display: inline;
 }
 
 .nav-actions {
@@ -100,14 +110,292 @@ button:active {
   color: var(--muted);
 }
 
-.compose-controls {
-  border: 1px solid var(--border);
-  border-radius: 28px;
+/* ?�문?�인 ?�디???�바 */
+.editor-toolbar {
   background: var(--card);
-  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.toolbar-group {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ?�트 ?�택 ?�롭?�운 */
+.font-selector-wrapper {
+  min-width: 140px;
+}
+
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.toolbar-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 120px;
+}
+
+.toolbar-select option {
+  padding: 8px;
+  font-size: 0.9rem;
+}
+
+.toolbar-select:hover {
+  border-color: var(--primary);
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+}
+
+/* ?�스???��???버튼 */
+.format-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn:hover {
+  background: rgba(17, 17, 17, 0.05);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.toolbar-btn.active {
+  background: rgba(17, 17, 17, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.toolbar-btn svg {
+  flex-shrink: 0;
+}
+
+/* ?�상 ?�택�?*/
+.color-selector-wrapper {
+  position: relative;
+}
+
+.color-selector {
+  position: relative;
+}
+
+.color-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-trigger:hover {
+  border-color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
+}
+
+.color-trigger.active {
+  border-color: var(--primary);
+  background: rgba(17, 17, 17, 0.1);
+}
+
+.color-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--swatch-color, #1b1c1f);
+  flex-shrink: 0;
+}
+
+.color-arrow {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.color-palette-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  min-width: 180px;
+}
+
+.color-palette-dropdown.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.color-palette-dropdown .color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-palette-dropdown .color-swatch span {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.color-palette-dropdown .color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-palette-dropdown .color-swatch.active {
+  border-color: var(--primary);
+  transform: scale(1.1);
+}
+
+/* ?�모?�콘 ?�택�?*/
+.emoji-selector-wrapper {
+  position: relative;
+}
+
+.emoji-trigger {
+  width: 36px;
+  height: 36px;
+}
+
+.emoji-palette {
+  position: fixed;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.emoji-palette.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.emoji-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-button:hover {
+  border-color: var(--primary);
+  background: rgba(17, 17, 17, 0.05);
+  transform: scale(1.1);
+}
+
+.emoji-button:active {
+  transform: scale(0.95);
 }
 
 .compose-editor {
@@ -171,7 +459,7 @@ button:active {
   width: 14cm;
   min-width: 14cm;
   max-width: 14cm;
-  height: 17cm;
+  height: 18cm;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: #fff;
   display: flex;
@@ -264,15 +552,28 @@ button:active {
 
 .paper-midnight {
   background: repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.15),
-      rgba(255, 255, 255, 0.15) 1px,
-      transparent 1px,
-      transparent 34px
-    ),
+    to bottom,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.15) 1px,
+    transparent 1px,
+    transparent 34px
+  ),
     linear-gradient(135deg, #0d1a2e, #182544);
   border: 1px solid rgba(12, 21, 39, 0.6);
   color: #f2f4ff;
+}
+
+.paper-yellow-soft {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.06),
+    rgba(0, 0, 0, 0.06) 1px,
+    transparent 1px,
+    transparent 32px
+  ),
+    #FFDEAD;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
 .paper-body {
@@ -316,198 +617,7 @@ button:active {
   letter-spacing: 0.02em;
 }
 
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.group-label {
-  font-weight: 600;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.format-toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.format-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  padding: 0 16px;
-  gap: 6px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.format-btn:hover,
-.format-btn.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(17, 17, 17, 0.05);
-}
-
-.format-btn__icon {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.format-btn__icon--bold {
-  font-weight: 800;
-}
-
-.format-btn__icon--italic {
-  font-style: italic;
-}
-
-.format-btn__icon--underline {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.format-btn__label {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.chip-option {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 10px 18px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-
-.chip-option.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(17, 17, 17, 0.05);
-}
-
-.color-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.color-swatch {
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.color-swatch span {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--swatch-color, #111);
-  display: inline-block;
-}
-
-.color-swatch.active {
-  border-color: var(--swatch-color, #111);
-  transform: translateY(-2px);
-}
-
-.emoji-group {
-  position: relative;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.emoji-toggle {
-  align-self: flex-start;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--text);
-  padding: 10px 18px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-
-.emoji-toggle.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(17, 17, 17, 0.05);
-}
-
-.emoji-palette {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  transform: translateY(-4px);
-  display: grid;
-  grid-template-columns: repeat(5, 40px);
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  width: max-content;
-  min-width: 220px;
-  max-width: min(320px, 80vw);
-  z-index: 10;
-}
-
-.emoji-palette.visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.emoji-button {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
-  font-size: 1.2rem;
-  background: #fff;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.emoji-button:hover,
-.emoji-button:focus-visible {
-  border-color: var(--primary);
-  background: rgba(17, 17, 17, 0.05);
-}
-
-.emoji-button:active {
-  transform: scale(0.95);
-}
+/* ?�거???��????�거??- ?�로???�바 ?��????�용 */
 
 [contenteditable="true"]:empty:before {
   content: attr(data-placeholder);
@@ -528,8 +638,49 @@ button:active {
   body {
     padding-bottom: 40px;
   }
-  .compose-controls {
-    position: static;
+  .editor-toolbar {
+    padding: 10px 12px;
+  }
+  .toolbar-group {
+    gap: 6px;
+  }
+  .toolbar-item {
+    gap: 6px;
+  }
+  .font-selector-wrapper {
+    min-width: 120px;
+  }
+  .toolbar-select {
+    min-width: 100px;
+    padding: 6px 28px 6px 10px;
+    font-size: 0.85rem;
+  }
+  .toolbar-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .toolbar-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .color-palette-dropdown {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 160px;
+    padding: 10px;
+  }
+  .color-palette-dropdown .color-swatch {
+    width: 36px;
+    height: 36px;
+  }
+  .emoji-palette {
+    grid-template-columns: repeat(5, 1fr);
+    min-width: 200px;
+    padding: 12px;
+  }
+  .emoji-button {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
   }
   .compose-actions {
     flex-direction: column;

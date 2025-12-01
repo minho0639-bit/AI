@@ -38,7 +38,7 @@ body {
 
 .brand {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 12px;
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
@@ -64,6 +64,24 @@ body {
 
 .user-nickname {
   font-weight: 600;
+}
+
+/* 홈 헤더 우측 이름 / 내 정보 / 로그아웃 폰트 크기 */
+.top-nav .user-nickname,
+.top-nav .user-controls button {
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .top-nav {
+    padding: 14px 16px;
+  }
+  .top-nav .user-controls {
+    gap: 8px;
+  }
+  .top-nav .user-controls .tiny {
+    padding: 4px 10px;
+  }
 }
 
 .site-header,

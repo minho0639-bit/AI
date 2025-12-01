@@ -1,5 +1,5 @@
 :root {
-  --bg: #f6f5f2;
+  --bg: #ffffff;
   --card: #ffffff;
   --text: #1b1c1f;
   --muted: #6c6e75;
@@ -43,6 +43,16 @@ body {
 .brand {
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+.logo-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  display: inline;
 }
 
 button {

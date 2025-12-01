@@ -31,6 +31,8 @@ const DEFAULT_STATIONERY = [
     name: "기본 편지지",
     description: "가장 깔끔하게 연출되는 기본 디자인",
     previewImageUrl: "assets/stationery/basic.jpg",
+    cssClass: "paper-lined",
+    backgroundColor: null,
     isActive: true,
   },
 ];
@@ -789,6 +791,8 @@ app.get("/api/admin/stationery", requireAdmin, async (req, res) => {
          name,
          description,
          preview_image_url AS previewImageUrl,
+         background_color AS backgroundColor,
+         css_class AS cssClass,
          is_active AS isActive,
          created_at,
          updated_at
@@ -803,15 +807,22 @@ app.get("/api/admin/stationery", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/stationery", requireAdmin, async (req, res) => {
-  const { name, description, previewImageUrl, isActive } = req.body;
+  const { name, description, previewImageUrl, backgroundColor, cssClass, isActive } = req.body;
   if (!name?.trim()) {
     return res.status(400).json({ message: "편지지 이름을 입력해 주세요." });
   }
   try {
     const [result] = await pool.query(
-      `INSERT INTO stationery_templates (name, description, preview_image_url, is_active)
-       VALUES (?, ?, ?, ?)`,
-      [name.trim(), description?.trim() || null, previewImageUrl?.trim() || null, isActive ? 1 : 0]
+      `INSERT INTO stationery_templates (name, description, preview_image_url, background_color, css_class, is_active)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        name.trim(),
+        description?.trim() || null,
+        previewImageUrl?.trim() || null,
+        backgroundColor?.trim() || null,
+        cssClass?.trim() || null,
+        isActive ? 1 : 0
+      ]
     );
     const [rows] = await pool.query(
       `SELECT
@@ -819,6 +830,8 @@ app.post("/api/admin/stationery", requireAdmin, async (req, res) => {
          name,
          description,
          preview_image_url AS previewImageUrl,
+         background_color AS backgroundColor,
+         css_class AS cssClass,
          is_active AS isActive,
          created_at,
          updated_at
@@ -838,16 +851,24 @@ app.put("/api/admin/stationery/:id", requireAdmin, async (req, res) => {
   if (!templateId) {
     return res.status(400).json({ message: "잘못된 편지지 ID입니다." });
   }
-  const { name, description, previewImageUrl, isActive } = req.body;
+  const { name, description, previewImageUrl, backgroundColor, cssClass, isActive } = req.body;
   if (!name?.trim()) {
     return res.status(400).json({ message: "편지지 이름을 입력해 주세요." });
   }
   try {
     await pool.query(
       `UPDATE stationery_templates
-       SET name = ?, description = ?, preview_image_url = ?, is_active = ?
+       SET name = ?, description = ?, preview_image_url = ?, background_color = ?, css_class = ?, is_active = ?
        WHERE id = ?`,
-      [name.trim(), description?.trim() || null, previewImageUrl?.trim() || null, isActive ? 1 : 0, templateId]
+      [
+        name.trim(),
+        description?.trim() || null,
+        previewImageUrl?.trim() || null,
+        backgroundColor?.trim() || null,
+        cssClass?.trim() || null,
+        isActive ? 1 : 0,
+        templateId
+      ]
     );
     const [rows] = await pool.query(
       `SELECT
@@ -855,6 +876,8 @@ app.put("/api/admin/stationery/:id", requireAdmin, async (req, res) => {
          name,
          description,
          preview_image_url AS previewImageUrl,
+         background_color AS backgroundColor,
+         css_class AS cssClass,
          is_active AS isActive,
          created_at,
          updated_at
@@ -1120,7 +1143,9 @@ app.get("/api/stationery", async (req, res) => {
          id,
          name,
          description,
-         preview_image_url AS previewImageUrl
+         preview_image_url AS previewImageUrl,
+         background_color AS backgroundColor,
+         css_class AS cssClass
        FROM stationery_templates
        WHERE is_active = 1
        ORDER BY created_at DESC`
@@ -1646,11 +1671,25 @@ async function ensureStationeryTemplates() {
       name VARCHAR(120) NOT NULL,
       description VARCHAR(255),
       preview_image_url VARCHAR(255),
+      background_color VARCHAR(20),
+      css_class VARCHAR(60),
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
   );
+  
+  // 기존 테이블에 새 컬럼 추가 (이미 존재하면 무시)
+  try {
+    await pool.query("ALTER TABLE stationery_templates ADD COLUMN background_color VARCHAR(20) NULL");
+  } catch (error) {
+    // 컬럼이 이미 존재하면 무시
+  }
+  try {
+    await pool.query("ALTER TABLE stationery_templates ADD COLUMN css_class VARCHAR(60) NULL");
+  } catch (error) {
+    // 컬럼이 이미 존재하면 무시
+  }
 
   for (const template of DEFAULT_STATIONERY) {
     const [rows] = await pool.query(
@@ -1659,12 +1698,14 @@ async function ensureStationeryTemplates() {
     );
     if (rows.length === 0) {
       await pool.query(
-        `INSERT INTO stationery_templates (name, description, preview_image_url, is_active)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO stationery_templates (name, description, preview_image_url, background_color, css_class, is_active)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           template.name,
           template.description || null,
           template.previewImageUrl || null,
+          template.backgroundColor || null,
+          template.cssClass || null,
           template.isActive ? 1 : 0,
         ]
       );
@@ -1673,11 +1714,13 @@ async function ensureStationeryTemplates() {
       const templateId = rows[0].id;
       await pool.query(
         `UPDATE stationery_templates
-         SET description = ?, preview_image_url = ?, is_active = ?
+         SET description = ?, preview_image_url = ?, background_color = ?, css_class = ?, is_active = ?
          WHERE id = ?`,
         [
           template.description || null,
           template.previewImageUrl || null,
+          template.backgroundColor || null,
+          template.cssClass || null,
           template.isActive ? 1 : 0,
           templateId,
         ]

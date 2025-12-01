@@ -14,7 +14,10 @@
   </head>
   <body>
       <header class="compose-nav">
-        <div class="brand">팬레터포스트</div>
+        <div class="brand">
+          <img src="assets/logo.JPG" alt="레터비" class="logo-img" />
+          <span class="logo-text" style="display: none;">레터비</span>
+        </div>
         <div class="nav-actions">
           <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
           <button type="button" class="ghost tiny" id="backHome">홈으로</button>
@@ -22,40 +25,81 @@
       </header>
 
       <main class="compose-main">
-        <section class="compose-controls" aria-label="서식 설정">
-          <div class="control-group">
-            <p class="group-label">폰트</p>
-            <div class="chip-group" id="fontChips"></div>
-          </div>
-          <div class="control-group">
-            <p class="group-label">텍스트 스타일</p>
-            <div class="format-toolbar" id="formatToolbar" role="group" aria-label="텍스트 스타일 버튼">
-              <button type="button" class="format-btn" data-command="bold" aria-label="굵게">
-                <span class="format-btn__icon format-btn__icon--bold" aria-hidden="true">가</span>
-                <span class="format-btn__label">굵게</span>
+        <!-- 전문적인 에디터 툴바 -->
+        <div class="editor-toolbar" aria-label="편집 도구">
+          <div class="toolbar-group">
+            <div class="toolbar-item font-selector-wrapper">
+              <label class="toolbar-label" for="fontSelect">폰트</label>
+              <div class="select-wrapper">
+                <select id="fontSelect" class="toolbar-select" aria-label="폰트 선택">
+                  <!-- JavaScript로 동적 생성 -->
+                </select>
+                <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-item">
+              <div class="format-toolbar" id="formatToolbar" role="group" aria-label="텍스트 스타일">
+                <button type="button" class="toolbar-btn" data-command="bold" aria-label="굵게" title="굵게 (Ctrl+B)">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5.25 3.75H10.5C11.4946 3.75 12.4484 4.14464 13.1517 4.84798C13.855 5.55132 14.25 6.50514 14.25 7.5C14.25 8.49486 13.855 9.44868 13.1517 10.152C12.4484 10.8554 11.4946 11.25 10.5 11.25H5.25V3.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5.25 11.25H11.25C12.2446 11.25 13.1984 11.6446 13.9017 12.348C14.605 13.0513 15 14.0051 15 15C15 15.9949 14.605 16.9487 13.9017 17.652C13.1984 18.3554 12.2446 18.75 11.25 18.75H5.25V11.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="italic" aria-label="기울임" title="기울임 (Ctrl+I)">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7.5 3.75H13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.5 14.25H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9.75 3.75L6.75 14.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="underline" aria-label="밑줄" title="밑줄 (Ctrl+U)">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4.5 3.75V9C4.5 10.5913 5.15893 12.1174 6.33058 13.2891C7.50223 14.4607 9.02826 15.1196 10.6195 15.1196C12.2107 15.1196 13.7368 14.4607 14.9084 13.2891C16.0801 12.1174 16.739 10.5913 16.739 9V3.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.5 14.25H13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-item color-selector-wrapper">
+              <label class="toolbar-label">색상</label>
+              <div class="color-selector">
+                <button type="button" class="color-trigger" id="colorTrigger" aria-label="텍스트 색상 선택">
+                  <span class="color-preview" id="colorPreview"></span>
+                  <svg class="color-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <div class="color-palette-dropdown" id="colorPalette" aria-hidden="true">
+                  <!-- JavaScript로 동적 생성 -->
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-item emoji-selector-wrapper">
+              <button type="button" class="toolbar-btn emoji-trigger" id="emojiToggle" aria-expanded="false" aria-label="이모티콘 삽입" title="이모티콘">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 16.5C13.1421 16.5 16.5 13.1421 16.5 9C16.5 4.85786 13.1421 1.5 9 1.5C4.85786 1.5 1.5 4.85786 1.5 9C1.5 13.1421 4.85786 16.5 9 16.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6.375 9.75C6.375 9.75 7.125 10.5 9 10.5C10.875 10.5 11.625 9.75 11.625 9.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="6.75" cy="6.75" r="0.75" fill="currentColor"/>
+                  <circle cx="11.25" cy="6.75" r="0.75" fill="currentColor"/>
+                </svg>
               </button>
-              <button type="button" class="format-btn" data-command="italic" aria-label="기울임">
-                <span class="format-btn__icon format-btn__icon--italic" aria-hidden="true">가</span>
-                <span class="format-btn__label">기울임</span>
-              </button>
-              <button type="button" class="format-btn" data-command="underline" aria-label="밑줄">
-                <span class="format-btn__icon format-btn__icon--underline" aria-hidden="true">가</span>
-                <span class="format-btn__label">밑줄</span>
-              </button>
+              <div class="emoji-palette" id="emojiPalette" aria-hidden="true">
+                <!-- JavaScript로 동적 생성 -->
+              </div>
             </div>
           </div>
-          <div class="control-group">
-            <p class="group-label">폰트 색상</p>
-            <div class="color-palette" id="colorPalette"></div>
-          </div>
-          <div class="control-group emoji-group">
-            <p class="group-label">이모티콘</p>
-            <button type="button" class="emoji-toggle" id="emojiToggle" aria-expanded="false">
-              이모티콘 선택
-            </button>
-            <div class="emoji-palette" id="emojiPalette" aria-hidden="true"></div>
-          </div>
-        </section>
+        </div>
 
         <section class="compose-editor">
           <div class="write-panel">
@@ -76,14 +120,17 @@
         const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
         const toSummary = document.getElementById("toSummary");
-        const fontChips = document.getElementById("fontChips");
+        const fontSelect = document.getElementById("fontSelect");
         const colorPalette = document.getElementById("colorPalette");
+        const colorTrigger = document.getElementById("colorTrigger");
+        const colorPreview = document.getElementById("colorPreview");
         const emojiPalette = document.getElementById("emojiPalette");
         const emojiToggle = document.getElementById("emojiToggle");
         const formatToolbar = document.getElementById("formatToolbar");
 
         const MAX_BODY = 1500;
-        const MAX_LINES_PER_PAGE = 16;
+        const MAX_LINES_PER_PAGE = 19;
+        const AUTO_PAGE_BREAK_LINES = 18;
         const BASE_FONT_SIZE = 18;
         const HANDWRITING_FONT_IDS = new Set(["handwriting", "gaegu", "dongle", "singleDay"]);
         const RICH_TEXT_PAGE_DELIMITERS = ['<div data-page-break="true"></div>', '<div><br /></div>'];
@@ -142,12 +189,8 @@
           "bastard",
         ];
 
-        const stationeryThemes = {
-          basic: {
-            label: "기본 편지지",
-            className: "paper-lined",
-          },
-        };
+        let stationeryThemes = {};
+        let stationeryList = [];
 
         const fontOptions = [
           { id: "default", label: "Pretendard", className: "font-default" },
@@ -170,8 +213,7 @@
 
         let paperBodies = [];
         let activeBody = null;
-        let selectedStationery = params.get("stationery") || "basic";
-        if (!stationeryThemes[selectedStationery]) selectedStationery = "basic";
+        let selectedStationery = params.get("stationery") || null;
         let selectedFont = "default";
         let selectedColorId = colorOptions[0].id;
         let selectedColor = colorOptions[0].value;
@@ -180,23 +222,55 @@
         const storedDraftData = readDraftFromStorage();
         applyDraftMetadata(storedDraftData);
 
+        let fontSelectChangeHandler = null;
+
         function renderFontOptions() {
-          fontChips.innerHTML = "";
+          if (!fontSelect) return;
+          
+          // 기존 이벤트 리스너 제거
+          if (fontSelectChangeHandler) {
+            fontSelect.removeEventListener("change", fontSelectChangeHandler);
+          }
+          
+          fontSelect.innerHTML = "";
           fontOptions.forEach((option) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = `chip-option ${option.className} ${option.id === selectedFont ? "active" : ""}`;
-            button.textContent = option.label;
-            button.addEventListener("click", () => {
-              selectedFont = option.id;
-              renderFontOptions();
-              applyTypography();
-            });
-            fontChips.appendChild(button);
+            const optionEl = document.createElement("option");
+            optionEl.value = option.id;
+            optionEl.textContent = option.label;
+            optionEl.selected = option.id === selectedFont;
+            // 폰트 미리보기를 위해 폰트 패밀리 적용
+            const fontFamily = getFontFamily(option.id);
+            optionEl.style.fontFamily = fontFamily;
+            fontSelect.appendChild(optionEl);
           });
+          
+          // 새 이벤트 리스너 추가
+          fontSelectChangeHandler = (e) => {
+            selectedFont = e.target.value;
+            applyTypography();
+            // 선택된 폰트로 드롭다운 자체의 폰트도 업데이트
+            fontSelect.style.fontFamily = getFontFamily(selectedFont);
+          };
+          fontSelect.addEventListener("change", fontSelectChangeHandler);
+          
+          // 현재 선택된 폰트로 드롭다운 자체의 폰트도 설정
+          fontSelect.style.fontFamily = getFontFamily(selectedFont);
+        }
+
+        function getFontFamily(fontId) {
+          const fontMap = {
+            default: '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+            serif: '"Cormorant Garamond", "Times New Roman", serif',
+            handwriting: '"Nanum Pen Script", "Cafe24 Ssurround", cursive',
+            gaegu: '"Gaegu", "Nanum Pen Script", cursive',
+            dongle: '"Dongle", "Nanum Pen Script", cursive',
+            singleDay: '"Single Day", "Nanum Pen Script", cursive',
+          };
+          return fontMap[fontId] || fontMap.default;
         }
 
         function renderColorPalette() {
+          if (!colorPalette) return;
           colorPalette.innerHTML = "";
           colorOptions.forEach((option) => {
             const swatch = document.createElement("button");
@@ -204,12 +278,44 @@
             swatch.className = `color-swatch ${option.id === selectedColorId ? "active" : ""}`;
             swatch.style.setProperty("--swatch-color", option.value);
             swatch.setAttribute("aria-label", `${option.label} 색 적용`);
-            swatch.innerHTML = "<span></span>";
+            swatch.innerHTML = `<span style="background: ${option.value}"></span>`;
             swatch.addEventListener("mousedown", (event) => event.preventDefault());
-            swatch.addEventListener("click", () => applyColorSelection(option.id, option.value));
+            swatch.addEventListener("click", () => {
+              applyColorSelection(option.id, option.value);
+              setColorPaletteState(false);
+            });
             colorPalette.appendChild(swatch);
           });
+          updateColorPreview();
         }
+
+        function updateColorPreview() {
+          if (!colorPreview) return;
+          const selectedOption = colorOptions.find(opt => opt.id === selectedColorId);
+          if (selectedOption) {
+            colorPreview.style.background = selectedOption.value;
+          }
+        }
+
+        function setColorPaletteState(isOpen) {
+          if (!colorPalette || !colorTrigger) return;
+          colorPalette.classList.toggle("visible", isOpen);
+          colorTrigger.classList.toggle("active", isOpen);
+          colorPalette.setAttribute("aria-hidden", String(!isOpen));
+        }
+
+        colorTrigger?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const willOpen = !colorPalette.classList.contains("visible");
+          setColorPaletteState(willOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!colorPalette || !colorTrigger) return;
+          if (!colorPalette.classList.contains("visible")) return;
+          if (colorPalette.contains(event.target) || colorTrigger.contains(event.target)) return;
+          setColorPaletteState(false);
+        });
 
         function renderEmojiPalette() {
           emojiPalette.innerHTML = "";
@@ -233,6 +339,13 @@
           emojiToggle.classList.toggle("active", isOpen);
           emojiToggle.setAttribute("aria-expanded", String(isOpen));
           emojiPalette.setAttribute("aria-hidden", String(!isOpen));
+          
+          // 위치 조정
+          if (isOpen && emojiToggle) {
+            const rect = emojiToggle.getBoundingClientRect();
+            emojiPalette.style.top = `${rect.bottom + 8}px`;
+            emojiPalette.style.left = `${rect.left}px`;
+          }
         }
 
         function getPlaceholderText() {
@@ -283,6 +396,7 @@
           }
 
           renderColorPalette();
+          updateColorPreview();
           captureSnapshot();
           updateFormatToolbarState();
         }
@@ -297,13 +411,76 @@
           return { withinEditor, collapsed: range.collapsed };
         }
 
+        async function loadStationery() {
+          try {
+            const response = await fetch("/api/stationery");
+            if (!response.ok) {
+              throw new Error("편지지 목록을 불러올 수 없습니다.");
+            }
+            stationeryList = await response.json();
+            
+            // stationeryThemes 객체 생성
+            stationeryThemes = {};
+            stationeryList.forEach((item) => {
+              // 기본 편지지는 paper-lined 클래스 사용
+              let cssClass = item.cssClass || "";
+              if (item.name === "기본 편지지" && !cssClass) {
+                cssClass = "paper-lined";
+              }
+              
+              stationeryThemes[item.id] = {
+                id: item.id,
+                label: item.name,
+                className: cssClass,
+                backgroundColor: item.backgroundColor || null,
+              };
+            });
+            
+            // 기본 편지지가 없으면 첫 번째 활성 편지지 사용
+            if (!selectedStationery || !stationeryThemes[selectedStationery]) {
+              selectedStationery = stationeryList.length > 0 ? stationeryList[0].id : null;
+            }
+            
+            applyStationeryStyles();
+          } catch (error) {
+            console.error("편지지 로드 오류:", error);
+            // 폴백: 기본 편지지
+            stationeryThemes = {
+              basic: {
+                id: "basic",
+                label: "기본 편지지",
+                className: "paper-lined",
+                backgroundColor: null,
+              },
+            };
+            selectedStationery = "basic";
+            applyStationeryStyles();
+          }
+        }
+
         function applyStationeryStyles() {
-          const theme = stationeryThemes[selectedStationery] || stationeryThemes.basic;
+          if (!selectedStationery || !stationeryThemes[selectedStationery]) {
+            return;
+          }
+          const theme = stationeryThemes[selectedStationery];
           paperBodies.forEach((body) => {
             const page = body.closest(".letter-paper");
             if (page) {
+              // CSS 클래스 적용 (줄 패턴은 ::after 가상 요소로 그려짐)
               page.className = `letter-paper ${theme.className || ""}`.trim();
+              
+              // 인라인 스타일 초기화 (CSS 클래스가 제대로 작동하도록)
               page.style.backgroundImage = "";
+              
+              // 배경색이 있으면 설정
+              if (theme.backgroundColor) {
+                // paper-lined는 ::after로 줄을 그리므로 배경색만 설정
+                // 다른 CSS 클래스는 배경 패턴과 함께 작동
+                page.style.backgroundColor = theme.backgroundColor;
+              } else {
+                // 배경색이 없으면 CSS 클래스의 기본 배경 사용
+                page.style.backgroundColor = "";
+              }
             }
           });
         }
@@ -323,8 +500,14 @@
           if (draft.font && fontOptions.some((option) => option.id === draft.font)) {
             selectedFont = draft.font;
           }
-          if (draft.stationery && stationeryThemes[draft.stationery]) {
-            selectedStationery = draft.stationery;
+          if (draft.stationery) {
+            // 숫자 ID 또는 문자열 ID 모두 처리
+            const stationeryId = typeof draft.stationery === 'number' 
+              ? draft.stationery 
+              : draft.stationery;
+            if (stationeryThemes[stationeryId]) {
+              selectedStationery = stationeryId;
+            }
           }
           if (draft.color) {
             const match = colorOptions.find(
@@ -595,7 +778,7 @@
           const lines = text.split("\n");
           const hasTrailingBlank = lines.length > 0 && lines[lines.length - 1] === "";
           const effectiveCount = hasTrailingBlank ? lines.length - 1 : lines.length;
-          if (effectiveCount < MAX_LINES_PER_PAGE) {
+          if (effectiveCount < AUTO_PAGE_BREAK_LINES) {
             return;
           }
           event.preventDefault();
@@ -643,7 +826,7 @@
           if (effectiveCount <= MAX_LINES_PER_PAGE) {
             return true;
           }
-          alert("한 페이지에는 15줄까지만 작성할 수 있습니다. 새 페이지로 이동해 주세요.");
+          alert("한 페이지에는 19줄까지만 작성할 수 있습니다. 새 페이지로 이동해 주세요.");
           restoreSnapshot();
           const fallbackBody = paperBodies[Math.max(0, paperBodies.length - 1)] || null;
           if (fallbackBody) {
@@ -795,6 +978,10 @@
           event.stopPropagation();
           const willOpen = !emojiPalette.classList.contains("visible");
           setEmojiPaletteState(willOpen);
+          // 색상 팔레트가 열려있으면 닫기
+          if (willOpen && colorPalette) {
+            setColorPaletteState(false);
+          }
         });
 
         document.addEventListener("click", (event) => {
@@ -876,7 +1063,7 @@
             pages: paperBodies.length,
             font: selectedFont,
             color: selectedColor,
-            stationery: selectedStationery,
+            stationery: selectedStationery, // 편지지 ID (숫자 또는 문자열)
             createdAt: Date.now(),
             target: targetInfo,
           };
@@ -893,18 +1080,21 @@
         renderEmojiPalette();
         setEmojiPaletteState(false);
 
-        if (storedDraftData) {
-          hydrateDraftContent(storedDraftData);
-        }
+        // 편지지 로드 후 초기화
+        loadStationery().then(() => {
+          if (storedDraftData) {
+            hydrateDraftContent(storedDraftData);
+          }
 
-        if (paperBodies.length === 0) {
-          createPaperPage();
-        }
+          if (paperBodies.length === 0) {
+            createPaperPage();
+          }
 
-        applyStationeryStyles();
-        applyTypography();
-        captureSnapshot();
-        updateFormatToolbarState();
+          applyStationeryStyles();
+          applyTypography();
+          captureSnapshot();
+          updateFormatToolbarState();
+        });
       </script>
   </body>
 </html>

@@ -326,6 +326,28 @@
                     </select>
                   </div>
                 </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="stationery-background-color">배경색</label>
+                    <input
+                      type="text"
+                      id="stationery-background-color"
+                      name="backgroundColor"
+                      placeholder="예) #FFDEAD 또는 #FFFFFF"
+                    />
+                    <small style="color: var(--muted); font-size: 0.85rem;">HEX 색상 코드 (예: #FFDEAD)</small>
+                  </div>
+                  <div class="field">
+                    <label for="stationery-css-class">CSS 클래스</label>
+                    <input
+                      type="text"
+                      id="stationery-css-class"
+                      name="cssClass"
+                      placeholder="예) paper-lined, paper-yellow-soft"
+                    />
+                    <small style="color: var(--muted); font-size: 0.85rem;">CSS 클래스명 (예: paper-yellow-soft)</small>
+                  </div>
+                </div>
                 <div class="field">
                   <label for="stationery-description">설명</label>
                   <textarea
@@ -1434,6 +1456,8 @@
           name: formData.get("name"),
           description: formData.get("description") || null,
           previewImageUrl: formData.get("previewImageUrl") || null,
+          backgroundColor: formData.get("backgroundColor") || null,
+          cssClass: formData.get("cssClass") || null,
           isActive: formData.get("isActive") === "1",
         };
         try {
@@ -1478,6 +1502,8 @@
           name: patch.name ?? template.name,
           description: patch.description ?? template.description,
           previewImageUrl: patch.previewImageUrl ?? template.previewImageUrl,
+          backgroundColor: patch.backgroundColor ?? template.backgroundColor ?? null,
+          cssClass: patch.cssClass ?? template.cssClass ?? null,
           isActive:
             typeof patch.isActive === "boolean" ? patch.isActive : !!template.isActive,
         };
