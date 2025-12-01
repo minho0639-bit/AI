@@ -470,6 +470,267 @@ app.delete("/api/admin/recipients/:id", requireAdmin, async (req, res) => {
   }
 });
 
+// 소속사 관리 API
+app.get("/api/admin/agencies", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         image_url,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
+         created_at,
+         updated_at
+       FROM agencies
+       ORDER BY name ASC`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("admin agencies fetch error:", error);
+    res.status(500).json({ message: "소속사 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
+  const { name, imageData } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
+  }
+  try {
+    const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [name.trim()]);
+    const agencyId = result.insertId;
+    
+    let imageUrl = null;
+    if (imageData) {
+      imageUrl = await saveAgencyImage(agencyId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+      }
+    }
+    
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         image_url,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
+         created_at,
+         updated_at
+       FROM agencies
+       WHERE id = ?`,
+      [agencyId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("admin agency create error:", error);
+    res.status(500).json({ message: "소속사를 추가하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.put("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
+  const agencyId = Number(req.params.id);
+  const { name, imageData } = req.body;
+  if (!agencyId) {
+    return res.status(400).json({ message: "잘못된 소속사 ID입니다." });
+  }
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
+  }
+  try {
+    await pool.query("UPDATE agencies SET name = ? WHERE id = ?", [name.trim(), agencyId]);
+    
+    if (imageData) {
+      const imageUrl = await saveAgencyImage(agencyId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE agencies SET image_url = ? WHERE id = ?", [imageUrl, agencyId]);
+      }
+    }
+    
+    const [rows] = await pool.query(
+      `SELECT
+         id,
+         name,
+         image_url,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
+         created_at,
+         updated_at
+       FROM agencies
+       WHERE id = ?`,
+      [agencyId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "소속사를 찾을 수 없습니다." });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("admin agency update error:", error);
+    res.status(500).json({ message: "소속사를 수정하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.delete("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
+  const agencyId = Number(req.params.id);
+  if (!agencyId) {
+    return res.status(400).json({ message: "잘못된 소속사 ID입니다." });
+  }
+  try {
+    const [recipients] = await pool.query("SELECT COUNT(*) as count FROM recipients WHERE agency_id = ?", [agencyId]);
+    if (recipients[0].count > 0) {
+      return res.status(409).json({ message: "이 소속사에 속한 수령인이 있어 삭제할 수 없습니다." });
+    }
+    const [result] = await pool.query("DELETE FROM agencies WHERE id = ?", [agencyId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "소속사를 찾을 수 없습니다." });
+    }
+    res.json({ message: "소속사를 삭제했습니다." });
+  } catch (error) {
+    console.error("admin agency delete error:", error);
+    res.status(500).json({ message: "소속사를 삭제하는 중 오류가 발생했습니다." });
+  }
+});
+
+// 그룹/팀 관리 API
+app.get("/api/admin/groups", requireAdmin, async (req, res) => {
+  const agencyId = req.query.agencyId ? Number(req.query.agencyId) : null;
+  try {
+    let query = `
+      SELECT
+        rg.id,
+        rg.name,
+        rg.image_url,
+        rg.agency_id,
+        a.name AS agency_name,
+        (SELECT COUNT(*) FROM recipients WHERE group_id = rg.id) AS recipient_count,
+        rg.created_at,
+        rg.updated_at
+      FROM recipient_groups rg
+      LEFT JOIN agencies a ON a.id = rg.agency_id
+    `;
+    const params = [];
+    if (agencyId) {
+      query += " WHERE rg.agency_id = ?";
+      params.push(agencyId);
+    }
+    query += " ORDER BY a.name ASC, rg.name ASC";
+    
+    const [rows] = await pool.query(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error("admin groups fetch error:", error);
+    res.status(500).json({ message: "그룹/팀 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
+app.post("/api/admin/groups", requireAdmin, async (req, res) => {
+  const { name, agencyId, imageData } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "그룹/팀 이름을 입력해 주세요." });
+  }
+  try {
+    const [result] = await pool.query(
+      "INSERT INTO recipient_groups (name, agency_id) VALUES (?, ?)",
+      [name.trim(), agencyId ? Number(agencyId) : null]
+    );
+    const groupId = result.insertId;
+    
+    let imageUrl = null;
+    if (imageData) {
+      imageUrl = await saveGroupImage(groupId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+      }
+    }
+    
+    const [rows] = await pool.query(
+      `SELECT
+        rg.id,
+        rg.name,
+        rg.image_url,
+        rg.agency_id,
+        a.name AS agency_name,
+        (SELECT COUNT(*) FROM recipients WHERE group_id = rg.id) AS recipient_count,
+        rg.created_at,
+        rg.updated_at
+      FROM recipient_groups rg
+      LEFT JOIN agencies a ON a.id = rg.agency_id
+      WHERE rg.id = ?`,
+      [groupId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("admin group create error:", error);
+    res.status(500).json({ message: "그룹/팀을 추가하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.put("/api/admin/groups/:id", requireAdmin, async (req, res) => {
+  const groupId = Number(req.params.id);
+  const { name, agencyId, imageData } = req.body;
+  if (!groupId) {
+    return res.status(400).json({ message: "잘못된 그룹/팀 ID입니다." });
+  }
+  if (!name?.trim()) {
+    return res.status(400).json({ message: "그룹/팀 이름을 입력해 주세요." });
+  }
+  try {
+    await pool.query(
+      "UPDATE recipient_groups SET name = ?, agency_id = ? WHERE id = ?",
+      [name.trim(), agencyId ? Number(agencyId) : null, groupId]
+    );
+    
+    if (imageData) {
+      const imageUrl = await saveGroupImage(groupId, imageData);
+      if (imageUrl) {
+        await pool.query("UPDATE recipient_groups SET image_url = ? WHERE id = ?", [imageUrl, groupId]);
+      }
+    }
+    
+    const [rows] = await pool.query(
+      `SELECT
+        rg.id,
+        rg.name,
+        rg.image_url,
+        rg.agency_id,
+        a.name AS agency_name,
+        (SELECT COUNT(*) FROM recipients WHERE group_id = rg.id) AS recipient_count,
+        rg.created_at,
+        rg.updated_at
+      FROM recipient_groups rg
+      LEFT JOIN agencies a ON a.id = rg.agency_id
+      WHERE rg.id = ?`,
+      [groupId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "그룹/팀을 찾을 수 없습니다." });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("admin group update error:", error);
+    res.status(500).json({ message: "그룹/팀을 수정하는 중 오류가 발생했습니다." });
+  }
+});
+
+app.delete("/api/admin/groups/:id", requireAdmin, async (req, res) => {
+  const groupId = Number(req.params.id);
+  if (!groupId) {
+    return res.status(400).json({ message: "잘못된 그룹/팀 ID입니다." });
+  }
+  try {
+    const [recipients] = await pool.query("SELECT COUNT(*) as count FROM recipients WHERE group_id = ?", [groupId]);
+    if (recipients[0].count > 0) {
+      return res.status(409).json({ message: "이 그룹/팀에 속한 수령인이 있어 삭제할 수 없습니다." });
+    }
+    const [result] = await pool.query("DELETE FROM recipient_groups WHERE id = ?", [groupId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "그룹/팀을 찾을 수 없습니다." });
+    }
+    res.json({ message: "그룹/팀을 삭제했습니다." });
+  } catch (error) {
+    console.error("admin group delete error:", error);
+    res.status(500).json({ message: "그룹/팀을 삭제하는 중 오류가 발생했습니다." });
+  }
+});
+
 app.get("/api/admin/stationery", requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.query(

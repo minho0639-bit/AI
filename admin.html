@@ -42,6 +42,8 @@
         <nav class="admin-tabs" role="tablist">
           <button class="tab-button active" data-tab="orders">주문 현황</button>
           <button class="tab-button" data-tab="recipients">수령인 관리</button>
+          <button class="tab-button" data-tab="agencies">소속사 관리</button>
+          <button class="tab-button" data-tab="groups">그룹/팀 관리</button>
           <button class="tab-button" data-tab="stationery">편지지 관리</button>
           <button class="tab-button" data-tab="users">회원 목록</button>
           <button class="tab-button" data-tab="coupons">쿠폰 관리</button>
@@ -174,6 +176,109 @@
                   </tr>
                 </thead>
                 <tbody id="recipients-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="agencies">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>소속사 관리</h2>
+              <span id="agencies-status" class="panel-status">-</span>
+            </div>
+
+            <div class="form-card">
+              <strong>소속사 추가</strong>
+              <form id="agency-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="agency-name">소속사 이름 *</label>
+                    <input type="text" id="agency-name" name="name" placeholder="예) HYBE" required />
+                  </div>
+                  <div class="field">
+                    <label for="agency-image">소속사 사진 (3cm x 3cm)</label>
+                    <input type="file" id="agency-image" name="image" accept="image/*" />
+                    <div id="agency-image-preview" style="margin-top: 10px; display: none;">
+                      <img id="agency-image-preview-img" src="" alt="미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">소속사 추가</button>
+                  <div id="agency-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>소속사</th>
+                    <th>사진</th>
+                    <th>수령인 수</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="agencies-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-panel="groups">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>그룹/팀 관리</h2>
+              <span id="groups-status" class="panel-status">-</span>
+            </div>
+
+            <div class="form-card">
+              <strong>그룹/팀 추가</strong>
+              <form id="group-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="group-name">그룹/팀 이름 *</label>
+                    <input type="text" id="group-name" name="name" placeholder="예) 뉴진스" required />
+                  </div>
+                  <div class="field">
+                    <label for="group-agency">소속사</label>
+                    <select id="group-agency" name="agencyId">
+                      <option value="">소속사 없음</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="group-image">그룹/팀 사진 (3cm x 3cm)</label>
+                    <input type="file" id="group-image" name="image" accept="image/*" />
+                    <div id="group-image-preview" style="margin-top: 10px; display: none;">
+                      <img id="group-image-preview-img" src="" alt="미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">그룹/팀 추가</button>
+                  <div id="group-form-status" class="status-text"></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="overflow-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>그룹/팀</th>
+                    <th>소속사</th>
+                    <th>사진</th>
+                    <th>수령인 수</th>
+                    <th>업데이트</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="groups-body"></tbody>
               </table>
             </div>
           </section>
@@ -451,6 +556,8 @@
 
       const ordersStatus = document.getElementById("orders-status");
       const recipientsStatus = document.getElementById("recipients-status");
+      const agenciesStatus = document.getElementById("agencies-status");
+      const groupsStatus = document.getElementById("groups-status");
       const stationeryStatus = document.getElementById("stationery-status");
       const usersStatus = document.getElementById("users-status");
       const couponsStatus = document.getElementById("coupons-status");
@@ -462,6 +569,8 @@
       const printOrderBtn = document.getElementById("printOrderBtn");
       const closeOrderDetailBtn = document.getElementById("closeOrderDetail");
       const recipientsBody = document.getElementById("recipients-body");
+      const agenciesBody = document.getElementById("agencies-body");
+      const groupsBody = document.getElementById("groups-body");
       const stationeryBody = document.getElementById("stationery-body");
       const usersBody = document.getElementById("users-body");
       const couponsBody = document.getElementById("coupons-body");
@@ -670,6 +779,87 @@
         }
       });
 
+      const agencyForm = document.getElementById("agency-form");
+      const agencyFormStatus = document.getElementById("agency-form-status");
+      const agencyImageInput = document.getElementById("agency-image");
+      const agencyImagePreview = document.getElementById("agency-image-preview");
+      const agencyImagePreviewImg = document.getElementById("agency-image-preview-img");
+      
+      agencyImageInput?.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            agencyImagePreviewImg.src = e.target.result;
+            agencyImagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          agencyImagePreview.style.display = "none";
+        }
+      });
+
+      agencyForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleAgencyCreate(new FormData(agencyForm));
+      });
+
+      const groupForm = document.getElementById("group-form");
+      const groupFormStatus = document.getElementById("group-form-status");
+      const groupAgencySelect = document.getElementById("group-agency");
+      const groupImageInput = document.getElementById("group-image");
+      const groupImagePreview = document.getElementById("group-image-preview");
+      const groupImagePreviewImg = document.getElementById("group-image-preview-img");
+      
+      groupImageInput?.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            groupImagePreviewImg.src = e.target.result;
+            groupImagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          groupImagePreview.style.display = "none";
+        }
+      });
+
+      groupForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await handleGroupCreate(new FormData(groupForm));
+      });
+
+      agenciesBody?.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-agency-delete]");
+        if (!deleteBtn) return;
+        const agencyId = deleteBtn.dataset.agencyDelete;
+        const agencyName = deleteBtn.dataset.agencyName || "";
+        const confirmed = window.confirm(`${agencyName} 소속사를 삭제할까요?`);
+        if (!confirmed) return;
+        try {
+          await deleteAgency(agencyId);
+          await loadAgenciesOnly();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
+      groupsBody?.addEventListener("click", async (event) => {
+        const deleteBtn = event.target.closest("[data-group-delete]");
+        if (!deleteBtn) return;
+        const groupId = deleteBtn.dataset.groupDelete;
+        const groupName = deleteBtn.dataset.groupName || "";
+        const confirmed = window.confirm(`${groupName} 그룹/팀을 삭제할까요?`);
+        if (!confirmed) return;
+        try {
+          await deleteGroup(groupId);
+          await loadGroupsOnly();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+
       stationeryForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await handleStationeryCreate(new FormData(stationeryForm));
@@ -734,6 +924,13 @@
         if (isAdmin) {
           await ensureRecipientMetaLoaded();
           await loadAdminData();
+          // 소속사 목록을 로드하여 그룹 폼의 소속사 선택 옵션 업데이트
+          try {
+            const agencies = await fetchJson("/api/admin/agencies");
+            updateGroupAgencyOptions(agencies);
+          } catch (error) {
+            console.error("Failed to load agencies for group form:", error);
+          }
         }
       }
 
@@ -804,6 +1001,8 @@
         const { refreshMeta = false } = options;
         ordersStatus.textContent = "불러오는 중...";
         recipientsStatus.textContent = "불러오는 중...";
+        agenciesStatus.textContent = "불러오는 중...";
+        groupsStatus.textContent = "불러오는 중...";
         stationeryStatus.textContent = "불러오는 중...";
         usersStatus.textContent = "불러오는 중...";
         if (couponsStatus) {
@@ -814,20 +1013,26 @@
         }
         try {
           await ensureRecipientMetaLoaded(refreshMeta);
-          const [orders, recipients, users, stationery, couponBundle] = await Promise.all([
+          const [orders, recipients, agencies, groups, users, stationery, couponBundle] = await Promise.all([
             fetchJson("/api/admin/orders"),
             fetchJson("/api/admin/recipients"),
+            fetchJson("/api/admin/agencies"),
+            fetchJson("/api/admin/groups"),
             fetchJson("/api/admin/users"),
             fetchJson("/api/admin/stationery"),
             fetchJson("/api/admin/coupons"),
           ]);
           renderOrders(orders);
           renderRecipients(recipients);
+          renderAgencies(agencies);
+          renderGroups(groups);
           renderStationery(stationery);
           renderUsers(users);
           renderCouponsBundle(couponBundle);
           ordersStatus.textContent = `${orders.length}건`;
           recipientsStatus.textContent = `${recipients.length}명`;
+          agenciesStatus.textContent = `${agencies.length}개`;
+          groupsStatus.textContent = `${groups.length}개`;
           stationeryStatus.textContent = `${stationery.length}종`;
           usersStatus.textContent = `${users.length}명`;
           if (couponsStatus) {
@@ -841,6 +1046,8 @@
           const message = error.message || "데이터를 불러오지 못했습니다.";
           ordersStatus.textContent = message;
           recipientsStatus.textContent = message;
+          agenciesStatus.textContent = message;
+          groupsStatus.textContent = message;
           stationeryStatus.textContent = message;
           usersStatus.textContent = message;
           if (couponsStatus) {
@@ -861,6 +1068,41 @@
         } catch (error) {
           recipientsStatus.textContent = error.message || "수령인을 불러오지 못했습니다.";
         }
+      }
+
+      async function loadAgenciesOnly() {
+        agenciesStatus.textContent = "불러오는 중...";
+        try {
+          const agencies = await fetchJson("/api/admin/agencies");
+          renderAgencies(agencies);
+          agenciesStatus.textContent = `${agencies.length}개`;
+          // 그룹 폼의 소속사 선택 옵션 업데이트
+          updateGroupAgencyOptions(agencies);
+        } catch (error) {
+          agenciesStatus.textContent = error.message || "소속사를 불러오지 못했습니다.";
+        }
+      }
+
+      async function loadGroupsOnly() {
+        groupsStatus.textContent = "불러오는 중...";
+        try {
+          const groups = await fetchJson("/api/admin/groups");
+          renderGroups(groups);
+          groupsStatus.textContent = `${groups.length}개`;
+        } catch (error) {
+          groupsStatus.textContent = error.message || "그룹/팀을 불러오지 못했습니다.";
+        }
+      }
+
+      function updateGroupAgencyOptions(agencies) {
+        if (!groupAgencySelect) return;
+        groupAgencySelect.innerHTML = '<option value="">소속사 없음</option>';
+        agencies.forEach((agency) => {
+          const option = document.createElement("option");
+          option.value = agency.id;
+          option.textContent = agency.name;
+          groupAgencySelect.appendChild(option);
+        });
       }
 
       async function loadStationeryOnly() {
@@ -1000,6 +1242,109 @@
         if (!response.ok) {
           const errorBody = await response.json().catch(() => ({}));
           throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
+        }
+      }
+
+      async function handleAgencyCreate(formData) {
+        agencyFormStatus.textContent = "추가 중...";
+        agencyFormStatus.classList.remove("error", "success");
+        
+        let imageData = null;
+        const imageFile = agencyImageInput?.files[0];
+        if (imageFile) {
+          imageData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(imageFile);
+          });
+        }
+        
+        const payload = {
+          name: formData.get("name"),
+          imageData: imageData,
+        };
+        try {
+          const response = await fetch("/api/admin/agencies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "소속사를 추가하지 못했습니다.");
+          }
+          agencyForm.reset();
+          agencyImagePreview.style.display = "none";
+          agencyImagePreviewImg.src = "";
+          agencyFormStatus.textContent = "소속사를 추가했습니다.";
+          agencyFormStatus.classList.add("success");
+          await loadAgenciesOnly();
+        } catch (error) {
+          agencyFormStatus.textContent = error.message;
+          agencyFormStatus.classList.add("error");
+        }
+      }
+
+      async function handleGroupCreate(formData) {
+        groupFormStatus.textContent = "추가 중...";
+        groupFormStatus.classList.remove("error", "success");
+        
+        let imageData = null;
+        const imageFile = groupImageInput?.files[0];
+        if (imageFile) {
+          imageData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(imageFile);
+          });
+        }
+        
+        const payload = {
+          name: formData.get("name"),
+          agencyId: formData.get("agencyId") || null,
+          imageData: imageData,
+        };
+        try {
+          const response = await fetch("/api/admin/groups", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "그룹/팀을 추가하지 못했습니다.");
+          }
+          groupForm.reset();
+          groupImagePreview.style.display = "none";
+          groupImagePreviewImg.src = "";
+          groupFormStatus.textContent = "그룹/팀을 추가했습니다.";
+          groupFormStatus.classList.add("success");
+          await loadGroupsOnly();
+        } catch (error) {
+          groupFormStatus.textContent = error.message;
+          groupFormStatus.classList.add("error");
+        }
+      }
+
+      async function deleteAgency(agencyId) {
+        const response = await fetch(`/api/admin/agencies/${agencyId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "소속사를 삭제하지 못했습니다.");
+        }
+      }
+
+      async function deleteGroup(groupId) {
+        const response = await fetch(`/api/admin/groups/${groupId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || "그룹/팀을 삭제하지 못했습니다.");
         }
       }
 
@@ -1809,6 +2154,67 @@
                     class="btn-small btn-danger"
                     data-recipient-delete="${recipient.id}"
                     data-recipient-name="${recipient.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function renderAgencies(agencies) {
+        agenciesBody.innerHTML = agencies
+          .map(
+            (agency) => `
+            <tr>
+              <td>#${agency.id}</td>
+              <td>${agency.name}</td>
+              <td>
+                ${agency.image_url ? `<img src="/${agency.image_url}" alt="${agency.name}" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px;" />` : '<span class="text-muted">이미지 없음</span>'}
+              </td>
+              <td>${agency.recipient_count || 0}명</td>
+              <td>${formatDate(agency.updated_at)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-agency-delete="${agency.id}"
+                    data-agency-name="${agency.name}"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `
+          )
+          .join("");
+      }
+
+      function renderGroups(groups) {
+        groupsBody.innerHTML = groups
+          .map(
+            (group) => `
+            <tr>
+              <td>#${group.id}</td>
+              <td>${group.name}</td>
+              <td>${group.agency_name || "-"}</td>
+              <td>
+                ${group.image_url ? `<img src="/${group.image_url}" alt="${group.name}" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px;" />` : '<span class="text-muted">이미지 없음</span>'}
+              </td>
+              <td>${group.recipient_count || 0}명</td>
+              <td>${formatDate(group.updated_at)}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="btn-small btn-danger"
+                    data-group-delete="${group.id}"
+                    data-group-name="${group.name}"
                   >
                     삭제
                   </button>
