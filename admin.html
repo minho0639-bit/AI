@@ -189,6 +189,12 @@
               <form id="agency-form">
                 <div class="form-grid">
                   <div class="field">
+                    <label for="agency-category">대분류 *</label>
+                    <select id="agency-category" name="categoryId" required>
+                      <option value="">불러오는 중...</option>
+                    </select>
+                  </div>
+                  <div class="field">
                     <label for="agency-name">소속사 이름 *</label>
                     <input type="text" id="agency-name" name="name" placeholder="예) HYBE" required />
                   </div>
@@ -213,6 +219,7 @@
                   <tr>
                     <th>ID</th>
                     <th>소속사</th>
+                    <th>대분류</th>
                     <th>사진</th>
                     <th>수령인 수</th>
                     <th>업데이트</th>
@@ -629,12 +636,14 @@
       logoutButtons.forEach((button) =>
         button.addEventListener("click", async () => {
           await fetch("/api/logout", { method: "POST" });
-          toggleDashboard(false);
+          await toggleDashboard(false);
         })
       );
 
       tabButtons.forEach((button) =>
-        button.addEventListener("click", () => activateTab(button.dataset.tab))
+        button.addEventListener("click", async () => {
+          await activateTab(button.dataset.tab);
+        })
       );
 
       recipientCategorySelect.addEventListener("change", () => {
@@ -745,6 +754,7 @@
 
       const agencyForm = document.getElementById("agency-form");
       const agencyFormStatus = document.getElementById("agency-form-status");
+      const agencyCategorySelect = document.getElementById("agency-category");
       const agencyImageInput = document.getElementById("agency-image");
       const agencyImagePreview = document.getElementById("agency-image-preview");
       const agencyImagePreviewImg = document.getElementById("agency-image-preview-img");
@@ -884,7 +894,7 @@
 
       async function initAdminPage() {
         const isAdmin = await checkAdminSession();
-        toggleDashboard(isAdmin);
+        await toggleDashboard(isAdmin);
         if (isAdmin) {
           await ensureRecipientMetaLoaded();
           await loadAdminData();
@@ -895,6 +905,8 @@
           } catch (error) {
             console.error("Failed to load agencies for group form:", error);
           }
+          // 소속사 폼의 대분류 선택 옵션 업데이트
+          await loadAgencyCategoryOptions();
         }
       }
 
@@ -924,23 +936,25 @@
           }
           loginStatus.textContent = "로그인 성공! 데이터를 불러오는 중...";
           loginStatus.classList.add("success");
-          toggleDashboard(true);
+          await toggleDashboard(true);
           await ensureRecipientMetaLoaded(true);
           await loadAdminData();
+          // 소속사 폼의 대분류 선택 옵션 업데이트
+          await loadAgencyCategoryOptions();
         } catch (error) {
           loginStatus.textContent = error.message;
           loginStatus.classList.add("error");
         }
       }
 
-      function toggleDashboard(isLoggedIn) {
+      async function toggleDashboard(isLoggedIn) {
         if (isLoggedIn) {
           loginSection.classList.add("hidden");
           dashboardSection.classList.add("active");
           refreshButtons.forEach((btn) => (btn.disabled = false));
           logoutButtons.forEach((btn) => (btn.disabled = false));
           welcomeText.textContent = "관리자 계정으로 접속 중 - 메뉴에서 원하는 영역을 선택하세요.";
-          activateTab("orders");
+          await activateTab("orders");
         } else {
           loginSection.classList.remove("hidden");
           dashboardSection.classList.remove("active");
@@ -952,13 +966,18 @@
         }
       }
 
-      function activateTab(tabName) {
+      async function activateTab(tabName) {
         tabButtons.forEach((button) => {
           button.classList.toggle("active", button.dataset.tab === tabName);
         });
         tabPanels.forEach((panel) => {
           panel.classList.toggle("active", panel.dataset.panel === tabName);
         });
+        
+        // 소속사 탭이 활성화될 때 대분류 목록 로드
+        if (tabName === "agencies") {
+          await loadAgencyCategoryOptions();
+        }
       }
 
       async function loadAdminData(options = {}) {
@@ -1005,6 +1024,10 @@
           if (couponIssuesStatus) {
             couponIssuesStatus.textContent = `${(couponBundle?.issues || []).length}건`;
           }
+          // 소속사 폼의 대분류 선택 옵션 업데이트
+          await loadAgencyCategoryOptions();
+          // 그룹 폼의 소속사 선택 옵션 업데이트
+          updateGroupAgencyOptions(agencies);
         } catch (error) {
           console.error(error);
           const message = error.message || "데이터를 불러오지 못했습니다.";
@@ -1042,8 +1065,40 @@
           agenciesStatus.textContent = `${agencies.length}개`;
           // 그룹 폼의 소속사 선택 옵션 업데이트
           updateGroupAgencyOptions(agencies);
+          // 소속사 폼의 대분류 선택 옵션 업데이트
+          await loadAgencyCategoryOptions();
         } catch (error) {
           agenciesStatus.textContent = error.message || "소속사를 불러오지 못했습니다.";
+        }
+      }
+
+      async function loadAgencyCategoryOptions() {
+        if (!agencyCategorySelect) {
+          console.warn("agencyCategorySelect element not found");
+          return;
+        }
+        try {
+          agencyCategorySelect.innerHTML = '<option value="">대분류를 불러오는 중...</option>';
+          agencyCategorySelect.disabled = true;
+          
+          // meta가 로드되지 않았으면 먼저 로드
+          if (!state.metaLoaded || !state.meta || !state.meta.categories) {
+            await ensureRecipientMetaLoaded();
+          }
+          
+          if (!state.meta || !state.meta.categories || state.meta.categories.length === 0) {
+            console.error("Categories not loaded:", state.meta);
+            agencyCategorySelect.innerHTML = '<option value="">대분류가 없습니다. 관리자에게 문의하세요.</option>';
+            agencyCategorySelect.disabled = false;
+            return;
+          }
+          
+          populateSelect(agencyCategorySelect, state.meta.categories, "대분류 선택");
+          agencyCategorySelect.disabled = false;
+        } catch (error) {
+          console.error("Failed to load categories for agency form:", error);
+          agencyCategorySelect.innerHTML = '<option value="">대분류를 불러오지 못했습니다. 새로고침해주세요.</option>';
+          agencyCategorySelect.disabled = false;
         }
       }
 
@@ -1275,6 +1330,7 @@
         
         const payload = {
           name: formData.get("name"),
+          categoryId: formData.get("categoryId"),
           imageData: imageData,
         };
         try {
@@ -1290,6 +1346,7 @@
           agencyForm.reset();
           agencyImagePreview.style.display = "none";
           agencyImagePreviewImg.src = "";
+          await loadAgencyCategoryOptions();
           agencyFormStatus.textContent = "소속사를 추가했습니다.";
           agencyFormStatus.classList.add("success");
           await loadAgenciesOnly();
@@ -2185,6 +2242,7 @@
             <tr>
               <td>#${agency.id}</td>
               <td>${agency.name}</td>
+              <td>${agency.category_name || "-"}</td>
               <td>
                 ${agency.image_url ? `<img src="/${agency.image_url}" alt="${agency.name}" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px;" />` : '<span class="text-muted">이미지 없음</span>'}
               </td>

@@ -1,5 +1,5 @@
 :root {
-  --bg: #f6f5f2;
+  --bg: #ffffff;
   --text: #1b1c1f;
   --muted: #6c6e75;
   --card: #ffffff;
@@ -23,10 +23,17 @@ body {
 }
 
 .top-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px clamp(20px, 8vw, 110px) 0;
+  padding: 24px clamp(20px, 8vw, 110px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .brand {
@@ -39,7 +46,7 @@ body {
 }
 
 .logo-img {
-  height: 32px;
+  height: 56px;
   width: auto;
   object-fit: contain;
 }
@@ -138,14 +145,13 @@ button:active {
 }
 
 .canvas {
-  margin-top: 80px;
+  margin-top: 100px;
 }
 
 .hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 48px;
-  align-items: start;
 }
 
 .hero-copy h1 {
@@ -390,15 +396,15 @@ textarea {
 
 .login-panel {
   display: flex;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 body.logged-in .login-panel {
   display: none;
 }
 
-body.logged-in .home-visual {
-  display: flex;
-}
 
 body.logged-in .home-actions {
   display: block;
@@ -406,6 +412,28 @@ body.logged-in .home-actions {
 
 body.logged-in .user-controls {
   display: inline-flex;
+}
+
+@media (min-width: 769px) {
+  .hero-copy {
+    width: 100%;
+    max-width: 100%;
+    text-align: center;
+  }
+  
+  .hero-copy p {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .hero-copy .highlight {
+    justify-content: center;
+  }
+  
+  .login-panel {
+    max-width: 800px;
+    margin: 0 auto;
+  }
 }
 
 @media (max-width: 768px) {

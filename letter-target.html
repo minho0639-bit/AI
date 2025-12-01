@@ -24,12 +24,7 @@
         <p id="pageDesc" class="muted"></p>
       </section>
 
-      <section class="subcategories visible" id="subcategorySection">
-        <p class="section-title">중간 분류를 선택하세요</p>
-        <div class="chip-list" id="subcategoryChips"></div>
-      </section>
-
-      <section class="details" id="detailsSection">
+      <section class="details visible" id="detailsSection">
         <p class="section-title">소속사, 팀, 이름을 선택하세요</p>
         <div class="agency-cards-container" id="agencyCardsContainer" style="display: none; margin-bottom: 24px;">
           <p class="section-title" style="margin-bottom: 16px;">소속사를 선택하세요</p>
@@ -124,12 +119,12 @@
       const categoryKey = params.get("category");
       const categoryPreset = CATEGORY_PRESETS[categoryKey];
       const categoryLabelFromParam = params.get("categoryLabel");
+      const selectedAgencyId = params.get("agencyId") ? Number(params.get("agencyId")) : null;
 
       const pageTitle = document.getElementById("pageTitle");
       const pageDesc = document.getElementById("pageDesc");
       const backToCategory = document.getElementById("backToCategory");
 
-      const subcategoryChips = document.getElementById("subcategoryChips");
       const detailsSection = document.getElementById("detailsSection");
       const selectionPreview = document.getElementById("selectionPreview");
       const nextButton = document.getElementById("nextStep");
@@ -145,8 +140,6 @@
       const state = {
         taxonomy: { categories: [], subcategories: [] },
         selectedCategory: null,
-        subcategories: [],
-        selectedSubcategory: null,
         recipients: [],
         selectedAgency: null,
         selectedGroup: null,
@@ -159,7 +152,7 @@
         try {
           await loadTaxonomy();
           resolveCategory();
-          setupSubcategories();
+          loadRecipientsForCategory();
         } catch (error) {
           alert("대상 정보를 불러오지 못했습니다. 다시 시도해 주세요.");
           window.location.replace("/letter.html");
@@ -183,56 +176,20 @@
         }
         state.selectedCategory = categoryFromDb;
         pageTitle.textContent = `${categoryFromDb.name} 대상 선택`;
-        pageDesc.textContent = `${categoryFromDb.name} 분야의 세부 카테고리를 선택한 뒤, 소속사와 팀을 지정해 주세요.`;
-        state.subcategories = state.taxonomy.subcategories.filter(
-          (sub) => sub.category_id === categoryFromDb.id
-        );
-        if (state.subcategories.length === 0) {
-          selectionPreview.textContent = "등록된 세부 카테고리가 없습니다.";
-        }
+        pageDesc.textContent = `${categoryFromDb.name} 분야의 소속사와 팀을 지정해 주세요.`;
       }
 
-      function setupSubcategories() {
-        subcategoryChips.innerHTML = "";
-        state.subcategories.forEach((sub) => {
-          const preset = SUBCATEGORY_PRESETS[sub.name] || FALLBACK_STYLE;
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "chip";
-          button.dataset.subcategoryId = sub.id;
-          button.dataset.subcategoryName = sub.name;
-          button.innerHTML = `
-            <span class="chip-icon" aria-hidden="true">${preset.icon}</span>
-            <span class="chip-details">
-              <span class="chip-label">${sub.name}</span>
-            </span>
-          `;
-          button.style.setProperty("--chip-accent", preset.accent);
-          button.style.setProperty("--chip-bg", preset.background);
-          button.style.setProperty("--chip-icon-bg", preset.iconBg);
-          button.style.setProperty("--chip-shadow", preset.shadow);
-          button.addEventListener("click", () => handleSubcategorySelect(sub, button));
-          subcategoryChips.appendChild(button);
-        });
-      }
-
-      function handleSubcategorySelect(subcategory, button) {
-        document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
-        button.classList.add("active");
-        state.selectedSubcategory = subcategory;
-        resetSelections("subcategory");
-        detailsSection.classList.add("visible");
-        detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        loadRecipientsForSubcategory(subcategory.id);
-      }
-
-      async function loadRecipientsForSubcategory(subcategoryId) {
+      async function loadRecipientsForCategory() {
         selectionPreview.textContent = "수령인 목록을 불러오는 중입니다...";
         document.getElementById("agencyCardsContainer").style.display = "none";
         document.getElementById("groupCardsContainer").style.display = "none";
         document.getElementById("recipientCardsContainer").style.display = "none";
         try {
-          const response = await fetch(`/api/recipients/by-subcategory/${subcategoryId}`);
+          let url = `/api/recipients/by-category/${state.selectedCategory.id}`;
+          if (selectedAgencyId) {
+            url += `?agencyId=${selectedAgencyId}`;
+          }
+          const response = await fetch(url);
           if (!response.ok) {
             throw new Error("recipients fetch failed");
           }
@@ -253,6 +210,7 @@
           if (!agencyMap.has(agencyName)) {
             agencyMap.set(agencyName, {
               name: agencyName,
+              id: recipient.agency_id || null,
               image_url: recipient.agency_image_url || null,
             });
           } else {
@@ -260,6 +218,9 @@
             const existing = agencyMap.get(agencyName);
             if (!existing.image_url && recipient.agency_image_url) {
               existing.image_url = recipient.agency_image_url;
+            }
+            if (!existing.id && recipient.agency_id) {
+              existing.id = recipient.agency_id;
             }
           }
         });
@@ -299,6 +260,27 @@
           agencyCardsGrid.appendChild(card);
         });
 
+        // 선택된 소속사가 하나만 있거나, URL 파라미터에서 agencyId가 있으면 자동 선택
+        if (agencies.length === 1 || (selectedAgencyId && agencies.length > 0)) {
+          const agencyToSelect = selectedAgencyId 
+            ? agencies.find(a => a.id === selectedAgencyId) || agencies[0]
+            : agencies[0];
+          
+          if (agencyToSelect) {
+            state.selectedAgency = agencyToSelect.name;
+            // 해당 소속사 카드 찾아서 클릭 시뮬레이션
+            setTimeout(() => {
+              const matchingCard = Array.from(document.querySelectorAll("#agencyCardsGrid .recipient-card"))
+                .find(card => card.dataset.agencyName === agencyToSelect.name);
+              if (matchingCard) {
+                matchingCard.classList.add("active");
+                populateGroupSelect();
+              }
+            }, 100);
+            return;
+          }
+        }
+        
         selectionPreview.textContent = "소속사를 선택해 주세요.";
       }
 
@@ -413,7 +395,7 @@
 
 
       function updateSelectionPreview() {
-        if (!state.selectedRecipient || !state.selectedSubcategory) {
+        if (!state.selectedRecipient) {
           selectionPreview.textContent = "아직 선택되지 않았습니다.";
           nextButton.disabled = true;
           return;
@@ -423,7 +405,6 @@
         const groupLabel = state.selectedRecipient.group_name?.trim() || "그룹/팀 미지정";
         selectionPreview.textContent = [
           state.selectedCategory.name,
-          state.selectedSubcategory.name,
           agencyLabel,
           groupLabel,
           state.selectedRecipient.name,
@@ -434,14 +415,7 @@
       }
 
       function resetSelections(level) {
-        if (level === "subcategory") {
-          state.selectedAgency = null;
-          state.selectedGroup = null;
-          state.selectedRecipient = null;
-          document.getElementById("agencyCardsContainer").style.display = "none";
-          document.getElementById("groupCardsContainer").style.display = "none";
-          document.getElementById("recipientCardsContainer").style.display = "none";
-        } else if (level === "agency") {
+        if (level === "agency") {
           state.selectedGroup = null;
           state.selectedRecipient = null;
           document.getElementById("groupCardsContainer").style.display = "none";
@@ -455,12 +429,10 @@
       }
 
       nextButton.addEventListener("click", () => {
-        if (!state.selectedRecipient || !state.selectedSubcategory) return;
+        if (!state.selectedRecipient) return;
         const redirectParams = new URLSearchParams({
           category: categoryKey,
           categoryLabel: state.selectedCategory.name,
-          subcategoryId: state.selectedSubcategory.id,
-          subcategoryLabel: state.selectedSubcategory.name,
           agency: normalizeAgency(state.selectedRecipient.agency),
           team: state.selectedRecipient.group_name?.trim() || "",
           name: state.selectedRecipient.name,

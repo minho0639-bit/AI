@@ -28,6 +28,13 @@
         </div>
       </section>
 
+      <section class="agency-section" id="agencySection" style="display: none;">
+        <p class="section-title">인기 소속사 선택 (선택사항)</p>
+        <div class="agency-grid" id="agencyGrid">
+          <p class="muted">대분류를 선택하면 해당 분야의 인기 소속사가 표시됩니다.</p>
+        </div>
+      </section>
+
       <section class="category-grid">
         <article class="category-card" data-category="entertainment">
           <div class="badge">Entertainment</div>
@@ -47,10 +54,110 @@
       const categoryCards = document.querySelectorAll(".category-card");
       const artistSearch = document.getElementById("artistSearch");
       const searchBtn = document.getElementById("searchBtn");
+      const agencyGrid = document.getElementById("agencyGrid");
+      let selectedAgencyId = null;
 
       backHome.addEventListener("click", () => {
         window.location.href = "/";
       });
+
+      // 소속사 목록 로드 (대분류별로 필터링)
+      async function loadAgencies(categoryKey) {
+        try {
+          // 대분류 ID 가져오기
+          const categoryMap = {
+            entertainment: "엔터테인먼트",
+            sports: "스포츠",
+          };
+          const categoryName = categoryMap[categoryKey];
+          if (!categoryName) {
+            agencyGrid.innerHTML = '<p class="muted">대분류를 먼저 선택해 주세요.</p>';
+            return;
+          }
+          
+          // 카테고리 목록 가져오기
+          const categoriesResponse = await fetch("/api/recipients/categories");
+          if (!categoriesResponse.ok) throw new Error("카테고리 목록을 불러오지 못했습니다.");
+          const { categories } = await categoriesResponse.json();
+          const category = categories.find(c => c.name === categoryName);
+          
+          if (!category) {
+            agencyGrid.innerHTML = '<p class="muted">해당 대분류의 소속사가 없습니다.</p>';
+            return;
+          }
+          
+          const response = await fetch(`/api/agencies?categoryId=${category.id}`);
+          if (!response.ok) throw new Error("소속사 목록을 불러오지 못했습니다.");
+          const agencies = await response.json();
+          renderAgencies(agencies);
+        } catch (error) {
+          console.error("Failed to load agencies:", error);
+          agencyGrid.innerHTML = '<p class="muted">소속사 목록을 불러오지 못했습니다.</p>';
+        }
+      }
+
+      function renderAgencies(agencies) {
+        if (agencies.length === 0) {
+          agencyGrid.innerHTML = '<p class="muted">등록된 소속사가 없습니다.</p>';
+          return;
+        }
+
+        agencyGrid.innerHTML = agencies.map((agency) => `
+          <article class="agency-card" data-agency-id="${agency.id}">
+            ${agency.image_url ? `<img src="${agency.image_url}" alt="${agency.name}" class="agency-image" />` : '<div class="agency-placeholder">🏢</div>'}
+            <h3>${agency.name}</h3>
+          </article>
+        `).join('');
+
+        // 소속사 선택 이벤트
+        document.querySelectorAll(".agency-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            // 기존 선택 해제
+            document.querySelectorAll(".agency-card").forEach(c => c.classList.remove("active"));
+            // 새 선택
+            card.classList.add("active");
+            selectedAgencyId = card.dataset.agencyId;
+            
+            // 소속사 선택 후 letter-target.html로 이동
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryKey = urlParams.get("category") || 
+              Array.from(document.querySelectorAll(".category-card")).find(c => c.classList.contains("active"))?.dataset.category;
+            if (categoryKey) {
+              const label = categories[categoryKey];
+              const params = new URLSearchParams({
+                category: categoryKey,
+                categoryLabel: label,
+                agencyId: selectedAgencyId,
+              });
+              window.location.href = `/letter-target.html?${params.toString()}`;
+            }
+          });
+        });
+        
+        // 소속사 선택 없이 대분류만 선택하고 다음 단계로 이동하는 버튼 추가 (이미 있으면 추가하지 않음)
+        if (!document.getElementById("skipAgencyBtn")) {
+          const skipAgencyBtn = document.createElement("button");
+          skipAgencyBtn.id = "skipAgencyBtn";
+          skipAgencyBtn.type = "button";
+          skipAgencyBtn.className = "ghost full";
+          skipAgencyBtn.textContent = "소속사 선택 없이 계속하기";
+          skipAgencyBtn.style.marginTop = "16px";
+          skipAgencyBtn.addEventListener("click", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryKey = urlParams.get("category") || 
+              Array.from(document.querySelectorAll(".category-card")).find(c => c.classList.contains("active"))?.dataset.category;
+            if (categoryKey) {
+              const label = categories[categoryKey];
+              const params = new URLSearchParams({
+                category: categoryKey,
+                categoryLabel: label,
+              });
+              window.location.href = `/letter-target.html?${params.toString()}`;
+            }
+          });
+          agencyGrid.parentElement.appendChild(skipAgencyBtn);
+        }
+      }
 
       const categories = {
         entertainment: "엔터테인먼트",
@@ -58,14 +165,16 @@
       };
 
       categoryCards.forEach((card) => {
-        card.addEventListener("click", () => {
+        card.addEventListener("click", async () => {
           const key = card.dataset.category;
           const label = categories[key];
-          const params = new URLSearchParams({
-            category: key,
-            categoryLabel: label,
-          });
-          window.location.href = `/letter-target.html?${params.toString()}`;
+          
+          // 대분류 선택 시 해당 대분류의 소속사 로드 및 표시
+          document.getElementById("agencySection").style.display = "block";
+          await loadAgencies(key);
+          
+          // 소속사 선택 대기 (소속사 선택 후 letter-target.html로 이동)
+          // 소속사 선택 이벤트는 renderAgencies에서 처리됨
         });
       });
 
@@ -85,6 +194,15 @@
           handleSearch();
         }
       });
+
+      // 페이지 로드 시에는 소속사 목록을 표시하지 않음 (대분류 선택 후 표시)
+
+      // URL 파라미터에서 선택된 소속사 확인
+      const urlParams = new URLSearchParams(window.location.search);
+      const agencyIdFromUrl = urlParams.get("agencyId");
+      if (agencyIdFromUrl) {
+        selectedAgencyId = agencyIdFromUrl;
+      }
     </script>
   </body>
 </html>

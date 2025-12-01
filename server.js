@@ -475,14 +475,17 @@ app.get("/api/admin/agencies", requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT
-         id,
-         name,
-         image_url,
-         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
-         created_at,
-         updated_at
-       FROM agencies
-       ORDER BY name ASC`
+         a.id,
+         a.name,
+         a.image_url,
+         a.category_id,
+         rc.name AS category_name,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
+         a.created_at,
+         a.updated_at
+       FROM agencies a
+       LEFT JOIN recipient_categories rc ON rc.id = a.category_id
+       ORDER BY a.name ASC`
     );
     res.json(rows);
   } catch (error) {
@@ -492,12 +495,15 @@ app.get("/api/admin/agencies", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
-  const { name, imageData } = req.body;
+  const { name, categoryId, imageData } = req.body;
   if (!name?.trim()) {
     return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
   }
+  if (!categoryId) {
+    return res.status(400).json({ message: "대분류를 선택해 주세요." });
+  }
   try {
-    const [result] = await pool.query("INSERT INTO agencies (name) VALUES (?)", [name.trim()]);
+    const [result] = await pool.query("INSERT INTO agencies (name, category_id) VALUES (?, ?)", [name.trim(), Number(categoryId)]);
     const agencyId = result.insertId;
     
     let imageUrl = null;
@@ -510,14 +516,17 @@ app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
     
     const [rows] = await pool.query(
       `SELECT
-         id,
-         name,
-         image_url,
-         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
-         created_at,
-         updated_at
-       FROM agencies
-       WHERE id = ?`,
+         a.id,
+         a.name,
+         a.image_url,
+         a.category_id,
+         rc.name AS category_name,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
+         a.created_at,
+         a.updated_at
+       FROM agencies a
+       LEFT JOIN recipient_categories rc ON rc.id = a.category_id
+       WHERE a.id = ?`,
       [agencyId]
     );
     res.status(201).json(rows[0]);
@@ -529,15 +538,18 @@ app.post("/api/admin/agencies", requireAdmin, async (req, res) => {
 
 app.put("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
   const agencyId = Number(req.params.id);
-  const { name, imageData } = req.body;
+  const { name, categoryId, imageData } = req.body;
   if (!agencyId) {
     return res.status(400).json({ message: "잘못된 소속사 ID입니다." });
   }
   if (!name?.trim()) {
     return res.status(400).json({ message: "소속사 이름을 입력해 주세요." });
   }
+  if (!categoryId) {
+    return res.status(400).json({ message: "대분류를 선택해 주세요." });
+  }
   try {
-    await pool.query("UPDATE agencies SET name = ? WHERE id = ?", [name.trim(), agencyId]);
+    await pool.query("UPDATE agencies SET name = ?, category_id = ? WHERE id = ?", [name.trim(), Number(categoryId), agencyId]);
     
     if (imageData) {
       const imageUrl = await saveAgencyImage(agencyId, imageData);
@@ -548,14 +560,17 @@ app.put("/api/admin/agencies/:id", requireAdmin, async (req, res) => {
     
     const [rows] = await pool.query(
       `SELECT
-         id,
-         name,
-         image_url,
-         (SELECT COUNT(*) FROM recipients WHERE agency_id = agencies.id) AS recipient_count,
-         created_at,
-         updated_at
-       FROM agencies
-       WHERE id = ?`,
+         a.id,
+         a.name,
+         a.image_url,
+         a.category_id,
+         rc.name AS category_name,
+         (SELECT COUNT(*) FROM recipients WHERE agency_id = a.id) AS recipient_count,
+         a.created_at,
+         a.updated_at
+       FROM agencies a
+       LEFT JOIN recipient_categories rc ON rc.id = a.category_id
+       WHERE a.id = ?`,
       [agencyId]
     );
     if (rows.length === 0) {
@@ -1082,6 +1097,29 @@ app.get("/api/stationery", async (req, res) => {
   }
 });
 
+app.get("/api/agencies", async (req, res) => {
+  const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
+  try {
+    let query = `SELECT
+         a.id,
+         a.name,
+         a.image_url,
+         a.category_id
+       FROM agencies a`;
+    const params = [];
+    if (categoryId) {
+      query += " WHERE a.category_id = ?";
+      params.push(categoryId);
+    }
+    query += " ORDER BY a.name ASC";
+    const [rows] = await pool.query(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error("public agencies fetch error:", error);
+    res.status(500).json({ message: "소속사 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
 app.get("/api/recipients/categories", async (req, res) => {
   try {
     const [categories] = await pool.query(
@@ -1097,29 +1135,36 @@ app.get("/api/recipients/categories", async (req, res) => {
   }
 });
 
-app.get("/api/recipients/by-subcategory/:subcategoryId", async (req, res) => {
-  const subcategoryId = Number(req.params.subcategoryId);
-  if (!subcategoryId) {
-    return res.status(400).json({ message: "잘못된 중분류 ID입니다." });
+app.get("/api/recipients/by-category/:categoryId", async (req, res) => {
+  const categoryId = Number(req.params.categoryId);
+  if (!categoryId) {
+    return res.status(400).json({ message: "잘못된 대분류 ID입니다." });
   }
+  const agencyId = req.query.agencyId ? Number(req.query.agencyId) : null;
   try {
-    const [rows] = await pool.query(
-      `SELECT
+    let query = `SELECT
          r.id,
          r.name,
          r.is_active,
          r.image_url AS image_url,
          COALESCE(a.name, "") AS agency,
+         a.id AS agency_id,
          a.image_url AS agency_image_url,
          COALESCE(rg.name, "") AS group_name,
          rg.image_url AS group_image_url
        FROM recipients r
        LEFT JOIN agencies a ON a.id = r.agency_id
        LEFT JOIN recipient_groups rg ON rg.id = r.group_id
-       WHERE r.subcategory_id = ? AND r.is_active = 1
-       ORDER BY r.name ASC`,
-      [subcategoryId]
-    );
+       WHERE r.category_id = ? AND r.is_active = 1`;
+    const params = [categoryId];
+    
+    if (agencyId) {
+      query += " AND r.agency_id = ?";
+      params.push(agencyId);
+    }
+    
+    query += " ORDER BY r.name ASC";
+    const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (error) {
     console.error("public recipients fetch error:", error);
@@ -1662,6 +1707,13 @@ async function ensureRecipientSchemaExtensions() {
   } catch (error) {
     if (error.code !== "ER_DUP_FIELDNAME") {
       console.warn("recipient_groups updated_at alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE agencies ADD COLUMN category_id INT NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("agencies category_id alter warn:", error.message || error);
     }
   }
 }
