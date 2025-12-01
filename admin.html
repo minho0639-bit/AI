@@ -116,19 +116,15 @@
                   </div>
                   <div class="field">
                     <label for="recipient-agency">소속사</label>
-                    <input type="text" id="recipient-agency" name="agencyName" placeholder="예) HYBE" />
-                    <input type="file" id="recipient-agency-image" name="agencyImage" accept="image/*" style="margin-top: 8px;" />
-                    <div id="recipient-agency-image-preview" style="margin-top: 10px; display: none;">
-                      <img id="recipient-agency-image-preview-img" src="" alt="소속사 미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
-                    </div>
+                    <select id="recipient-agency" name="agencyId">
+                      <option value="">소속사 없음</option>
+                    </select>
                   </div>
                   <div class="field">
                     <label for="recipient-group">그룹 / 팀</label>
-                    <input type="text" id="recipient-group" name="groupName" placeholder="예) 뉴진스" />
-                    <input type="file" id="recipient-group-image" name="groupImage" accept="image/*" style="margin-top: 8px;" />
-                    <div id="recipient-group-image-preview" style="margin-top: 10px; display: none;">
-                      <img id="recipient-group-image-preview-img" src="" alt="팀 미리보기" style="width: 113px; height: 113px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
-                    </div>
+                    <select id="recipient-group" name="groupId" disabled>
+                      <option value="">먼저 소속사를 선택하세요</option>
+                    </select>
                   </div>
                   <div class="field">
                     <label for="recipient-status-select">상태</label>
@@ -663,40 +659,8 @@
         }
       });
 
-      const recipientAgencyImageInput = document.getElementById("recipient-agency-image");
-      const recipientAgencyImagePreview = document.getElementById("recipient-agency-image-preview");
-      const recipientAgencyImagePreviewImg = document.getElementById("recipient-agency-image-preview-img");
-      
-      recipientAgencyImageInput?.addEventListener("change", (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            recipientAgencyImagePreviewImg.src = e.target.result;
-            recipientAgencyImagePreview.style.display = "block";
-          };
-          reader.readAsDataURL(file);
-        } else {
-          recipientAgencyImagePreview.style.display = "none";
-        }
-      });
-
-      const recipientGroupImageInput = document.getElementById("recipient-group-image");
-      const recipientGroupImagePreview = document.getElementById("recipient-group-image-preview");
-      const recipientGroupImagePreviewImg = document.getElementById("recipient-group-image-preview-img");
-      
-      recipientGroupImageInput?.addEventListener("change", (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            recipientGroupImagePreviewImg.src = e.target.result;
-            recipientGroupImagePreview.style.display = "block";
-          };
-          reader.readAsDataURL(file);
-        } else {
-          recipientGroupImagePreview.style.display = "none";
-        }
+      recipientAgencyInput.addEventListener("change", () => {
+        updateRecipientGroupOptions();
       });
 
       recipientForm.addEventListener("submit", async (event) => {
@@ -1158,6 +1122,42 @@
       function hydrateRecipientForm() {
         populateSelect(recipientCategorySelect, state.meta.categories, "대분류 선택");
         updateSubcategoryOptions();
+        loadRecipientAgencies();
+      }
+
+      async function loadRecipientAgencies() {
+        try {
+          const agencies = await fetchJson("/api/admin/agencies");
+          recipientAgencyInput.innerHTML = '<option value="">소속사 없음</option>';
+          agencies.forEach((agency) => {
+            const option = document.createElement("option");
+            option.value = agency.id;
+            option.textContent = agency.name;
+            recipientAgencyInput.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Failed to load agencies:", error);
+        }
+      }
+
+      async function updateRecipientGroupOptions() {
+        const agencyId = recipientAgencyInput.value;
+        recipientGroupInput.innerHTML = '<option value="">그룹/팀 없음</option>';
+        recipientGroupInput.disabled = !agencyId;
+        
+        if (!agencyId) return;
+        
+        try {
+          const groups = await fetchJson(`/api/admin/groups?agencyId=${agencyId}`);
+          groups.forEach((group) => {
+            const option = document.createElement("option");
+            option.value = group.id;
+            option.textContent = group.name;
+            recipientGroupInput.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Failed to load groups:", error);
+        }
       }
 
       function populateSelect(selectEl, items, placeholder) {
@@ -1200,8 +1200,8 @@
           name: formData.get("name"),
           categoryId: formData.get("categoryId"),
           subcategoryId: formData.get("subcategoryId") || null,
-          agencyName: formData.get("agencyName") || null,
-          groupName: formData.get("groupName") || null,
+          agencyId: formData.get("agencyId") || null,
+          groupId: formData.get("groupId") || null,
           isActive: formData.get("isActive") === "1",
           address: formData.get("address") || null,
           imageData: imageData,
@@ -1219,12 +1219,11 @@
           recipientForm.reset();
           recipientImagePreview.style.display = "none";
           recipientImagePreviewImg.src = "";
-          recipientAgencyImagePreview.style.display = "none";
-          recipientAgencyImagePreviewImg.src = "";
-          recipientGroupImagePreview.style.display = "none";
-          recipientGroupImagePreviewImg.src = "";
           recipientCategorySelect.value = "";
           updateSubcategoryOptions();
+          recipientAgencyInput.value = "";
+          recipientGroupInput.innerHTML = '<option value="">그룹/팀 없음</option>';
+          recipientGroupInput.disabled = true;
           recipientStatusSelect.value = "1";
           recipientFormStatus.textContent = "수령인을 추가했습니다.";
           recipientFormStatus.classList.add("success");

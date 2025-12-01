@@ -390,7 +390,7 @@ app.get("/api/admin/recipients", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
-  const { name, categoryId, subcategoryId, agencyName, groupName, isActive, address, imageData, agencyImageData, groupImageData } = req.body;
+  const { name, categoryId, subcategoryId, agencyId, groupId, isActive, address, imageData } = req.body;
   if (!name?.trim() || !categoryId) {
     return res.status(400).json({ message: "이름과 대분류는 필수입니다." });
   }
@@ -398,14 +398,14 @@ app.post("/api/admin/recipients", requireAdmin, async (req, res) => {
     return res.status(400).json({ message: "중분류를 선택해 주세요." });
   }
   try {
-    const agencyId = await findOrCreateAgency(agencyName, agencyImageData);
-    const groupId = await findOrCreateGroup(groupName, agencyId, groupImageData);
+    const finalAgencyId = agencyId ? Number(agencyId) : null;
+    const finalGroupId = groupId ? Number(groupId) : null;
     const payload = [
       name.trim(),
       Number(categoryId),
       subcategoryId ? Number(subcategoryId) : null,
-      agencyId,
-      groupId,
+      finalAgencyId,
+      finalGroupId,
       typeof isActive === "boolean" ? (isActive ? 1 : 0) : 1,
       address?.trim() ? address.trim() : null,
       null, // image_url은 나중에 업데이트
