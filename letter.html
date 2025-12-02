@@ -24,7 +24,6 @@
           <span class="user-nickname">Guest</span>
         </button>
         <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
-        <button type="button" id="backHome" class="ghost tiny">홈으로</button>
       </div>
     </header>
 
@@ -60,16 +59,11 @@
     </main>
 
     <script>
-      const backHome = document.getElementById("backHome");
       const categoryCards = document.querySelectorAll(".category-card");
       const artistSearch = document.getElementById("artistSearch");
       const searchBtn = document.getElementById("searchBtn");
       const agencyGrid = document.getElementById("agencyGrid");
       let selectedAgencyId = null;
-
-      backHome.addEventListener("click", () => {
-        window.location.href = "/";
-      });
 
       // 인기 소속사 목록 로드 (모든 대분류)
       async function loadPopularAgencies() {

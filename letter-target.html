@@ -24,7 +24,6 @@
           <span class="user-nickname">Guest</span>
         </button>
         <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
-        <button type="button" id="backToCategory" class="ghost tiny">대분류 다시 선택</button>
       </div>
     </header>
 
@@ -133,7 +132,6 @@
 
       const pageTitle = document.getElementById("pageTitle");
       const pageDesc = document.getElementById("pageDesc");
-      const backToCategory = document.getElementById("backToCategory");
 
       const detailsSection = document.getElementById("detailsSection");
       const selectionPreview = document.getElementById("selectionPreview");
@@ -142,10 +140,6 @@
       if (!categoryPreset) {
         window.location.replace("/letter.html");
       }
-
-      backToCategory.addEventListener("click", () => {
-        window.location.href = "/letter.html";
-      });
 
       const state = {
         taxonomy: { categories: [], subcategories: [] },

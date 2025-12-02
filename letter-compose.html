@@ -24,8 +24,6 @@
             <span class="user-nickname">Guest</span>
           </button>
           <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
-          <button type="button" class="ghost tiny" id="backToSelect">대상 다시 선택</button>
-          <button type="button" class="ghost tiny" id="backHome">홈으로</button>
         </div>
       </header>
 
@@ -121,8 +119,6 @@
       <script>
         const params = new URLSearchParams(window.location.search);
         const paperStack = document.getElementById("paperStack");
-        const backToSelect = document.getElementById("backToSelect");
-        const backHome = document.getElementById("backHome");
         const saveDraft = document.getElementById("saveDraft");
         const toSummary = document.getElementById("toSummary");
         const fontSelect = document.getElementById("fontSelect");
@@ -1018,24 +1014,6 @@
         formatToolbar
           ?.querySelectorAll("button")
           .forEach((button) => button.addEventListener("mousedown", (event) => event.preventDefault()));
-
-        backToSelect.addEventListener("click", () => {
-          const category = params.get("category");
-          const categoryLabel = params.get("categoryLabel") || "";
-          if (category) {
-            const targetParams = new URLSearchParams({
-              category,
-              categoryLabel,
-            });
-            window.location.href = `/letter-target.html?${targetParams.toString()}`;
-          } else {
-            window.location.href = "/letter.html";
-          }
-        });
-
-        backHome.addEventListener("click", () => {
-          window.location.href = "/";
-        });
 
         saveDraft.addEventListener("click", () => {
           alert("임시 저장 기능은 곧 제공될 예정입니다.");

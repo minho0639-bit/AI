@@ -24,8 +24,6 @@
           <span class="user-nickname">Guest</span>
         </button>
         <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
-        <button type="button" class="ghost tiny" id="backToTarget">대상 다시 선택</button>
-        <button type="button" class="ghost tiny" id="backHome">홈으로</button>
       </div>
     </header>
 
@@ -57,8 +55,7 @@
       const targetDetail = document.getElementById("targetDetail");
       const stationeryGrid = document.getElementById("stationeryGrid");
       const goToCompose = document.getElementById("goToCompose");
-      const backToTargetButtons = [document.getElementById("backToTarget"), document.getElementById("backToTargetBottom")];
-      const backHome = document.getElementById("backHome");
+      const backToTargetBottom = document.getElementById("backToTargetBottom");
 
       const FALLBACK_STATIONERY = [
         {
@@ -142,8 +139,8 @@
         window.location.href = `/letter-compose.html?${composeParams.toString()}`;
       }
 
-      backToTargetButtons.forEach((btn) =>
-        btn.addEventListener("click", () => {
+      if (backToTargetBottom) {
+        backToTargetBottom.addEventListener("click", () => {
           const category = params.get("category");
           const categoryLabel = params.get("categoryLabel");
           if (!category) {
@@ -155,12 +152,8 @@
             categoryLabel: categoryLabel || "",
           });
           window.location.href = `/letter-target.html?${targetParams.toString()}`;
-        })
-      );
-
-      backHome.addEventListener("click", () => {
-        window.location.href = "/";
-      });
+        });
+      }
 
       goToCompose.addEventListener("click", goToLetterCompose);
 

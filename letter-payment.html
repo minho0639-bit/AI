@@ -27,7 +27,6 @@
         </button>
         <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
         <button type="button" class="ghost tiny" id="backToCompose">편지 수정</button>
-        <button type="button" class="ghost tiny" id="backHome">홈으로</button>
       </div>
     </header>
 
@@ -260,7 +259,6 @@
       const requestPayment = document.getElementById("requestPayment");
       const downloadDraft = document.getElementById("downloadDraft");
       const backToCompose = document.getElementById("backToCompose");
-      const backHome = document.getElementById("backHome");
       const buyerForm = document.getElementById("buyerForm");
       const buyerProfileNotice = document.getElementById("buyerProfileNotice");
       const editBuyerInfoBtn = document.getElementById("editBuyerInfo");
@@ -1047,7 +1045,6 @@
       requestPayment.addEventListener("click", handlePayment);
       downloadDraft.addEventListener("click", handleSavePreviewImage);
       backToCompose.addEventListener("click", () => (window.location.href = "/letter-compose.html"));
-      backHome.addEventListener("click", () => (window.location.href = "/"));
       editBuyerInfoBtn.addEventListener("click", unlockBuyerForm);
       closePaymentModal.addEventListener("click", closeModal);
       cancelMockPayment.addEventListener("click", closeModal);
