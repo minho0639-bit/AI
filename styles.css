@@ -463,10 +463,49 @@ body.logged-in .user-controls {
 @media (max-width: 768px) {
   .hero {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .hero-copy h1 {
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+
+  .hero-copy p {
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .tag {
+    margin-bottom: 12px;
+  }
+
+  .highlight {
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .hero-cta {
+    margin: 16px 0 12px;
   }
 
   .panel {
-    padding: 24px;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .form {
+    gap: 12px;
+  }
+
+  .canvas {
+    margin-top: 60px;
+  }
+
+  .site-header,
+  main,
+  .footer {
+    padding: 20px 16px;
   }
 
   .letter-actions {

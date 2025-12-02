@@ -20,22 +20,6 @@ body {
   display: flex;
 }
 
-.profile-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-}
-
-.brand {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-nav {
-  display: flex;
-  gap: 8px;
-}
 
 button {
   border: none;

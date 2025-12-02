@@ -29,35 +29,6 @@ body {
   color: var(--muted);
 }
 
-.write-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: var(--bg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px clamp(20px, 7vw, 120px);
-  margin-bottom: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.brand {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.logo-img {
-  height: 56px;
-  width: auto;
-  object-fit: contain;
-}
-
-.logo-text {
-  display: inline;
-}
 
 button {
   border: none;
@@ -447,5 +418,24 @@ select {
   .recipient-card-image {
     width: 100px;
     height: 100px;
+  }
+  /* 모바일에서 소속사 카드 크기 조정 - 한 줄에 3개 */
+  .agency-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .agency-card {
+    padding: 10px;
+    gap: 8px;
+  }
+  .agency-image,
+  .agency-placeholder {
+    height: 60px;
+  }
+  .agency-placeholder {
+    font-size: 2rem;
+  }
+  .agency-card h3 {
+    font-size: 0.8rem;
   }
 }

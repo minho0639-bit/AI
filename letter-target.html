@@ -20,6 +20,10 @@
         <span class="logo-text" style="display: none;">레터비</span>
       </div>
       <div class="user-controls">
+        <button class="quiet tiny user-nickname-button" type="button">
+          <span class="user-nickname">Guest</span>
+        </button>
+        <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
         <button type="button" id="backToCategory" class="ghost tiny">대분류 다시 선택</button>
       </div>
     </header>
@@ -31,7 +35,7 @@
       </section>
 
       <section class="details visible" id="detailsSection">
-        <p class="section-title">소속사, 팀, 이름을 선택하세요</p>
+        <p class="section-title" id="sectionTitle">소속사, 팀, 이름을 선택하세요</p>
         <div class="agency-cards-container" id="agencyCardsContainer" style="display: none; margin-bottom: 24px;">
           <p class="section-title" style="margin-bottom: 16px;">소속사를 선택하세요</p>
           <div class="recipient-cards-grid" id="agencyCardsGrid"></div>
@@ -182,7 +186,13 @@
         }
         state.selectedCategory = categoryFromDb;
         pageTitle.textContent = `${categoryFromDb.name} 대상 선택`;
-        pageDesc.textContent = `${categoryFromDb.name} 분야의 소속사와 팀을 지정해 주세요.`;
+        if (selectedAgencyId) {
+          pageDesc.textContent = `${categoryFromDb.name} 분야의 팀/그룹을 선택해 주세요.`;
+          const sectionTitle = document.querySelector("#sectionTitle");
+          if (sectionTitle) sectionTitle.textContent = "팀/그룹, 이름을 선택하세요";
+        } else {
+          pageDesc.textContent = `${categoryFromDb.name} 분야의 소속사와 팀을 지정해 주세요.`;
+        }
       }
 
       async function loadRecipientsForCategory() {
@@ -210,6 +220,41 @@
       }
 
       function populateAgencySelect() {
+        // agencyId가 URL 파라미터로 전달된 경우, 소속사 선택 UI를 표시하지 않고 바로 팀/그룹 선택으로 넘어감
+        if (selectedAgencyId) {
+          const agencyMap = new Map();
+          state.recipients.forEach((recipient) => {
+            const agencyName = recipient.agency?.trim() || "소속사 미지정";
+            if (!agencyMap.has(agencyName)) {
+              agencyMap.set(agencyName, {
+                name: agencyName,
+                id: recipient.agency_id || null,
+                image_url: recipient.agency_image_url || null,
+              });
+            } else {
+              const existing = agencyMap.get(agencyName);
+              if (!existing.image_url && recipient.agency_image_url) {
+                existing.image_url = recipient.agency_image_url;
+              }
+              if (!existing.id && recipient.agency_id) {
+                existing.id = recipient.agency_id;
+              }
+            }
+          });
+
+          const agencies = Array.from(agencyMap.values());
+          const agencyToSelect = agencies.find(a => a.id === selectedAgencyId);
+          
+          if (agencyToSelect) {
+            // 소속사 선택 UI는 숨기고, 바로 팀/그룹 선택으로 이동
+            document.getElementById("agencyCardsContainer").style.display = "none";
+            state.selectedAgency = agencyToSelect.name;
+            populateGroupSelect();
+            return;
+          }
+        }
+
+        // agencyId가 없는 경우만 소속사 선택 UI 표시 (기존 로직)
         const agencyMap = new Map();
         state.recipients.forEach((recipient) => {
           const agencyName = recipient.agency?.trim() || "소속사 미지정";
@@ -278,22 +323,17 @@
           agencyCardsGrid.appendChild(card);
         });
 
-        // 선택된 소속사가 하나만 있거나, URL 파라미터에서 agencyId가 있으면 자동 선택
-        if (agencies.length === 1 || (selectedAgencyId && agencies.length > 0)) {
-          const agencyToSelect = selectedAgencyId 
-            ? agencies.find(a => a.id === selectedAgencyId) || agencies[0]
-            : agencies[0];
-          
+        // 선택된 소속사가 하나만 있으면 자동 선택
+        if (agencies.length === 1) {
+          const agencyToSelect = agencies[0];
           if (agencyToSelect) {
             state.selectedAgency = agencyToSelect.name;
-            // 해당 소속사 카드 찾아서 클릭 시뮬레이션
             setTimeout(() => {
               const matchingCard = Array.from(document.querySelectorAll("#agencyCardsGrid .recipient-card"))
                 .find(card => card.dataset.agencyName === agencyToSelect.name);
               if (matchingCard) {
                 matchingCard.classList.add("active");
                 populateGroupSelect();
-                // 다음 섹션으로 부드럽게 스크롤
                 setTimeout(() => {
                   const groupContainer = document.getElementById("groupCardsContainer");
                   if (groupContainer && groupContainer.style.display !== "none") {
@@ -484,6 +524,59 @@
         });
         window.location.href = `/letter-stationery.html?${redirectParams.toString()}`;
       });
+
+      // 로그인 상태 확인 및 사용자 정보 표시
+      const nicknameEl = document.querySelector(".user-nickname");
+      const nicknameBtn = document.querySelector(".user-nickname-button");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      function applySession(user) {
+        document.body.classList.add("logged-in");
+        if (nicknameEl) nicknameEl.textContent = user?.name || user?.email || "팬";
+      }
+
+      function clearSessionState() {
+        document.body.classList.remove("logged-in");
+        if (nicknameEl) nicknameEl.textContent = "Guest";
+      }
+
+      async function fetchSession() {
+        try {
+          const res = await fetch("/api/me");
+          const data = await res.json();
+          if (data.loggedIn) {
+            applySession(data.user);
+          } else {
+            clearSessionState();
+          }
+        } catch (error) {
+          console.error("세션 정보를 가져오지 못했습니다.", error);
+        }
+      }
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          try {
+            await fetch("/api/logout", { method: "POST" });
+          } catch (error) {
+            console.error("로그아웃 실패", error);
+          } finally {
+            window.location.href = "/";
+          }
+        });
+      }
+
+      if (nicknameBtn) {
+        nicknameBtn.addEventListener("click", () => {
+          if (document.body.classList.contains("logged-in")) {
+            window.location.href = "/profile.html";
+          } else {
+            window.location.href = "/";
+          }
+        });
+      }
+
+      fetchSession();
     </script>
   </body>
 </html>

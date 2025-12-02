@@ -20,8 +20,11 @@
         <span class="logo-text" style="display: none;">레터비</span>
       </div>
       <div class="user-controls">
+        <button class="quiet tiny user-nickname-button" type="button">
+          <span class="user-nickname">Guest</span>
+        </button>
+        <button id="logoutBtn" class="ghost tiny" type="button">로그아웃</button>
         <button type="button" class="ghost tiny" id="goHomeBtn">홈으로</button>
-        <button type="button" class="ghost tiny" id="logoutBtn">로그아웃</button>
       </div>
     </header>
 
@@ -279,6 +282,33 @@
       backHomeBtn?.addEventListener("click", () => (window.location.href = "/"));
       writeLetterBtn?.addEventListener("click", () => (window.location.href = "/letter.html"));
 
+      // 헤더의 사용자 이름 업데이트
+      const nicknameEl = document.querySelector(".user-nickname");
+      const nicknameBtn = document.querySelector(".user-nickname-button");
+
+      async function updateHeaderUser() {
+        try {
+          const res = await fetch("/api/me");
+          const data = await res.json();
+          if (data.loggedIn && data.user && nicknameEl) {
+            nicknameEl.textContent = data.user.name || data.user.email || "팬";
+            document.body.classList.add("logged-in");
+          } else {
+            if (nicknameEl) nicknameEl.textContent = "Guest";
+            document.body.classList.remove("logged-in");
+          }
+        } catch (error) {
+          console.error("세션 정보를 가져오지 못했습니다.", error);
+        }
+      }
+
+      if (nicknameBtn) {
+        nicknameBtn.addEventListener("click", () => {
+          window.location.href = "/profile.html";
+        });
+      }
+
+      updateHeaderUser();
       fetchProfile();
       renderOrders();
     </script>
