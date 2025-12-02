@@ -18,6 +18,11 @@ body {
   background: var(--bg);
   color: var(--text);
   padding: 24px clamp(20px, 7vw, 120px) 80px;
+  padding-top: 80px;
+}
+
+.top-nav .user-controls {
+  display: flex;
 }
 
 .stationery-nav {

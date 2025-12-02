@@ -13,6 +13,11 @@ body {
   color: #1b1c1f;
   font-family: "Pretendard", "Noto Sans KR", sans-serif;
   padding: 32px clamp(20px, 6vw, 120px);
+  padding-top: 80px;
+}
+
+.top-nav .user-controls {
+  display: flex;
 }
 
 .profile-nav {

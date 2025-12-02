@@ -10,15 +10,19 @@
       href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="profile.css" />
   </head>
   <body>
-    <header class="profile-nav">
-      <div class="brand" role="img" aria-label="Fanletter Post">Fanletter Post</div>
-      <nav>
+    <header class="top-nav">
+      <div class="brand" onclick="window.location.href='/'">
+        <img src="assets/logo.JPG" alt="레터비" class="logo-img" />
+        <span class="logo-text" style="display: none;">레터비</span>
+      </div>
+      <div class="user-controls">
         <button type="button" class="ghost tiny" id="goHomeBtn">홈으로</button>
         <button type="button" class="ghost tiny" id="logoutBtn">로그아웃</button>
-      </nav>
+      </div>
     </header>
 
     <main class="profile-main" aria-live="polite">
