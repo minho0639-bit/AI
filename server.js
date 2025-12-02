@@ -206,8 +206,28 @@ function requireLogin(req, res, next) {
 }
 
 app.get("/api/admin/orders", requireAdmin, async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+  const statusFilter = req.query.status || "";
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
+  const offset = (page - 1) * limit;
+  
   try {
+    let whereClause = "";
+    let queryParams = [];
+    
+    if (statusFilter && LETTER_STATUS_SET.has(statusFilter)) {
+      whereClause = "WHERE l.status = ?";
+      queryParams.push(statusFilter);
+    }
+    
+    // 전체 개수 조회
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total FROM letters l ${whereClause}`,
+      queryParams
+    );
+    const total = countRows[0]?.total || 0;
+    
+    // 데이터 조회
     const [rows] = await pool.query(
       `SELECT
          l.id,
@@ -216,6 +236,8 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
          l.status AS letter_status,
          l.submitted_at,
          l.created_at,
+         l.is_anonymous,
+         l.paper_option,
          u.email AS user_email,
          u.name AS user_name,
          p.status AS payment_status,
@@ -228,11 +250,19 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
        LEFT JOIN users u ON l.user_id = u.id
        LEFT JOIN payments p ON p.letter_id = l.id
        LEFT JOIN shipments s ON s.letter_id = l.id
+       ${whereClause}
        ORDER BY l.created_at DESC
-       LIMIT ?`,
-      [limit]
+       LIMIT ? OFFSET ?`,
+      [...queryParams, limit, offset]
     );
-    res.json(rows);
+    
+    res.json({
+      orders: rows,
+      total: total,
+      page: page,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("admin orders fetch error:", error);
     res.status(500).json({ message: "주문 목록을 불러오는 중 오류가 발생했습니다." });
@@ -1350,6 +1380,13 @@ app.post("/api/orders", requireLogin, async (req, res) => {
   const paymentStatus = normalizePaymentStatus(payment.status);
   const pgTransactionId = payment.pgTransactionId ? truncate(payment.pgTransactionId, 190) : null;
   const submittedAt = new Date();
+  
+  // 보내는이 정보 처리
+  const sender = payload.sender || {};
+  const isAnonymous = sender.includeSender === false;
+  const senderName = !isAnonymous && sender.name ? truncate(sender.name, 120) : null;
+  const senderEmail = !isAnonymous && sender.email ? truncate(sender.email, 255) : null;
+  const senderPhone = !isAnonymous && sender.phone ? truncate(sender.phone, 20) : null;
 
   const connection = await pool.getConnection();
   try {
@@ -1357,8 +1394,8 @@ app.post("/api/orders", requireLogin, async (req, res) => {
 
     const [letterResult] = await connection.query(
       `INSERT INTO letters
-        (user_id, recipient_name, recipient_group, content, paper_option, font_style, text_color, attachment_url, status, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'submitted', ?)`,
+        (user_id, recipient_name, recipient_group, content, paper_option, font_style, text_color, attachment_url, status, submitted_at, is_anonymous, sender_name, sender_email, sender_phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'submitted', ?, ?, ?, ?, ?)`,
       [
         req.session.userId,
         recipientName,
@@ -1368,6 +1405,10 @@ app.post("/api/orders", requireLogin, async (req, res) => {
         fontStyle,
         textColor,
         submittedAt,
+        isAnonymous ? 1 : 0,
+        senderName,
+        senderEmail,
+        senderPhone,
       ]
     );
     const letterId = letterResult.insertId;
@@ -1744,6 +1785,34 @@ async function ensureLetterSchemaExtensions() {
       console.warn("letters text_color alter warn:", error.message || error);
     }
   }
+  try {
+    await pool.query("ALTER TABLE letters ADD COLUMN is_anonymous TINYINT(1) NULL DEFAULT 0");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("letters is_anonymous alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE letters ADD COLUMN sender_name VARCHAR(120) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("letters sender_name alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE letters ADD COLUMN sender_email VARCHAR(255) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("letters sender_email alter warn:", error.message || error);
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE letters ADD COLUMN sender_phone VARCHAR(20) NULL DEFAULT NULL");
+  } catch (error) {
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      console.warn("letters sender_phone alter warn:", error.message || error);
+    }
+  }
 }
 
 async function ensureRecipientSchemaExtensions() {
@@ -2024,6 +2093,10 @@ async function getAdminOrderDetail(letterId) {
        l.submitted_at,
        l.created_at,
        l.updated_at,
+       l.is_anonymous,
+       l.sender_name,
+       l.sender_email,
+       l.sender_phone,
        u.email AS user_email,
        u.name AS user_name,
        u.phone AS user_phone,
@@ -2061,6 +2134,12 @@ async function getAdminOrderDetail(letterId) {
     fontStyle: row.font_style,
     textColor: row.text_color,
     attachmentUrl: row.attachment_url,
+    isAnonymous: row.is_anonymous === 1,
+    sender: {
+      name: row.sender_name,
+      email: row.sender_email,
+      phone: row.sender_phone,
+    },
     submittedAt: formatDateValue(row.submitted_at),
     createdAt: formatDateValue(row.created_at),
     updatedAt: formatDateValue(row.updated_at),

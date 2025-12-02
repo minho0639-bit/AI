@@ -55,6 +55,18 @@
               <h2>주문 현황</h2>
               <span id="orders-status" class="panel-status">-</span>
             </div>
+            <div class="panel-controls" style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <label for="orderStatusFilter" style="font-weight: 500;">상태 필터:</label>
+                <select id="orderStatusFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">전체</option>
+                  <option value="submitted">접수 완료</option>
+                  <option value="printing">인쇄 중</option>
+                  <option value="shipped">발송 완료</option>
+                </select>
+              </div>
+              <div id="orders-pagination" style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;"></div>
+            </div>
             <div class="overflow-table">
               <table>
                 <thead>
@@ -600,6 +612,8 @@
       const orderDetailContent = document.getElementById("orderDetailContent");
       const printOrderBtn = document.getElementById("printOrderBtn");
       const closeOrderDetailBtn = document.getElementById("closeOrderDetail");
+      const orderStatusFilter = document.getElementById("orderStatusFilter");
+      const ordersPagination = document.getElementById("orders-pagination");
       const recipientsBody = document.getElementById("recipients-body");
       const agenciesBody = document.getElementById("agencies-body");
       const groupsBody = document.getElementById("groups-body");
@@ -650,6 +664,12 @@
         coupons: [],
         couponIssues: [],
         currentOrderDetail: null,
+        orders: {
+          filter: "",
+          page: 1,
+          pageSize: 20,
+          total: 0,
+        },
       };
 
       loginForm.addEventListener("submit", async (event) => {
@@ -725,6 +745,20 @@
         const detailBtn = event.target.closest("[data-order-detail]");
         if (detailBtn) {
           await loadOrderDetail(detailBtn.dataset.orderDetail);
+        }
+      });
+
+      orderStatusFilter?.addEventListener("change", (event) => {
+        state.orders.filter = event.target.value || "";
+        state.orders.page = 1;
+        loadAdminData();
+      });
+
+      ordersPagination?.addEventListener("click", (event) => {
+        const pageBtn = event.target.closest("[data-page]");
+        if (pageBtn) {
+          state.orders.page = parseInt(pageBtn.dataset.page, 10);
+          loadAdminData();
         }
       });
 
@@ -1025,8 +1059,8 @@
         }
         try {
           await ensureRecipientMetaLoaded(refreshMeta);
-          const [orders, recipients, agencies, groups, users, stationery, couponBundle] = await Promise.all([
-            fetchJson("/api/admin/orders"),
+          const [ordersResult, recipients, agencies, groups, users, stationery, couponBundle] = await Promise.all([
+            fetchJson(`/api/admin/orders?status=${state.orders.filter || ""}&page=${state.orders.page}&limit=${state.orders.pageSize}`),
             fetchJson("/api/admin/recipients"),
             fetchJson("/api/admin/agencies"),
             fetchJson("/api/admin/groups"),
@@ -1034,14 +1068,18 @@
             fetchJson("/api/admin/stationery"),
             fetchJson("/api/admin/coupons"),
           ]);
+          const orders = Array.isArray(ordersResult) ? ordersResult : (ordersResult.orders || []);
+          const total = Array.isArray(ordersResult) ? orders.length : (ordersResult.total || orders.length);
+          state.orders.total = total;
           renderOrders(orders);
+          renderOrdersPagination();
           renderRecipients(recipients);
           renderAgencies(agencies);
           renderGroups(groups);
           renderStationery(stationery);
           renderUsers(users);
           renderCouponsBundle(couponBundle);
-          ordersStatus.textContent = `${orders.length}건`;
+          ordersStatus.textContent = `${total}건`;
           recipientsStatus.textContent = `${recipients.length}명`;
           agenciesStatus.textContent = `${agencies.length}개`;
           groupsStatus.textContent = `${groups.length}개`;
@@ -1804,6 +1842,17 @@
         return response.json();
       }
 
+      function getStationeryName(paperOption) {
+        if (!paperOption) return "-";
+        if (!state.stationery || state.stationery.length === 0) {
+          return paperOption;
+        }
+        const stationery = state.stationery.find(
+          (s) => String(s.id) === String(paperOption) || s.id === paperOption
+        );
+        return stationery ? stationery.name : paperOption;
+      }
+
       function renderOrders(orders) {
         ordersBody.innerHTML = orders
           .map((order) => {
@@ -1822,6 +1871,8 @@
                 <td>
                   ${formatLetterStatusBadge(order.letter_status)}
                   <div class="text-muted">${formatDate(order.submitted_at)}</div>
+                  ${order.is_anonymous === 1 ? '<div class="text-danger small">익명</div>' : ''}
+                  ${order.paper_option ? `<div class="text-muted small">편지지: ${getStationeryName(order.paper_option)}</div>` : ''}
                 </td>
                 <td>
                   <div>${order.payment_status || "-"}</div>
@@ -1847,6 +1898,55 @@
             `;
           })
           .join("");
+      }
+
+      function renderOrdersPagination() {
+        if (!ordersPagination) return;
+        const totalPages = Math.ceil(state.orders.total / state.orders.pageSize);
+        if (totalPages <= 1) {
+          ordersPagination.innerHTML = "";
+          return;
+        }
+        const currentPage = state.orders.page;
+        let paginationHtml = "";
+        
+        // 이전 페이지 버튼
+        if (currentPage > 1) {
+          paginationHtml += `<button type="button" class="btn-small btn-ghost" data-page="${currentPage - 1}">이전</button>`;
+        }
+        
+        // 페이지 번호 버튼
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        if (startPage > 1) {
+          paginationHtml += `<button type="button" class="btn-small btn-ghost" data-page="1">1</button>`;
+          if (startPage > 2) {
+            paginationHtml += `<span>...</span>`;
+          }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+          if (i === currentPage) {
+            paginationHtml += `<button type="button" class="btn-small" disabled>${i}</button>`;
+          } else {
+            paginationHtml += `<button type="button" class="btn-small btn-ghost" data-page="${i}">${i}</button>`;
+          }
+        }
+        
+        if (endPage < totalPages) {
+          if (endPage < totalPages - 1) {
+            paginationHtml += `<span>...</span>`;
+          }
+          paginationHtml += `<button type="button" class="btn-small btn-ghost" data-page="${totalPages}">${totalPages}</button>`;
+        }
+        
+        // 다음 페이지 버튼
+        if (currentPage < totalPages) {
+          paginationHtml += `<button type="button" class="btn-small btn-ghost" data-page="${currentPage + 1}">다음</button>`;
+        }
+        
+        ordersPagination.innerHTML = paginationHtml;
       }
 
       async function loadOrderDetail(orderId) {
@@ -1920,6 +2020,57 @@
         const textColor = order.textColor || "#1b1c1f";
         const shipment = order.shipment || {};
         const hasImage = order.attachmentUrl && order.attachmentUrl.trim().length > 0;
+        
+        // 편지지 정보 찾기
+        let stationeryBackgroundColor = null;
+        let stationeryName = null;
+        if (order.paperOption) {
+          // state.stationery가 없으면 로드 시도
+          if (!state.stationery || state.stationery.length === 0) {
+            // 편지지 정보를 비동기로 로드
+            fetchJson("/api/admin/stationery")
+              .then((stationeryList) => {
+                state.stationery = stationeryList;
+                // 편지지 정보를 찾아서 배경색 적용
+                const stationery = stationeryList.find(
+                  (s) => String(s.id) === String(order.paperOption) || s.id === order.paperOption
+                );
+                if (stationery) {
+                  if (stationery.backgroundColor) {
+                    const previewPaper = document.querySelector("#orderLetterPreview .preview-paper");
+                    const previewPaperInner = document.querySelector("#orderLetterPreview .preview-paper-inner");
+                    if (previewPaper) {
+                      previewPaper.style.backgroundColor = stationery.backgroundColor;
+                    }
+                    if (previewPaperInner) {
+                      previewPaperInner.style.backgroundColor = stationery.backgroundColor;
+                    }
+                  }
+                  // 편지지 이름 업데이트
+                  const stationeryNameEl = document.querySelector("#orderStationeryName");
+                  if (stationeryNameEl) {
+                    stationeryNameEl.textContent = stationery.name || order.paperOption;
+                  }
+                }
+              })
+              .catch((error) => {
+                console.error("편지지 정보 로드 실패:", error);
+              });
+          } else {
+            // paperOption이 숫자 ID일 수도 있고 문자열 ID일 수도 있음
+            const stationery = state.stationery.find(
+              (s) => String(s.id) === String(order.paperOption) || s.id === order.paperOption
+            );
+            if (stationery) {
+              if (stationery.backgroundColor) {
+                stationeryBackgroundColor = stationery.backgroundColor;
+              }
+              stationeryName = stationery.name || order.paperOption;
+            } else {
+              stationeryName = order.paperOption;
+            }
+          }
+        }
         orderDetailContent.innerHTML = `
           <section class="order-detail-section">
             <div class="order-detail-grid">
@@ -1931,6 +2082,13 @@
                 <p class="label">회원</p>
                 <strong>${order.user?.name || "-"} (${order.user?.email || "-"})</strong>
                 <div class="text-muted">${order.user?.phone || "-"}</div>
+              </div>
+              <div>
+                <p class="label">보내는이 정보</p>
+                ${order.isAnonymous ? '<strong class="text-danger">익명으로 보내기</strong>' : `
+                  <strong>${order.sender?.name || "-"}</strong>
+                  <div class="text-muted">${order.sender?.email || "-"} / ${order.sender?.phone || "-"}</div>
+                `}
               </div>
               <div>
                 <p class="label">편지 상태</p>
@@ -1945,6 +2103,10 @@
                 <p class="label">제출 시각</p>
                 <strong>${formatDate(order.submittedAt)}</strong>
               </div>
+              <div>
+                <p class="label">편지지</p>
+                <strong id="orderStationeryName">${stationeryName || order.paperOption || "-"}</strong>
+              </div>
             </div>
           </section>
 
@@ -1956,8 +2118,8 @@
             </div>
             ` : `
             <div class="letter-preview" id="orderLetterPreview">
-              <div class="preview-paper ${stationeryClass}">
-                <div class="preview-paper-inner">
+              <div class="preview-paper ${stationeryClass}"${stationeryBackgroundColor ? ` style="background-color: ${stationeryBackgroundColor};"` : ""}>
+                <div class="preview-paper-inner"${stationeryBackgroundColor ? ` style="background-color: ${stationeryBackgroundColor};"` : ""}>
                   <div class="preview-paper-guides" aria-hidden="true"></div>
                   <div class="preview-paper-body font-${fontClass}" style="color: ${textColor}">
                     ${letterHtml}
@@ -2106,6 +2268,8 @@
         const stationeryClass = STATIONERY_CLASS_MAP[order.paperOption] || STATIONERY_CLASS_MAP.default;
         const fontClass = resolveFontClass(order.fontStyle);
         const textColor = order.textColor || "#1b1c1f";
+        
+        // 출력용 편지는 배경색을 적용하지 않음 (실제 색상 용지로 출력하므로)
         return `
           <html lang="ko">
             <head>
@@ -2134,21 +2298,38 @@
                   align-items: center;
                   padding: 0;
                 }
-                .preview-paper {
-                  --paper-fill: #fff;
+                * {
+                  --paper-fill: #fff !important;
+                }
+                .preview-paper,
+                .preview-paper.paper-lined,
+                .preview-paper.paper-classic,
+                .preview-paper.paper-blossom,
+                .preview-paper.paper-midnight,
+                .preview-paper[class*="paper-"],
+                div[class*="paper-"] {
+                  --paper-fill: #fff !important;
                   --paper-line-color: rgba(0, 0, 0, 0.42);
                   width: 11cm;
                   height: 13.5cm;
                   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
                   position: relative;
                   padding: 1cm;
-                  background: var(--paper-fill);
+                  background: #fff !important;
+                  background-color: #fff !important;
+                  background-image: none !important;
+                  background-size: auto !important;
+                  background-position: center !important;
+                  background-repeat: no-repeat !important;
                   overflow: hidden;
                 }
                 .preview-paper-inner {
                   position: relative;
                   width: 100%;
                   height: 100%;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  background-image: none !important;
                 }
                 .preview-paper-guides {
                   position: absolute;
@@ -2174,15 +2355,15 @@
                 }
                 .paper-lined,
                 .paper-classic,
-                .paper-blossom {
+                .paper-blossom,
+                .paper-midnight,
+                [class*="paper-"] {
                   --paper-fill: #fff;
                   --paper-line-spacing: 28px;
-                }
-                .paper-midnight {
-                  --paper-fill: #0f1c2c;
-                  --paper-line-color: rgba(255, 255, 255, 0.35);
-                  --paper-line-spacing: 28px;
-                  color: #f3f4f8;
+                  background: #fff !important;
+                  background-color: #fff !important;
+                  background-image: none !important;
+                  color: #111 !important;
                 }
                 .preview-paper-body.font-default { font-family: "Pretendard", "Noto Sans KR", sans-serif; }
                 .preview-paper-body.font-serif { font-family: "Cormorant Garamond", "Times New Roman", serif; }
@@ -2194,8 +2375,8 @@
             </head>
             <body>
               <div class="preview">
-                <div class="preview-paper ${stationeryClass}">
-                  <div class="preview-paper-inner">
+                <div class="preview-paper" style="background: #fff !important; background-color: #fff !important; background-image: none !important;">
+                  <div class="preview-paper-inner" style="background: transparent !important; background-color: transparent !important; background-image: none !important;">
                     <div class="preview-paper-guides"></div>
                     <div class="preview-paper-body font-${fontClass}" style="color: ${textColor}">${letterHtml}</div>
                   </div>

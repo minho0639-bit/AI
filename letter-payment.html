@@ -64,7 +64,12 @@
               <input type="tel" id="buyerPhone" placeholder="01012345678" />
             </label>
           </div>
+          <label class="anonymous-checkbox">
+            <input type="checkbox" id="anonymousSender" />
+            <span>익명으로 보내기</span>
+          </label>
         </div>
+
         <div class="price-card">
           <div class="price-row">
             <span>기본 요금</span>
@@ -265,6 +270,7 @@
       const buyerNameInput = document.getElementById("buyerName");
       const buyerEmailInput = document.getElementById("buyerEmail");
       const buyerPhoneInput = document.getElementById("buyerPhone");
+      const anonymousSenderCheckbox = document.getElementById("anonymousSender");
       const paymentModal = document.getElementById("paymentModal");
       const closePaymentModal = document.getElementById("closePaymentModal");
       const cancelMockPayment = document.getElementById("cancelMockPayment");
@@ -285,6 +291,7 @@
       const ORDER_API_ENDPOINT = "/api/orders";
       let manualPaymentContext = null;
       let isSubmittingOrder = false;
+      let stationeryThemes = {};
 
       function getSelectedPayMethod() {
         const checked = Array.from(payMethodInputs).find((input) => input.checked);
@@ -492,12 +499,51 @@
           try {
             const previewPaper = document.querySelector(".preview .preview-paper");
             if (previewPaper && typeof html2canvas === "function") {
+              // 관리자가 실제 색상 용지로 출력하므로 편지지 배경색을 완전히 제거하고 투명 배경으로 저장
+              const previewPaperInner = previewPaper.querySelector(".preview-paper-inner");
+              const originalPaperBg = previewPaper.style.backgroundColor;
+              const originalPaperBgImage = previewPaper.style.backgroundImage;
+              const originalPaperClass = previewPaper.className;
+              const originalInnerBg = previewPaperInner ? previewPaperInner.style.backgroundColor : null;
+              const originalInnerBgImage = previewPaperInner ? previewPaperInner.style.backgroundImage : null;
+              
+              // html2canvas의 onclone 콜백을 사용하여 복제된 DOM에서 배경색 제거
               const canvas = await html2canvas(previewPaper, {
-                backgroundColor: "#ffffff",
+                backgroundColor: null,
                 scale: Math.min(3, window.devicePixelRatio ? window.devicePixelRatio + 1 : 2),
                 logging: false,
                 useCORS: true,
+                onclone: (clonedDoc) => {
+                  // 복제된 문서에서 편지지 배경색 제거
+                  const clonedPaper = clonedDoc.querySelector(".preview-paper");
+                  const clonedPaperInner = clonedPaper ? clonedPaper.querySelector(".preview-paper-inner") : null;
+                  
+                  if (clonedPaper) {
+                    clonedPaper.style.setProperty("background", "transparent", "important");
+                    clonedPaper.style.setProperty("background-color", "transparent", "important");
+                    clonedPaper.style.setProperty("background-image", "none", "important");
+                    clonedPaper.style.setProperty("background-size", "auto", "important");
+                    clonedPaper.style.setProperty("background-position", "center", "important");
+                    clonedPaper.style.setProperty("background-repeat", "no-repeat", "important");
+                    
+                    // CSS 클래스 제거 (배경색이 있는 클래스)
+                    clonedPaper.className = clonedPaper.className.replace(/paper-\w+/g, "").trim();
+                  }
+                  
+                  if (clonedPaperInner) {
+                    clonedPaperInner.style.setProperty("background", "transparent", "important");
+                    clonedPaperInner.style.setProperty("background-color", "transparent", "important");
+                    clonedPaperInner.style.setProperty("background-image", "none", "important");
+                    clonedPaperInner.style.setProperty("background-size", "auto", "important");
+                    clonedPaperInner.style.setProperty("background-position", "center", "important");
+                    clonedPaperInner.style.setProperty("background-repeat", "no-repeat", "important");
+                  }
+                },
               });
+              
+              // onclone을 사용하므로 원본 DOM은 수정하지 않음 (복원 불필요)
+              
+              // 투명 배경을 위해 PNG 형식으로 저장 (투명도 지원)
               letterImageBase64 = canvas.toDataURL("image/png", 1);
             }
           } catch (imageError) {
@@ -525,6 +571,7 @@
               couponCode: appliedCoupon?.code || null,
             },
             buyer: getBuyerInfo(),
+            sender: getSenderInfo(),
             letterImage: letterImageBase64,
           };
 
@@ -685,6 +732,44 @@
         return null;
       }
 
+      async function loadStationery() {
+        try {
+          const response = await fetch("/api/stationery");
+          if (!response.ok) {
+            throw new Error("편지지 목록을 불러올 수 없습니다.");
+          }
+          const stationeryList = await response.json();
+          
+          // stationeryThemes 객체 생성
+          stationeryThemes = {};
+          stationeryList.forEach((item) => {
+            // 기본 편지지는 paper-lined 클래스 사용
+            let cssClass = item.cssClass || "";
+            if (item.name === "기본 편지지" && !cssClass) {
+              cssClass = "paper-lined";
+            }
+            
+            stationeryThemes[item.id] = {
+              id: item.id,
+              label: item.name,
+              className: cssClass,
+              backgroundColor: item.backgroundColor || null,
+            };
+          });
+        } catch (error) {
+          console.error("편지지 로드 오류:", error);
+          // 폴백: 기본 편지지
+          stationeryThemes = {
+            basic: {
+              id: "basic",
+              label: "기본 편지지",
+              className: "paper-lined",
+              backgroundColor: null,
+            },
+          };
+        }
+      }
+
       function renderSummary(data) {
         if (!data) {
           summaryBody.innerHTML = `
@@ -705,7 +790,15 @@
         const previewFallback = baseText.length > 400 ? `${baseText.slice(0, 400)}…` : baseText;
         const pages = Number(data.pages) || 1;
         const characters = Number(data.characters) || baseText.length;
-        const stationeryClass = STATIONERY_CLASS_MAP[data.stationery] || STATIONERY_CLASS_MAP.default;
+        
+        // 편지지 정보 가져오기 (숫자 ID와 문자열 ID 모두 처리)
+        const stationeryId = data.stationery;
+        // 숫자 ID와 문자열 ID 모두 처리
+        const stationeryTheme = stationeryThemes[stationeryId] || stationeryThemes[String(stationeryId)] || stationeryThemes[Number(stationeryId)] || null;
+        const stationeryClass = stationeryTheme 
+          ? stationeryTheme.className || STATIONERY_CLASS_MAP[stationeryId] || STATIONERY_CLASS_MAP.default
+          : STATIONERY_CLASS_MAP[stationeryId] || STATIONERY_CLASS_MAP.default;
+        
         const previewHtml = data.formattedText
           ? sanitizeDraftHtml(data.formattedText)
           : escapeHtml(previewFallback).replace(/\n/g, "<br>");
@@ -741,6 +834,15 @@
         `;
         const previewPaperEl = summaryBody.querySelector(".preview-paper");
         if (previewPaperEl) {
+          // 배경색이 있으면 인라인 스타일로 적용
+          if (stationeryTheme && stationeryTheme.backgroundColor) {
+            previewPaperEl.style.backgroundColor = stationeryTheme.backgroundColor;
+            // preview-paper-inner에도 배경색 적용 (글 작성 영역에 배경색이 보이도록)
+            const previewPaperInner = previewPaperEl.querySelector(".preview-paper-inner");
+            if (previewPaperInner) {
+              previewPaperInner.style.backgroundColor = stationeryTheme.backgroundColor;
+            }
+          }
           renderPreviewGuides(previewPaperEl);
         }
       }
@@ -848,6 +950,28 @@
         return { name, email, phone };
       }
 
+      function getSenderInfo() {
+        const isAnonymous = anonymousSenderCheckbox ? anonymousSenderCheckbox.checked : false;
+        
+        if (isAnonymous) {
+          return { includeSender: false };
+        }
+        
+        // 보내는이 정보 포함 시 구매자 정보를 참조
+        const buyerInfo = getBuyerInfo();
+        return {
+          includeSender: true,
+          name: buyerInfo.name || "",
+          email: buyerInfo.email || "",
+          phone: buyerInfo.phone || "",
+        };
+      }
+
+      function validateSenderInfo() {
+        // 체크박스만 있으므로 별도 검증 불필요
+        return true;
+      }
+
       function validateBuyerInfo(info) {
         if (!info.email) {
           alert("결제자 이메일을 입력해 주세요.");
@@ -937,6 +1061,7 @@
 
         const buyerInfo = getBuyerInfo();
         if (!validateBuyerInfo(buyerInfo)) return;
+        if (!validateSenderInfo()) return;
         if (!buyerForm || buyerForm.dataset.locked !== "true") {
           saveBuyerProfile(buyerInfo);
         }
@@ -1054,7 +1179,10 @@
       });
 
       draftData = loadDraft();
-      renderSummary(draftData);
+      // 편지지 정보를 먼저 로드한 후 미리보기 렌더링
+      loadStationery().then(() => {
+        renderSummary(draftData);
+      });
       refreshAmounts();
       setCouponLoadingState(true);
       fetchCouponsFromServer();

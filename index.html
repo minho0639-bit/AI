@@ -11,8 +11,113 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      .splash-screen {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at top, #fff7d6 0, #ffffff 55%, #fff7e5 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .splash-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.25rem;
+      }
+
+      .splash-logo-row {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+      }
+
+      .splash-bee {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        animation: splash-bee-float 2.4s ease-in-out infinite;
+      }
+
+      .splash-logo-text {
+        height: 64px;
+        width: auto;
+        object-fit: contain;
+      }
+
+      .splash-tagline {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #4b4d55;
+        letter-spacing: -0.01em;
+      }
+
+      .splash-letter-icon {
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
+        animation: splash-letter-bounce 1.8s ease-in-out infinite;
+      }
+
+      @keyframes splash-bee-float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      @keyframes splash-letter-bounce {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-2deg);
+        }
+        50% {
+          transform: translateY(-6px) rotate(3deg);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .splash-logo-row {
+          flex-direction: column;
+        }
+
+        .splash-bee {
+          width: 96px;
+          height: 96px;
+        }
+
+        .splash-logo-text {
+          height: 52px;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splashScreen" class="splash-screen">
+      <div class="splash-inner">
+        <div class="splash-logo-row">
+          <img src="assets/bee-character.png" alt="레터비 꿀벌 캐릭터" class="splash-bee" />
+          <img src="assets/logo-text.png" alt="Letter-Bee 로고" class="splash-logo-text" />
+        </div>
+        <div class="splash-tagline">오늘 접수된 마음을, 이번 주 안에 편지로.</div>
+        <img src="assets/letter-icon.png" alt="편지 아이콘" class="splash-letter-icon" />
+      </div>
+    </div>
     <header class="top-nav">
       <div class="brand" onclick="window.location.href='/'">
         <img src="assets/logo.JPG" alt="레터비" class="logo-img">
@@ -94,6 +199,21 @@
         </div>
       </footer>
     <script>
+      // 스플래시 화면 처리
+      (function () {
+        const splashScreen = document.getElementById("splashScreen");
+        if (!splashScreen) return;
+
+        // 1.5초 후 스플래시 화면 숨기기
+        setTimeout(() => {
+          splashScreen.classList.add("hidden");
+          // 애니메이션 완료 후 DOM에서 제거
+          setTimeout(() => {
+            splashScreen.remove();
+          }, 500);
+        }, 1500);
+      })();
+
       // 로고 이미지 로드 처리
       const logoImg = document.querySelector(".logo-img");
       const logoText = document.querySelector(".logo-text");
