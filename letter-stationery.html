@@ -117,10 +117,6 @@
             <div class="stationery-preview">
               <img src="${option.previewImageUrl || "assets/stationery/basic.jpg"}" alt="${option.name} 미리보기" />
             </div>
-            <div>
-              <strong>${option.name}</strong>
-              <p>${option.description || ""}</p>
-            </div>
           `;
           card.addEventListener("click", () => {
             selectedStationery = optionId;

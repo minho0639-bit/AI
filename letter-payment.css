@@ -446,8 +446,7 @@ button:active {
   border-radius: 16px;
   padding: 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
   background: rgba(217, 75, 140, 0.08);
 }
@@ -456,24 +455,44 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .coupon-card__info strong {
   font-size: 1rem;
+  line-height: 1.4;
+}
+
+.coupon-card__info p {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0;
 }
 
 .coupon-card__actions {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .coupon-card__actions select {
+  flex: 1;
+  min-width: 0;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 8px 14px;
   font-size: 0.9rem;
   background: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coupon-card__actions button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .empty-state {

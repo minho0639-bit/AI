@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     <title>팬레터포스트 | 편지 작성</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -88,6 +88,19 @@
 
             <div class="toolbar-divider"></div>
 
+            <div class="toolbar-item">
+              <input type="file" id="imageUpload" accept="image/*" style="display: none;" />
+              <button type="button" class="toolbar-btn" id="imageUploadBtn" aria-label="이미지 삽입" title="이미지 삽입">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15.75 3.75H2.25C1.42157 3.75 0.75 4.42157 0.75 5.25V12.75C0.75 13.5784 1.42157 14.25 2.25 14.25H15.75C16.5784 14.25 17.25 13.5784 17.25 12.75V5.25C17.25 4.42157 16.5784 3.75 15.75 3.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6.75 7.5C7.57843 7.5 8.25 6.82843 8.25 6C8.25 5.17157 7.57843 4.5 6.75 4.5C5.92157 4.5 5.25 5.17157 5.25 6C5.25 6.82843 5.92157 7.5 6.75 7.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M0.75 12.75L5.25 8.25L8.25 11.25L12.75 6.75L17.25 12.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
             <div class="toolbar-item emoji-selector-wrapper">
               <button type="button" class="toolbar-btn emoji-trigger" id="emojiToggle" aria-expanded="false" aria-label="이모티콘 삽입" title="이모티콘">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -128,6 +141,8 @@
         const emojiPalette = document.getElementById("emojiPalette");
         const emojiToggle = document.getElementById("emojiToggle");
         const formatToolbar = document.getElementById("formatToolbar");
+        const imageUpload = document.getElementById("imageUpload");
+        const imageUploadBtn = document.getElementById("imageUploadBtn");
 
         const MAX_BODY = 1500;
         const MAX_LINES_PER_PAGE = 19;
@@ -745,6 +760,8 @@
           });
           body.addEventListener("keydown", (event) => handleBodyKeydown(event, body));
           body.addEventListener("input", () => handleBodyInput(body));
+          body.addEventListener("dragover", handleDragOver);
+          body.addEventListener("drop", (e) => handleDrop(e, body));
           page.appendChild(body);
           paperStack.appendChild(page);
           paperBodies.push(body);
@@ -974,6 +991,487 @@
             button.classList.toggle("active", !!isActive);
           });
         }
+
+        let draggedImage = null;
+
+        function createDraggableImage(imageSrc, maxWidth = 300) {
+          const container = document.createElement("div");
+          container.className = "image-container";
+          container.style.position = "relative";
+          container.style.display = "inline-block";
+          container.style.margin = "8px auto";
+          container.style.maxWidth = "100%";
+          container.contentEditable = "false";
+          
+          // 고유 ID 생성
+          const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          container.dataset.imageId = imageId;
+          
+          const img = document.createElement("img");
+          img.src = imageSrc;
+          // 크기 설정 (width와 maxWidth 모두 설정하여 일관성 유지)
+          img.style.width = `${maxWidth}px`;
+          img.style.maxWidth = `${maxWidth}px`;
+          img.style.height = "auto";
+          img.style.display = "block";
+          img.style.borderRadius = "4px";
+          img.style.cursor = "move";
+          img.draggable = true;
+          // width 속성도 설정하여 크기 정보 보존
+          img.setAttribute("width", maxWidth);
+          
+          // 삭제 버튼
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "image-delete-btn";
+          deleteBtn.innerHTML = "×";
+          deleteBtn.type = "button";
+          deleteBtn.setAttribute("aria-label", "이미지 삭제");
+          deleteBtn.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            z-index: 10;
+          `;
+          
+          // 크기 조절 핸들
+          const resizeHandle = document.createElement("div");
+          resizeHandle.className = "image-resize-handle";
+          resizeHandle.setAttribute("aria-label", "이미지 크기 조절");
+          resizeHandle.style.cssText = `
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            background: #111;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: nwse-resize;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+          `;
+          
+          let isResizing = false;
+          let startX = 0;
+          let startWidth = 0;
+          
+          // 크기 조절 시작
+          resizeHandle.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = parseInt(img.getAttribute("width")) || parseInt(img.style.width) || maxWidth;
+            document.addEventListener("mousemove", handleResize);
+            document.addEventListener("mouseup", stopResize);
+          });
+          
+          // 크기 조절 중
+          function handleResize(e) {
+            if (!isResizing) return;
+            const diff = e.clientX - startX;
+            const newWidth = Math.max(100, Math.min(600, startWidth + diff));
+            img.style.width = `${newWidth}px`;
+            img.style.maxWidth = `${newWidth}px`;
+            // width 속성도 업데이트하여 크기 정보 보존
+            img.setAttribute("width", newWidth);
+          }
+          
+          // 크기 조절 종료
+          function stopResize() {
+            isResizing = false;
+            document.removeEventListener("mousemove", handleResize);
+            document.removeEventListener("mouseup", stopResize);
+            captureSnapshot();
+          }
+          
+          // 터치 이벤트 (모바일)
+          resizeHandle.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isResizing = true;
+            startX = e.touches[0].clientX;
+            startWidth = parseInt(img.getAttribute("width")) || parseInt(img.style.width) || maxWidth;
+            document.addEventListener("touchmove", handleTouchResize);
+            document.addEventListener("touchend", stopResize);
+          });
+          
+          function handleTouchResize(e) {
+            if (!isResizing) return;
+            const diff = e.touches[0].clientX - startX;
+            const newWidth = Math.max(100, Math.min(600, startWidth + diff));
+            img.style.width = `${newWidth}px`;
+            img.style.maxWidth = `${newWidth}px`;
+            // width 속성도 업데이트하여 크기 정보 보존
+            img.setAttribute("width", newWidth);
+          }
+          
+          // 삭제 버튼 클릭
+          deleteBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm("이미지를 삭제하시겠습니까?")) {
+              container.remove();
+              const target = activeBody || paperBodies[0];
+              if (target) {
+                handleBodyInput(target);
+                captureSnapshot();
+              }
+            }
+          });
+          
+          // 드래그 시작
+          img.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", img.src);
+            e.dataTransfer.setData("application/x-image-id", imageId);
+            e.dataTransfer.setData("application/x-image-container", "true");
+            // 현재 이미지 크기를 dataTransfer에 저장
+            const currentWidth = img.getAttribute("width") || img.style.width || img.style.maxWidth || "300";
+            const widthValue = parseInt(currentWidth.toString().replace("px", "")) || 300;
+            e.dataTransfer.setData("application/x-image-width", widthValue.toString());
+            img.style.opacity = "0.5";
+            container.style.opacity = "0.5";
+            draggedImage = container;
+            container.dataset.dragging = "true";
+          });
+          
+          // 드래그 종료
+          img.addEventListener("dragend", (e) => {
+            // 드롭이 성공하지 않았으면 원래 상태로 복원
+            if (container.dataset.dragging === "true") {
+              // dropEffect가 "move"가 아니면 드롭이 실패한 것
+              if (e.dataTransfer.dropEffect !== "move") {
+                // 드롭이 실패했으므로 원래 상태로 복원
+                img.style.opacity = "1";
+                container.style.opacity = "1";
+                container.dataset.dragging = "false";
+                draggedImage = null;
+              }
+              // dropEffect가 "move"면 drop 이벤트에서 처리하므로 여기서는 아무것도 하지 않음
+            }
+          });
+          
+          container.appendChild(img);
+          container.appendChild(deleteBtn);
+          container.appendChild(resizeHandle);
+          
+          return container;
+        }
+
+        function insertImageAtCursor(imageSrc, maxWidth = 300) {
+          const target = activeBody || paperBodies[0];
+          if (!target) return;
+          
+          target.focus();
+          restoreSelectionRange(target);
+          
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            // 커서가 없으면 끝에 삽입
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          
+          try {
+            const container = createDraggableImage(imageSrc, maxWidth);
+            
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(container);
+            
+            // 이미지 뒤에 줄바꿈 추가
+            const br = document.createElement("br");
+            range.setStartAfter(container);
+            range.insertNode(br);
+            
+            // 커서를 이미지 뒤로 이동
+            range.setStartAfter(br);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            handleBodyInput(target);
+            captureSnapshot();
+          } catch (error) {
+            console.error("이미지 삽입 실패:", error);
+            alert("이미지를 삽입하는 중 오류가 발생했습니다.");
+          }
+        }
+
+        function handleDragOver(e) {
+          if (e.dataTransfer.types.includes("text/plain") || (e.dataTransfer.files && e.dataTransfer.files.length > 0)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }
+        }
+
+        function handleDrop(e, target) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (!target) return;
+          
+          target.focus();
+          
+          // 이미지 파일이 드롭된 경우
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith("image/")) {
+              if (file.size > 5 * 1024 * 1024) {
+                alert("이미지 크기는 5MB 이하여야 합니다.");
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const imageSrc = event.target.result;
+                insertImageAtDropPosition(target, e, imageSrc);
+              };
+              reader.readAsDataURL(file);
+              return;
+            }
+          }
+          
+          // 기존 이미지가 드롭된 경우
+          const isImageContainer = e.dataTransfer.getData("application/x-image-container") === "true";
+          const imageId = e.dataTransfer.getData("application/x-image-id");
+          // dataTransfer에서 크기 정보 가져오기 (가장 확실한 방법)
+          const savedWidth = e.dataTransfer.getData("application/x-image-width");
+          let maxWidth = savedWidth ? parseInt(savedWidth) : 300;
+          
+          let sourceContainer = null;
+          let imageSrc = null;
+          
+          // 1순위: 이미지 ID로 찾기 (가장 확실한 방법, 모든 편지지 영역에서)
+          if (isImageContainer && imageId) {
+            const allContainers = document.querySelectorAll(".image-container");
+            for (const container of allContainers) {
+              if (container.dataset.imageId === imageId) {
+                const img = container.querySelector("img");
+                if (img) {
+                  sourceContainer = container;
+                  imageSrc = img.src;
+                  // 크기 정보가 없으면 원본에서 가져오기
+                  if (!savedWidth) {
+                    const currentWidth = img.getAttribute("width") || img.style.width || img.style.maxWidth;
+                    if (currentWidth) {
+                      maxWidth = parseInt(currentWidth.toString().replace("px", "")) || 300;
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          }
+          // 2순위: draggedImage가 있으면 직접 사용
+          if (!sourceContainer && draggedImage) {
+            const img = draggedImage.querySelector("img");
+            if (img) {
+              sourceContainer = draggedImage;
+              imageSrc = img.src;
+              // 크기 정보가 없으면 원본에서 가져오기
+              if (!savedWidth) {
+                const currentWidth = img.getAttribute("width") || img.style.width || img.style.maxWidth;
+                if (currentWidth) {
+                  maxWidth = parseInt(currentWidth.toString().replace("px", "")) || 300;
+                }
+              }
+            }
+          }
+          // 3순위: 이미지 소스로 찾기 (모든 편지지 영역에서)
+          if (!sourceContainer && isImageContainer && e.dataTransfer.getData("text/plain")) {
+            imageSrc = e.dataTransfer.getData("text/plain");
+            const allContainers = document.querySelectorAll(".image-container");
+            for (const container of allContainers) {
+              const img = container.querySelector("img");
+              if (img && img.src === imageSrc) {
+                sourceContainer = container;
+                // 크기 정보가 없으면 원본에서 가져오기
+                if (!savedWidth) {
+                  const currentWidth = img.getAttribute("width") || img.style.width || img.style.maxWidth;
+                  if (currentWidth) {
+                    maxWidth = parseInt(currentWidth.toString().replace("px", "")) || 300;
+                  }
+                }
+                break;
+              }
+            }
+          }
+          
+          // 원본 이미지가 있으면 제거하고 새 위치에 삽입
+          if (sourceContainer && imageSrc) {
+            // 원본 이미지 크기 최종 확인 (dataTransfer에 저장된 값이 없을 경우)
+            if (!savedWidth) {
+              const originalImg = sourceContainer.querySelector("img");
+              if (originalImg) {
+                const currentWidth = originalImg.getAttribute("width") || originalImg.style.width || originalImg.style.maxWidth;
+                if (currentWidth) {
+                  const parsedWidth = parseInt(currentWidth.toString().replace("px", ""));
+                  if (!isNaN(parsedWidth) && parsedWidth > 0) {
+                    maxWidth = parsedWidth;
+                  }
+                }
+              }
+            }
+            
+            // 원본 제거 (드래그 상태 복원 후 제거)
+            const originalImg = sourceContainer.querySelector("img");
+            if (sourceContainer.dataset.dragging === "true") {
+              if (originalImg) {
+                originalImg.style.opacity = "1";
+                sourceContainer.style.opacity = "1";
+              }
+            }
+            
+            // 원본 제거 (DOM에서 완전히 제거)
+            if (sourceContainer.parentNode) {
+              sourceContainer.parentNode.removeChild(sourceContainer);
+            }
+            draggedImage = null;
+            
+            // 새 위치에 삽입 (조정된 크기 정보 포함)
+            insertImageAtDropPosition(target, e, imageSrc, maxWidth);
+            return;
+          }
+          
+          // 원본을 찾지 못한 경우에만 새로 삽입 (파일 드롭 등)
+          if (e.dataTransfer.getData("text/plain") && !isImageContainer) {
+            const imageSrc = e.dataTransfer.getData("text/plain");
+            insertImageAtDropPosition(target, e, imageSrc);
+          }
+        }
+
+        function insertImageAtDropPosition(target, dropEvent, imageSrc, maxWidth = 300) {
+          try {
+            // 드롭 위치 계산 - 더 정확한 위치 찾기
+            let range = null;
+            const selection = window.getSelection();
+            
+            // caretRangeFromPoint를 사용하여 정확한 드롭 위치 찾기
+            if (document.caretRangeFromPoint) {
+              try {
+                range = document.caretRangeFromPoint(dropEvent.clientX, dropEvent.clientY);
+              } catch (err) {
+                // caretRangeFromPoint가 실패할 수 있음
+              }
+            }
+            
+            // range가 없거나 target에 속하지 않으면 더 정확하게 찾기
+            if (!range || !target.contains(range.commonAncestorContainer)) {
+              // 드롭 위치에서 가장 가까운 텍스트 노드 찾기
+              const dropPoint = document.elementFromPoint(dropEvent.clientX, dropEvent.clientY);
+              if (dropPoint && target.contains(dropPoint)) {
+                range = document.createRange();
+                // 드롭된 요소가 텍스트 노드면 그 위치에 삽입
+                if (dropPoint.nodeType === Node.TEXT_NODE) {
+                  const textNode = dropPoint;
+                  const textLength = textNode.textContent.length;
+                  // 드롭 위치에 가장 가까운 문자 위치 계산
+                  range.setStart(textNode, Math.min(textLength, Math.floor(textLength / 2)));
+                  range.collapse(true);
+                } else if (dropPoint === target || dropPoint.closest('.paper-body') === target) {
+                  // target 자체이면 끝에 삽입
+                  range.selectNodeContents(target);
+                  range.collapse(false);
+                } else {
+                  // 다른 요소면 그 앞에 삽입 시도
+                  try {
+                    range.setStartBefore(dropPoint);
+                    range.collapse(true);
+                  } catch (err) {
+                    // 실패하면 끝에 삽입
+                    range.selectNodeContents(target);
+                    range.collapse(false);
+                  }
+                }
+              } else {
+                // fallback: 끝에 삽입
+                range = document.createRange();
+                range.selectNodeContents(target);
+                range.collapse(false);
+              }
+            }
+            
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            const container = createDraggableImage(imageSrc, maxWidth);
+            const currentRange = selection.getRangeAt(0);
+            currentRange.deleteContents();
+            currentRange.insertNode(container);
+            
+            // 이미지 뒤에 줄바꿈 추가
+            const br = document.createElement("br");
+            currentRange.setStartAfter(container);
+            currentRange.insertNode(br);
+            
+            // 커서를 이미지 뒤로 이동
+            currentRange.setStartAfter(br);
+            currentRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(currentRange);
+            
+            activeBody = target;
+            handleBodyInput(target);
+            captureSnapshot();
+          } catch (error) {
+            console.error("이미지 드롭 실패:", error);
+            alert("이미지를 이동하는 중 오류가 발생했습니다.");
+          }
+        }
+
+        function handleImageUpload(event) {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          
+          if (!file.type.startsWith("image/")) {
+            alert("이미지 파일만 업로드할 수 있습니다.");
+            return;
+          }
+          
+          // 파일 크기 제한 (5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            alert("이미지 크기는 5MB 이하여야 합니다.");
+            return;
+          }
+          
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const imageSrc = e.target.result;
+            insertImageAtCursor(imageSrc);
+          };
+          reader.onerror = () => {
+            alert("이미지를 읽는 중 오류가 발생했습니다.");
+          };
+          reader.readAsDataURL(file);
+          
+          // 같은 파일을 다시 선택할 수 있도록 input 초기화
+          event.target.value = "";
+        }
+
+        imageUploadBtn?.addEventListener("click", () => {
+          imageUpload?.click();
+        });
+
+        imageUpload?.addEventListener("change", handleImageUpload);
 
         emojiToggle?.addEventListener("click", (event) => {
           event.stopPropagation();

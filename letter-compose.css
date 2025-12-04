@@ -389,8 +389,9 @@ button:active {
   display: flex;
   justify-content: center;
   width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
   scrollbar-gutter: stable;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .paper-stack {
@@ -562,6 +563,61 @@ button:active {
   z-index: 1;
 }
 
+.paper-body .image-container {
+  position: relative;
+  display: inline-block;
+  margin: 8px auto;
+  max-width: 100%;
+}
+
+.paper-body .image-container img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: move;
+}
+
+.paper-body .image-container:hover .image-delete-btn,
+.paper-body .image-container:hover .image-resize-handle {
+  opacity: 1;
+}
+
+.paper-body .image-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.paper-body .image-delete-btn:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.paper-body .image-resize-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.paper-body .image-resize-handle:hover {
+  background: #333;
+  transform: scale(1.1);
+}
+
+.paper-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.paper-body img:hover {
+  opacity: 0.9;
+}
+
 .paper-body {
   flex: 1;
   line-height: 1.8;
@@ -669,17 +725,29 @@ button:active {
 @media (max-width: 600px) {
   body {
     padding: 16px;
+    overflow-x: hidden;
   }
   .compose-main {
     gap: 24px;
   }
   .write-panel {
     padding-bottom: 12px;
-    justify-content: flex-start;
+    justify-content: center;
+    overflow-x: visible;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .paper-stack {
+    transform-origin: center top;
+    min-width: 14cm;
   }
   .letter-paper {
     padding: 1cm;
     border-radius: 0;
+    transform: scale(0.6);
+    transform-origin: center top;
   }
   .compose-actions button {
     width: 100%;
