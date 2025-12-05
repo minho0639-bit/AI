@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="letter-compose.css" />
+    <script src="js/api-config.js"></script>
   </head>
   <body>
       <header class="top-nav">
@@ -429,11 +430,15 @@
 
         async function loadStationery() {
           try {
-            const response = await fetch("/api/stationery");
-            if (!response.ok) {
-              throw new Error("편지지 목록을 불러올 수 없습니다.");
+            if (window.apiConfig && window.apiConfig.json) {
+              stationeryList = await window.apiConfig.json("/api/stationery", { credentials: 'include' });
+            } else {
+              const response = await fetch("/api/stationery", { credentials: 'include' });
+              if (!response.ok) {
+                throw new Error("편지지 목록을 불러올 수 없습니다.");
+              }
+              stationeryList = await response.json();
             }
-            stationeryList = await response.json();
             
             // stationeryThemes 객체 생성
             stationeryThemes = {};
@@ -750,16 +755,37 @@
           body.className = "paper-body";
           body.contentEditable = "true";
           body.dataset.placeholder = getPlaceholderText();
+          
+          // Android WebView에서 contentEditable 입력 활성화를 위한 속성 추가
+          body.setAttribute("spellcheck", "true");
+          body.setAttribute("autocorrect", "on");
+          body.setAttribute("autocapitalize", "sentences");
+          body.setAttribute("inputmode", "text");
+          
+          // 스타일 속성으로도 명시
+          body.style.webkitUserSelect = "text";
+          body.style.userSelect = "text";
+          body.style.webkitTouchCallout = "default";
+          body.style.cursor = "text";
+          
           body.addEventListener("focus", () => {
             activeBody = body;
             updateFormatToolbarState();
+            // Android WebView에서 포커스 시 입력 활성화
+            console.log('paper-body 포커스됨');
           });
           body.addEventListener("click", () => {
             activeBody = body;
             updateFormatToolbarState();
+            // 클릭 시 포커스 강제
+            body.focus();
+            console.log('paper-body 클릭됨, 포커스 설정');
           });
           body.addEventListener("keydown", (event) => handleBodyKeydown(event, body));
-          body.addEventListener("input", () => handleBodyInput(body));
+          body.addEventListener("input", () => {
+            console.log('paper-body 입력 이벤트 발생');
+            handleBodyInput(body);
+          });
           body.addEventListener("dragover", handleDragOver);
           body.addEventListener("drop", (e) => handleDrop(e, body));
           page.appendChild(body);
@@ -1578,38 +1604,152 @@
         });
 
         // 로그인 상태 확인 및 사용자 정보 표시
-        const nicknameEl = document.querySelector(".user-nickname");
+        // DOM이 로드된 후에 요소를 찾기 위해 함수로 감싸기
+        function getNicknameEl() {
+          return document.querySelector(".user-nickname");
+        }
+        
         const nicknameBtn = document.querySelector(".user-nickname-button");
         const logoutBtn = document.getElementById("logoutBtn");
 
         function applySession(user) {
+          console.log('applySession 호출됨, 사용자 정보:', user);
           document.body.classList.add("logged-in");
-          if (nicknameEl) nicknameEl.textContent = user?.name || user?.email || "팬";
+          const nicknameEl = getNicknameEl();
+          if (nicknameEl) {
+            const displayName = user?.name || user?.email || "팬";
+            console.log('닉네임 업데이트:', displayName);
+            nicknameEl.textContent = displayName;
+          } else {
+            console.warn('nicknameEl 요소를 찾을 수 없습니다. DOM이 아직 로드되지 않았을 수 있습니다.');
+            // DOM이 로드될 때까지 기다렸다가 다시 시도
+            setTimeout(() => {
+              const nicknameEl = getNicknameEl();
+              if (nicknameEl && user) {
+                const displayName = user?.name || user?.email || "팬";
+                console.log('닉네임 업데이트 (재시도):', displayName);
+                nicknameEl.textContent = displayName;
+              }
+            }, 100);
+          }
         }
 
         function clearSessionState() {
           document.body.classList.remove("logged-in");
+          const nicknameEl = getNicknameEl();
           if (nicknameEl) nicknameEl.textContent = "Guest";
         }
 
         async function fetchSession() {
+          console.log('=== fetchSession 시작 ===');
+          const nicknameEl = getNicknameEl();
+          console.log('nicknameEl:', nicknameEl ? '있음' : '없음');
+          console.log('apiConfig:', typeof window.apiConfig, window.apiConfig?.baseUrl);
+          
           try {
-            const res = await fetch("/api/me");
-            const data = await res.json();
-            if (data.loggedIn) {
+            // 먼저 localStorage에서 세션 정보 확인 (WebView 쿠키 문제 대응)
+            try {
+              const storedSession = localStorage.getItem('userSession');
+              console.log('localStorage에서 세션 확인:', storedSession ? '있음' : '없음');
+              if (storedSession) {
+                const sessionData = JSON.parse(storedSession);
+                const sessionAge = Date.now() - sessionData.timestamp;
+                console.log('세션 나이:', Math.round(sessionAge / 1000 / 60), '분');
+                // 24시간 이내의 세션만 유효
+                if (sessionAge < 24 * 60 * 60 * 1000 && sessionData.user) {
+                  console.log('localStorage에서 세션 정보 복원:', sessionData.user);
+                  applySession(sessionData.user);
+                  // 백그라운드에서 서버 세션 확인
+                  checkServerSession();
+                  return;
+                } else {
+                  console.log('세션이 만료되었습니다. 제거합니다.');
+                  // 만료된 세션 제거
+                  localStorage.removeItem('userSession');
+                }
+              }
+            } catch (e) {
+              console.warn('localStorage 읽기 실패:', e);
+            }
+            
+            console.log('서버에서 세션 확인 시도...');
+            let data;
+            if (window.apiConfig && window.apiConfig.json) {
+              console.log('apiConfig.json 사용하여 /api/me 호출');
+              data = await window.apiConfig.json("/api/me", { credentials: 'include' });
+            } else {
+              console.log('일반 fetch 사용하여 /api/me 호출');
+              const res = await fetch("/api/me", { credentials: 'include' });
+              data = await res.json();
+            }
+            
+            console.log('서버 세션 응답:', data);
+            if (data.loggedIn && data.user) {
+              console.log('로그인 상태 확인됨, 사용자 정보:', data.user);
+              // 세션 정보를 localStorage에 저장
+              try {
+                localStorage.setItem('userSession', JSON.stringify({
+                  user: data.user,
+                  timestamp: Date.now()
+                }));
+                console.log('세션 정보를 localStorage에 저장했습니다.');
+              } catch (e) {
+                console.warn('localStorage 저장 실패:', e);
+              }
               applySession(data.user);
             } else {
+              console.log('로그인 상태 아님 또는 사용자 정보 없음');
+              // localStorage에서도 제거
+              try {
+                localStorage.removeItem('userSession');
+              } catch (e) {
+                console.warn('localStorage 제거 실패:', e);
+              }
               clearSessionState();
             }
           } catch (error) {
             console.error("세션 정보를 가져오지 못했습니다.", error);
+            console.error("오류 상세:", error.message, error.stack);
+            clearSessionState();
+          }
+        }
+        
+        // 백그라운드에서 서버 세션 확인 (localStorage 세션 사용 시)
+        async function checkServerSession() {
+          try {
+            if (window.apiConfig && window.apiConfig.json) {
+              const data = await window.apiConfig.json("/api/me", { credentials: 'include' });
+              if (data.loggedIn && data.user) {
+                // 서버 세션이 유효하면 localStorage 업데이트
+                localStorage.setItem('userSession', JSON.stringify({
+                  user: data.user,
+                  timestamp: Date.now()
+                }));
+              } else {
+                // 서버 세션이 없으면 localStorage 제거
+                localStorage.removeItem('userSession');
+                clearSessionState();
+              }
+            }
+          } catch (error) {
+            console.warn('서버 세션 확인 실패 (localStorage 세션 계속 사용):', error);
           }
         }
 
         if (logoutBtn) {
           logoutBtn.addEventListener("click", async () => {
             try {
-              await fetch("/api/logout", { method: "POST" });
+              if (window.apiConfig && window.apiConfig.fetch) {
+                await window.apiConfig.fetch("/api/logout", { 
+                  method: "POST",
+                  credentials: 'include'
+                });
+              } else {
+                await fetch("/api/logout", { 
+                  method: "POST",
+                  credentials: 'include'
+                });
+              }
             } catch (error) {
               console.error("로그아웃 실패", error);
             } finally {
@@ -1628,7 +1768,13 @@
           });
         }
 
-        fetchSession();
+        // DOM이 로드된 후 세션 확인
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', fetchSession);
+        } else {
+          // DOM이 이미 로드된 경우 즉시 실행
+          fetchSession();
+        }
       </script>
   </body>
 </html>

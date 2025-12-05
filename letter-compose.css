@@ -561,6 +561,15 @@ button:active {
   font-family: "Pretendard", sans-serif;
   position: relative;
   z-index: 1;
+  /* Android WebView에서 contentEditable 입력 활성화 */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  /* 입력 가능하도록 명시 */
+  cursor: text;
 }
 
 .paper-body .image-container {

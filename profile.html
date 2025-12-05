@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="profile.css" />
+    <script src="js/api-config.js"></script>
   </head>
   <body>
     <header class="top-nav">
@@ -97,11 +98,16 @@
       async function fetchProfile() {
         try {
           profileContent.innerHTML = '<p class="muted">회원 정보를 불러오는 중입니다...</p>';
-          const res = await fetch("/api/me");
-          if (!res.ok) {
-            throw new Error("회원 정보를 불러올 수 없습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/me", { credentials: 'include' });
+          } else {
+            const res = await fetch("/api/me", { credentials: 'include' });
+            if (!res.ok) {
+              throw new Error("회원 정보를 불러올 수 없습니다.");
+            }
+            data = await res.json();
           }
-          const data = await res.json();
           if (!data.loggedIn) {
             handleLogoutState();
             return;
@@ -208,9 +214,15 @@
 
       async function fetchOrders() {
         try {
-          const response = await fetch("/api/orders/my?limit=20");
-          if (!response.ok) throw new Error("주문 내역을 불러올 수 없습니다.");
-          return await response.json();
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/orders/my?limit=20", { credentials: 'include' });
+          } else {
+            const response = await fetch("/api/orders/my?limit=20", { credentials: 'include' });
+            if (!response.ok) throw new Error("주문 내역을 불러올 수 없습니다.");
+            data = await response.json();
+          }
+          return data;
         } catch (error) {
           console.warn(error.message);
           return [];
@@ -265,7 +277,17 @@
 
       async function handleLogout() {
         try {
-          await fetch("/api/logout", { method: "POST" });
+          if (window.apiConfig && window.apiConfig.fetch) {
+            await window.apiConfig.fetch("/api/logout", { 
+              method: "POST",
+              credentials: 'include'
+            });
+          } else {
+            await fetch("/api/logout", { 
+              method: "POST",
+              credentials: 'include'
+            });
+          }
         } catch (error) {
           console.warn("로그아웃 실패", error);
         } finally {
@@ -288,8 +310,13 @@
 
       async function updateHeaderUser() {
         try {
-          const res = await fetch("/api/me");
-          const data = await res.json();
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/me", { credentials: 'include' });
+          } else {
+            const res = await fetch("/api/me", { credentials: 'include' });
+            data = await res.json();
+          }
           if (data.loggedIn && data.user && nicknameEl) {
             nicknameEl.textContent = data.user.name || data.user.email || "팬";
             document.body.classList.add("logged-in");

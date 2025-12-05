@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="admin.css" />
+    <script src="js/api-config.js"></script>
   </head>
   <body>
     <header>
@@ -684,7 +685,17 @@
       );
       logoutButtons.forEach((button) =>
         button.addEventListener("click", async () => {
-          await fetch("/api/logout", { method: "POST" });
+          if (window.apiConfig && window.apiConfig.fetch) {
+            await window.apiConfig.fetch("/api/logout", { 
+              method: "POST",
+              credentials: 'include'
+            });
+          } else {
+            await fetch("/api/logout", { 
+              method: "POST",
+              credentials: 'include'
+            });
+          }
           await toggleDashboard(false);
         })
       );
@@ -975,7 +986,12 @@
 
       async function checkAdminSession() {
         try {
-          const response = await fetch("/api/admin/session");
+          let response;
+          if (window.apiConfig && window.apiConfig.fetch) {
+            response = await window.apiConfig.fetch("/api/admin/session", { credentials: 'include' });
+          } else {
+            response = await fetch("/api/admin/session", { credentials: 'include' });
+          }
           return response.ok;
         } catch (error) {
           console.error(error);
@@ -988,14 +1004,14 @@
         loginStatus.classList.remove("error", "success");
         const payload = Object.fromEntries(formData.entries());
         try {
-          const response = await fetch("/api/admin/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "로그인에 실패했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/login", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            // 이미 위에서 처리됨
           }
           loginStatus.textContent = "로그인 성공! 데이터를 불러오는 중...";
           loginStatus.classList.add("success");
@@ -1344,14 +1360,24 @@
           imageData: imageData,
         };
         try {
-          const response = await fetch("/api/admin/recipients", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/recipients", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/recipients", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "수령인을 추가하지 못했습니다.");
+            }
+            data = await response.json();
           }
           recipientForm.reset();
           recipientImagePreview.style.display = "none";
@@ -1371,12 +1397,24 @@
       }
 
       async function deleteRecipient(recipientId) {
-        const response = await fetch(`/api/admin/recipients/${recipientId}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.fetch) {
+          const response = await window.apiConfig.fetch(`/api/admin/recipients/${recipientId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
+          }
+        } else {
+          const response = await fetch(`/api/admin/recipients/${recipientId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "수령인을 삭제하지 못했습니다.");
+          }
         }
       }
 
@@ -1402,14 +1440,24 @@
           isPopular: formData.get("isPopular") === "on",
         };
         try {
-          const response = await fetch("/api/admin/agencies", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "소속사를 추가하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/agencies", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/agencies", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "소속사를 추가하지 못했습니다.");
+            }
+            data = await response.json();
           }
           agencyForm.reset();
           agencyImagePreview.style.display = "none";
@@ -1446,14 +1494,24 @@
           imageData: imageData,
         };
         try {
-          const response = await fetch("/api/admin/groups", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "그룹/팀을 추가하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/groups", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/groups", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "그룹/팀을 추가하지 못했습니다.");
+            }
+            data = await response.json();
           }
           groupForm.reset();
           groupImagePreview.style.display = "none";
@@ -1468,22 +1526,46 @@
       }
 
       async function deleteAgency(agencyId) {
-        const response = await fetch(`/api/admin/agencies/${agencyId}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "소속사를 삭제하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.fetch) {
+          const response = await window.apiConfig.fetch(`/api/admin/agencies/${agencyId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "소속사를 삭제하지 못했습니다.");
+          }
+        } else {
+          const response = await fetch(`/api/admin/agencies/${agencyId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "소속사를 삭제하지 못했습니다.");
+          }
         }
       }
 
       async function deleteGroup(groupId) {
-        const response = await fetch(`/api/admin/groups/${groupId}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "그룹/팀을 삭제하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.fetch) {
+          const response = await window.apiConfig.fetch(`/api/admin/groups/${groupId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "그룹/팀을 삭제하지 못했습니다.");
+          }
+        } else {
+          const response = await fetch(`/api/admin/groups/${groupId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "그룹/팀을 삭제하지 못했습니다.");
+          }
         }
       }
 
@@ -1499,14 +1581,24 @@
           isActive: formData.get("isActive") === "1",
         };
         try {
-          const response = await fetch("/api/admin/stationery", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "편지지를 추가하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/stationery", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/stationery", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "편지지를 추가하지 못했습니다.");
+            }
+            data = await response.json();
           }
           stationeryForm.reset();
           stationeryStatusSelect.value = "1";
@@ -1520,12 +1612,24 @@
       }
 
       async function deleteStationery(templateId) {
-        const response = await fetch(`/api/admin/stationery/${templateId}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "편지지를 삭제하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.fetch) {
+          const response = await window.apiConfig.fetch(`/api/admin/stationery/${templateId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "편지지를 삭제하지 못했습니다.");
+          }
+        } else {
+          const response = await fetch(`/api/admin/stationery/${templateId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "편지지를 삭제하지 못했습니다.");
+          }
         }
       }
 
@@ -1545,14 +1649,22 @@
           isActive:
             typeof patch.isActive === "boolean" ? patch.isActive : !!template.isActive,
         };
-        const response = await fetch(`/api/admin/stationery/${templateId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "편지지를 수정하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.json) {
+          await window.apiConfig.json(`/api/admin/stationery/${templateId}`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const response = await fetch(`/api/admin/stationery/${templateId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "편지지를 수정하지 못했습니다.");
+          }
         }
       }
 
@@ -1573,14 +1685,24 @@
           expiresAt: formData.get("expiresAt") || null,
         };
         try {
-          const response = await fetch("/api/admin/coupons", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "쿠폰을 생성하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/coupons", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/coupons", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "쿠폰을 생성하지 못했습니다.");
+            }
+            data = await response.json();
           }
           couponForm?.reset();
           couponFormStatus.textContent = "쿠폰을 생성했습니다.";
@@ -1614,14 +1736,24 @@
           return;
         }
         try {
-          const response = await fetch("/api/admin/coupons/issue", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.message || "쿠폰을 발급하지 못했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/admin/coupons/issue", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+          } else {
+            const response = await fetch("/api/admin/coupons/issue", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: 'include',
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => ({}));
+              throw new Error(errorBody.message || "쿠폰을 발급하지 못했습니다.");
+            }
+            data = await response.json();
           }
           couponIssueForm?.reset();
           couponIssueStatus.textContent = "쿠폰을 발급했습니다.";
@@ -1634,12 +1766,24 @@
       }
 
       async function deleteCoupon(couponId) {
-        const response = await fetch(`/api/admin/coupons/${couponId}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || "쿠폰을 삭제하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.fetch) {
+          const response = await window.apiConfig.fetch(`/api/admin/coupons/${couponId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "쿠폰을 삭제하지 못했습니다.");
+          }
+        } else {
+          const response = await fetch(`/api/admin/coupons/${couponId}`, {
+            method: "DELETE",
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || "쿠폰을 삭제하지 못했습니다.");
+          }
         }
       }
 
@@ -1834,12 +1978,16 @@
       }
 
       async function fetchJson(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.message || "요청에 실패했습니다.");
+        if (window.apiConfig && window.apiConfig.json) {
+          return await window.apiConfig.json(url, { credentials: 'include' });
+        } else {
+          const response = await fetch(url, { credentials: 'include' });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "요청에 실패했습니다.");
+          }
+          return response.json();
         }
-        return response.json();
       }
 
       function getStationeryName(paperOption) {
@@ -1966,29 +2114,45 @@
       }
 
       async function updateLetterStatus(orderId, status) {
-        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.message || "편지 상태를 업데이트하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.json) {
+          return await window.apiConfig.json(`/api/admin/orders/${orderId}/status`, {
+            method: "PUT",
+            body: JSON.stringify({ status }),
+          });
+        } else {
+          const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: JSON.stringify({ status }),
+          });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "편지 상태를 업데이트하지 못했습니다.");
+          }
+          return response.json();
         }
-        return response.json();
       }
 
       async function updateShipment(orderId, payload) {
-        const response = await fetch(`/api/admin/orders/${orderId}/shipment`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.message || "배송 정보를 업데이트하지 못했습니다.");
+        if (window.apiConfig && window.apiConfig.json) {
+          return await window.apiConfig.json(`/api/admin/orders/${orderId}/shipment`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const response = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || "배송 정보를 업데이트하지 못했습니다.");
+          }
+          return response.json();
         }
-        return response.json();
       }
 
       function renderPreviewGuides(previewPaper) {

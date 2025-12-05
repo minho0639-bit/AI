@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>팬레터포스트 회원가입</title>
     <link rel="stylesheet" href="signup.css" />
+    <script src="js/api-config.js"></script>
   </head>
   <body>
     <div class="signup-shell">
@@ -114,18 +115,24 @@
         }
 
         try {
-          const response = await fetch("/api/signup", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email, password, name, phone, marketingConsent }),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || "회원가입에 실패했습니다.");
+          let data;
+          if (window.apiConfig && window.apiConfig.json) {
+            data = await window.apiConfig.json("/api/signup", {
+              method: "POST",
+              body: JSON.stringify({ email, password, name, phone, marketingConsent }),
+            });
+          } else {
+            const response = await fetch("/api/signup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password, name, phone, marketingConsent }),
+            });
+            data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.message || "회원가입에 실패했습니다.");
+            }
           }
 
           messageEl.textContent = `${data.message} 잠시 후 홈으로 이동합니다.`;

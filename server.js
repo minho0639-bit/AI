@@ -67,16 +67,58 @@ initializeBootstrapTasks().catch((error) => {
   console.error("Startup bootstrap failed:", error);
 });
 
-app.use(cors());
+// CORS 설정 - 모바일 앱 및 웹 브라우저 지원
+app.use(cors({
+  origin: function (origin, callback) {
+    // origin이 없는 경우 (같은 도메인에서의 요청, 모바일 앱 등)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // 허용할 origin 목록
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:8080',
+      'http://b-itsolution.com:3202',
+      'capacitor://localhost',
+      'ionic://localhost',
+      'http://localhost',
+      // 로컬 네트워크 IP (개발 환경)
+      // 예: 'http://192.168.1.100:3000' - 실제 IP로 변경 필요
+    ];
+    
+    // 동적으로 로컬 네트워크 IP 허용 (192.168.x.x, 10.0.x.x 등)
+    const isLocalNetwork = /^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin);
+    
+    if (allowedOrigins.includes(origin) || isLocalNetwork) {
+      callback(null, true);
+    } else {
+      // 개발 환경에서는 모든 origin 허용 (프로덕션에서는 제거)
+      if (process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      }
+    }
+  },
+  credentials: true, // 쿠키 및 인증 정보 허용
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fanletter-post-secret",
     resave: false,
     saveUninitialized: false,
+    name: 'sessionId', // 쿠키 이름 명시
     cookie: {
-      secure: false,
+      secure: false, // HTTP 사용 시 false
       httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24,
+      maxAge: 1000 * 60 * 60 * 24, // 24시간
+      sameSite: 'lax', // Cross-site 요청에서도 쿠키 전송 허용
+      // domain을 설정하지 않으면 모든 도메인에서 쿠키 사용 가능
     },
   })
 );
@@ -1289,7 +1331,13 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
 });
 
 app.get("/api/me", async (req, res) => {
+  // 디버깅: 세션 정보 로깅
+  console.log('/api/me 요청 - 세션 ID:', req.sessionID);
+  console.log('/api/me 요청 - 세션 userId:', req.session.userId);
+  console.log('/api/me 요청 - 쿠키 헤더:', req.headers.cookie);
+  
   if (!req.session.userId) {
+    console.log('/api/me - 세션이 없음 (loggedIn: false 반환)');
     return res.json({ loggedIn: false });
   }
   try {
