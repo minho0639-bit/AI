@@ -412,12 +412,23 @@ select {
     padding: 20px;
   }
   .recipient-cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
   }
   .recipient-card-image {
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .recipient-card {
+    padding: 8px;
+    gap: 6px;
+  }
+  .recipient-card-name {
+    font-size: 0.75rem;
+  }
+  .agency-select-title {
+    font-size: clamp(1.5rem, 4vw, 2rem) !important;
   }
   /* 모바일에서 소속사 카드 크기 조정 - 한 줄에 3개 */
   .agency-grid {

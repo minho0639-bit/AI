@@ -96,6 +96,10 @@ button:active {
   padding: 32px;
 }
 
+.stationery-grid {
+  margin-top: 0;
+}
+
 .section-head {
   margin-bottom: 20px;
 }
@@ -108,8 +112,8 @@ button:active {
 
 @media (max-width: 768px) {
   .stationery-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
   }
 }
 
@@ -192,16 +196,27 @@ button:active {
 
 @media (max-width: 768px) {
   body {
-    padding-bottom: 40px;
+    padding: 16px 12px 40px;
+    padding-top: 80px;
+  }
+  .target-summary {
+    display: none;
   }
   .stationery-section {
-    padding: 24px;
+    padding: 20px 0;
+    border: none;
+    background: transparent;
+    margin-bottom: 0;
+  }
+  .stationery-grid {
+    margin-top: 12px;
+    gap: 6px;
   }
   .stationery-actions {
     flex-direction: column;
   }
   .stationery-card {
-    padding: 6px;
+    padding: 4px;
     gap: 0;
   }
   .stationery-card strong {

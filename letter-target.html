@@ -188,12 +188,13 @@
           throw new Error("category not found");
         }
         state.selectedCategory = categoryFromDb;
-        pageTitle.textContent = `${categoryFromDb.name} 대상 선택`;
         if (selectedAgencyId) {
+          pageTitle.textContent = `팀/그룹 대상 선택`;
           pageDesc.textContent = `${categoryFromDb.name} 분야의 팀/그룹을 선택해 주세요.`;
           const sectionTitle = document.querySelector("#sectionTitle");
           if (sectionTitle) sectionTitle.textContent = "팀/그룹, 이름을 선택하세요";
         } else {
+          pageTitle.textContent = `${categoryFromDb.name} 대상 선택`;
           pageDesc.textContent = `${categoryFromDb.name} 분야의 소속사와 팀을 지정해 주세요.`;
         }
       }
