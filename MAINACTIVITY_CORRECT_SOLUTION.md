@@ -8,14 +8,13 @@
 
 ## ✅ 가장 확실한 해결법
 
-**InputConnection 관련 override 전부 삭제**
+**InputConnection 관련 override 최소화**
 
-즉 아래 3개를 제거:
-- `onCheckIsTextEditor()`
-- `onCreateInputConnection(...)`
-- `onKeyDown` / `onKeyUp` WebView 포워딩 부분도 삭제 권장
+- `onCheckIsTextEditor()` ❌ 삭제
+- `onCreateInputConnection(...)` ✅ 필수 (추상 메서드이므로) - 하지만 `outAttrs` 수정 금지!
+- `onKeyDown` / `onKeyUp` ❌ 삭제 권장
 
-**MainActivity를 Capacitor 기본 상태로 되돌리는 것만으로 한글 입력이 정상화됩니다.**
+**주의**: 일부 Capacitor 버전에서는 `onCreateInputConnection`이 추상 메서드이므로 반드시 오버라이드해야 합니다. 하지만 `outAttrs`를 수정하지 않고 `super`를 호출해야 합니다!
 
 ## 🔥 최종 권장 MainActivity
 
@@ -28,6 +27,8 @@ import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -67,6 +68,14 @@ public class MainActivity extends BridgeActivity {
                 return super.shouldOverrideUrlLoading(view, url);
             }
         });
+    }
+    
+    // ⚠️ 중요: 추상 메서드이므로 반드시 오버라이드해야 하지만,
+    // outAttrs를 수정하지 않고 super를 그대로 호출해야 합니다!
+    @Override
+    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+        // outAttrs를 수정하지 않고 super를 그대로 호출
+        return super.onCreateInputConnection(outAttrs);
     }
 }
 ```
@@ -149,9 +158,11 @@ public boolean onKeyDown(int keyCode, KeyEvent event) {
 
 **이런 오버라이드들이 IME 구성값을 건드려서 한글 입력이 깨집니다.**
 
-## 🔥 안전한 수정 버전 (오버라이드 유지해야 하는 경우)
+## 🔥 추상 메서드인 경우 (현재 상황)
 
-만약 커스텀 IME 기능 때문에 오버라이드가 꼭 필요하다면, **WebView의 원본 InputConnection을 해치지 않도록 그대로 반환**해야 합니다:
+**`BridgeActivity`에 `onCreateInputConnection`이 추상 메서드로 정의되어 있는 경우:**
+
+반드시 오버라이드해야 하지만, **`outAttrs`를 수정하지 않고 `super`를 그대로 호출**해야 합니다:
 
 ```java
 @Override
@@ -165,6 +176,7 @@ public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
 - `outAttrs.inputType = ...`
 - `outAttrs.imeOptions = ...`
 - `outAttrs.hintLocales = null;`
+- `webView.onCreateInputConnection(outAttrs)` 직접 호출
 
 IME 구성값을 건드리면 한글 입력이 깨집니다.
 

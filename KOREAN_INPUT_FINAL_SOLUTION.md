@@ -22,11 +22,13 @@
 
 ### 방법 1: MainActivity를 Capacitor 기본 상태로 되돌리기 (권장)
 
-**InputConnection 관련 override 전부 삭제**
+**InputConnection 관련 override 최소화**
 
 - `onCheckIsTextEditor()` ❌ 삭제
-- `onCreateInputConnection(...)` ❌ 삭제  
-- `onKeyDown` / `onKeyUp` ❌ 삭제
+- `onCreateInputConnection(...)` ✅ 필수 (추상 메서드인 경우) - 하지만 `outAttrs` 수정 금지!
+- `onKeyDown` / `onKeyUp` ❌ 삭제 권장
+
+**주의**: 일부 Capacitor 버전에서는 `onCreateInputConnection`이 추상 메서드이므로 반드시 오버라이드해야 합니다. 하지만 `outAttrs`를 수정하지 않고 `super.onCreateInputConnection(outAttrs)`를 호출해야 합니다!
 
 **1단계: MainActivity.java 수정 (간단한 버전)**
 
@@ -37,6 +39,8 @@ import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -76,6 +80,14 @@ public class MainActivity extends BridgeActivity {
                 return super.shouldOverrideUrlLoading(view, url);
             }
         });
+    }
+    
+    // ⚠️ 중요: 추상 메서드이므로 반드시 오버라이드해야 하지만,
+    // outAttrs를 수정하지 않고 super를 그대로 호출해야 합니다!
+    @Override
+    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+        // outAttrs를 수정하지 않고 super를 그대로 호출
+        return super.onCreateInputConnection(outAttrs);
     }
 }
 ```
