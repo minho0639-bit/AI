@@ -16,6 +16,56 @@ const KAKAO_REDIRECT_URI =
   process.env.KAKAO_REDIRECT_URI || `http://localhost:${PORT}/auth/kakao/callback`;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const STATE_SECRET = process.env.SESSION_SECRET || "fanletter-post-secret";
+
+// State 서명 및 검증 함수
+function signState(state) {
+  const hmac = crypto.createHmac('sha256', STATE_SECRET);
+  hmac.update(state);
+  const signature = hmac.digest('hex');
+  return `${state}.${signature}`;
+}
+
+function verifyState(signedState) {
+  if (!signedState || typeof signedState !== 'string') {
+    return null;
+  }
+  const parts = signedState.split('.');
+  if (parts.length !== 2) {
+    return null;
+  }
+  const [state, signature] = parts;
+  const hmac = crypto.createHmac('sha256', STATE_SECRET);
+  hmac.update(state);
+  const expectedSignature = hmac.digest('hex');
+  if (signature !== expectedSignature) {
+    return null;
+  }
+  return state;
+}
+
+// 쿠키 파싱 헬퍼 함수
+function parseCookies(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader) {
+    return cookies;
+  }
+  cookieHeader.split(';').forEach(cookie => {
+    const trimmed = cookie.trim();
+    const equalIndex = trimmed.indexOf('=');
+    if (equalIndex > 0) {
+      const name = trimmed.substring(0, equalIndex).trim();
+      const value = trimmed.substring(equalIndex + 1).trim();
+      try {
+        cookies[name] = decodeURIComponent(value);
+      } catch (e) {
+        // URL 디코딩 실패 시 원본 값 사용
+        cookies[name] = value;
+      }
+    }
+  });
+  return cookies;
+}
 const DEFAULT_RECIPIENT_TAXONOMY = [
   {
     name: "엔터테인먼트",
@@ -63,8 +113,29 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// OAuth state 테이블 초기화
+async function ensureOAuthStateTable() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS oauth_states (
+      state VARCHAR(64) PRIMARY KEY,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+  );
+  
+  // 10분 이상 된 오래된 state 삭제 (정리 작업)
+  await pool.query(
+    "DELETE FROM oauth_states WHERE created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)"
+  );
+}
+
 initializeBootstrapTasks().catch((error) => {
   console.error("Startup bootstrap failed:", error);
+});
+
+// OAuth state 테이블 초기화
+ensureOAuthStateTable().catch((error) => {
+  console.error("OAuth state table initialization failed:", error);
 });
 
 // CORS 설정 - 모바일 앱 및 웹 브라우저 지원
@@ -117,7 +188,7 @@ app.use(
       secure: false, // HTTP 사용 시 false
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 24시간
-      sameSite: 'lax', // Cross-site 요청에서도 쿠키 전송 허용
+      sameSite: 'lax', // GET 요청에서 cross-site 쿠키 전송 허용 (OAuth 리다이렉트 지원)
       // domain을 설정하지 않으면 모든 도메인에서 쿠키 사용 가능
     },
   })
@@ -1558,28 +1629,61 @@ app.post("/api/logout", (req, res) => {
   });
 });
 
-app.get("/auth/kakao", (req, res) => {
+app.get("/auth/kakao", async (req, res) => {
   if (!KAKAO_CLIENT_ID) {
     return res.status(500).send("Kakao OAuth 설정이 필요합니다.");
   }
   const state = crypto.randomBytes(16).toString("hex");
-  req.session.kakaoState = state;
-  const authorizeUrl =
-    "https://kauth.kakao.com/oauth/authorize" +
-    `?response_type=code&client_id=${encodeURIComponent(KAKAO_CLIENT_ID)}` +
-    `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
-    `&state=${state}`;
-  res.redirect(authorizeUrl);
+  
+  try {
+    // 데이터베이스에 state 저장 (10분 후 자동 삭제)
+    await pool.query(
+      "INSERT INTO oauth_states (state) VALUES (?)",
+      [state]
+    );
+    
+    console.log("카카오 OAuth 시작 - State:", state);
+    const authorizeUrl =
+      "https://kauth.kakao.com/oauth/authorize" +
+      `?response_type=code&client_id=${encodeURIComponent(KAKAO_CLIENT_ID)}` +
+      `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
+      `&state=${state}`;
+    res.redirect(authorizeUrl);
+  } catch (error) {
+    console.error("OAuth state 저장 오류:", error);
+    res.status(500).send("OAuth 시작 중 오류가 발생했습니다.");
+  }
 });
 
 app.get("/auth/kakao/callback", async (req, res) => {
   const { code, state } = req.query;
-  if (!code || !state || state !== req.session.kakaoState) {
-    return res.status(400).send("잘못된 요청입니다.");
+  
+  console.log("카카오 콜백 수신 - code:", code ? "있음" : "없음", "state:", state);
+  
+  if (!code || !state) {
+    console.error("필수 파라미터 누락 - code:", !!code, "state:", !!state);
+    return res.status(400).send("잘못된 요청입니다. (필수 파라미터 누락)");
   }
-  delete req.session.kakaoState;
-
+  
   try {
+    // 데이터베이스에서 state 검증
+    const [stateRows] = await pool.query(
+      "SELECT state FROM oauth_states WHERE state = ?",
+      [state]
+    );
+    
+    if (stateRows.length === 0) {
+      console.error("State 검증 실패 - 데이터베이스에 state가 없습니다:", state);
+      return res.status(400).send("잘못된 요청입니다. (State 검증 실패)");
+    }
+    
+    // 검증 성공 후 state 삭제 (일회용)
+    await pool.query(
+      "DELETE FROM oauth_states WHERE state = ?",
+      [state]
+    );
+    
+    console.log("State 검증 성공");
     const tokenResponse = await axios.post(
       "https://kauth.kakao.com/oauth/token",
       null,
@@ -1619,7 +1723,15 @@ app.get("/auth/kakao/callback", async (req, res) => {
     });
 
     req.session.userId = userId;
-    res.redirect("/");
+    
+    // 세션 저장 후 리다이렉트
+    req.session.save((err) => {
+      if (err) {
+        console.error("세션 저장 오류:", err);
+        return res.redirect("/?login=failed");
+      }
+      res.redirect("/");
+    });
   } catch (error) {
     console.error("kakao oauth error:", error.response?.data || error.message);
     res.redirect("/?login=failed");
