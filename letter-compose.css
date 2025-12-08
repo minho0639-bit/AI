@@ -379,6 +379,14 @@ button:active {
 
 .compose-editor {
   margin-top: 24px;
+  margin-bottom: -16px;
+}
+
+@media (max-width: 600px) {
+  .compose-editor {
+    margin-top: 0;
+    margin-bottom: -8px;
+  }
 }
 
 .write-panel {
@@ -386,6 +394,7 @@ button:active {
   border-radius: 0;
   background: transparent;
   padding: 0;
+  padding-bottom: 0;
   display: flex;
   justify-content: center;
   width: 100%;
@@ -676,6 +685,9 @@ button:active {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 16px;
+  position: relative;
+  z-index: 10;
 }
 
 @media (max-width: 768px) {
@@ -735,12 +747,22 @@ button:active {
   body {
     padding: 16px;
     overflow-x: hidden;
+    padding-top: 16px;
+  }
+  /* 모바일에서 헤더 숨기기 */
+  .top-nav {
+    display: none;
   }
   .compose-main {
-    gap: 24px;
+    gap: 4px;
+  }
+  .compose-editor {
+    margin-top: 0;
+    margin-bottom: 0;
   }
   .write-panel {
-    padding-bottom: 12px;
+    padding-bottom: 0;
+    margin-bottom: -2cm;
     justify-content: center;
     overflow-x: visible;
     width: 100vw;
@@ -751,12 +773,18 @@ button:active {
   .paper-stack {
     transform-origin: center top;
     min-width: 14cm;
+    gap: 0;
   }
   .letter-paper {
     padding: 1cm;
     border-radius: 0;
     transform: scale(0.6);
     transform-origin: center top;
+  }
+  .compose-actions {
+    margin-top: 0;
+    gap: 8px;
+    padding-top: 0;
   }
   .compose-actions button {
     width: 100%;

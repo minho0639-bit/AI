@@ -1730,6 +1730,67 @@ app.get("/auth/kakao/callback", async (req, res) => {
         console.error("세션 저장 오류:", err);
         return res.redirect("/?login=failed");
       }
+      
+      // WebView 환경에서 세션 쿠키가 제대로 설정되도록 HTML 페이지 직접 반환
+      const userAgent = req.get('user-agent') || '';
+      const isMobileApp = userAgent.includes('Capacitor') || userAgent.includes('Android') || userAgent.includes('iPhone');
+      
+      if (isMobileApp) {
+        // 모바일 앱의 경우 HTML 페이지를 직접 반환하여 세션 쿠키 설정 보장
+        return res.send(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 중...</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #fff7d6 0, #ffffff 55%, #fff7e5 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .loading {
+      text-align: center;
+      color: #4b4d55;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #ffd700;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>로그인 중...</p>
+  </div>
+  <script>
+    // 세션 쿠키가 설정되도록 약간의 지연 후 리다이렉트
+    setTimeout(function() {
+      window.location.href = '/';
+    }, 500);
+  </script>
+</body>
+</html>
+        `);
+      }
+      
+      // 일반 웹 브라우저의 경우 기존대로 리다이렉트
       res.redirect("/");
     });
   } catch (error) {

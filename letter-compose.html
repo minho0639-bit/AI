@@ -1539,8 +1539,47 @@
           ?.querySelectorAll("button")
           .forEach((button) => button.addEventListener("mousedown", (event) => event.preventDefault()));
 
-        saveDraft.addEventListener("click", () => {
-          alert("임시 저장 기능은 곧 제공될 예정입니다.");
+        saveDraft.addEventListener("click", async () => {
+          try {
+            const fullText = getAllBodyText();
+            const formattedText = getAllBodyHtml();
+            const targetInfo = {
+              recipientId: params.get("recipientId") ? Number(params.get("recipientId")) : null,
+              recipientName: params.get("name") || null,
+              agency: params.get("agency") || null,
+              team: params.get("team") || null,
+              categoryLabel: params.get("categoryLabel") || null,
+              subcategoryLabel: params.get("subcategoryLabel") || null,
+            };
+            const draftData = {
+              text: fullText,
+              formattedText,
+              characters: getTotalCharacterCount(),
+              pages: paperBodies.length,
+              font: selectedFont,
+              color: selectedColor,
+              stationery: selectedStationery,
+              createdAt: Date.now(),
+              target: targetInfo,
+            };
+            
+            // sessionStorage에 저장
+            sessionStorage.setItem("fanletterDraft", JSON.stringify(draftData));
+            
+            // 사용자에게 피드백 제공
+            const originalText = saveDraft.textContent;
+            saveDraft.textContent = "저장됨!";
+            saveDraft.style.opacity = "0.7";
+            setTimeout(() => {
+              saveDraft.textContent = originalText;
+              saveDraft.style.opacity = "1";
+            }, 1500);
+            
+            console.log("임시 저장 완료:", draftData);
+          } catch (error) {
+            console.error("임시 저장 오류:", error);
+            alert("임시 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
+          }
         });
 
         toSummary.addEventListener("click", () => {
