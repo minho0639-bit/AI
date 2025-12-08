@@ -65,7 +65,7 @@
       <section class="social">
         <p>또는 SNS 계정으로 3초만에 시작하기</p>
         <div class="social-actions">
-          <button type="button" class="kakao" onclick="window.location.href='/auth/kakao'">
+          <button type="button" class="kakao" onclick="(function(){ sessionStorage.setItem('kakaoLoginInProgress', 'true'); const apiUrl = window.apiConfig?.baseUrl || 'http://b-itsolution.com:3202'; window.location.href = apiUrl + '/auth/kakao'; })()">
             카카오
           </button>
           <button type="button" class="naver">네이버</button>

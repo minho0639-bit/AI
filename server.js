@@ -190,6 +190,8 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24, // 24시간
       sameSite: 'lax', // GET 요청에서 cross-site 쿠키 전송 허용 (OAuth 리다이렉트 지원)
       // domain을 설정하지 않으면 모든 도메인에서 쿠키 사용 가능
+      // WebView에서 쿠키가 제대로 작동하도록 path 명시
+      path: '/',
     },
   })
 );
@@ -1648,6 +1650,34 @@ app.get("/auth/kakao", async (req, res) => {
       `?response_type=code&client_id=${encodeURIComponent(KAKAO_CLIENT_ID)}` +
       `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
       `&state=${state}`;
+    
+    // WebView에서 리다이렉트가 제대로 작동하지 않을 수 있으므로
+    // User-Agent를 확인하여 모바일 앱인 경우 JavaScript로 리다이렉트
+    const userAgent = req.get('user-agent') || '';
+    const isMobileApp = userAgent.includes('Capacitor') || userAgent.includes('Android') || userAgent.includes('iPhone');
+    
+    if (isMobileApp) {
+      // 모바일 앱의 경우 JavaScript로 리다이렉트
+      return res.send(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>카카오 로그인</title>
+  <script>
+    // 즉시 카카오 인증 페이지로 리다이렉트
+    window.location.href = '${authorizeUrl}';
+  </script>
+</head>
+<body>
+  <p>카카오 로그인 페이지로 이동 중...</p>
+</body>
+</html>
+      `);
+    }
+    
+    // 일반 웹 브라우저의 경우 기존대로 리다이렉트
     res.redirect(authorizeUrl);
   } catch (error) {
     console.error("OAuth state 저장 오류:", error);
@@ -1737,6 +1767,12 @@ app.get("/auth/kakao/callback", async (req, res) => {
       
       if (isMobileApp) {
         // 모바일 앱의 경우 HTML 페이지를 직접 반환하여 세션 쿠키 설정 보장
+        // 서버 URL을 동적으로 가져오기
+        const serverUrl = req.protocol + '://' + req.get('host');
+        // Capacitor WebView에서는 localhost를 사용하므로 실제 서버 URL 사용
+        // 환경 변수에서 가져오거나 기본값 사용
+        const apiBaseUrl = process.env.API_BASE_URL || 'http://b-itsolution.com:3202';
+        
         return res.send(`
 <!DOCTYPE html>
 <html lang="ko">
@@ -1773,6 +1809,40 @@ app.get("/auth/kakao/callback", async (req, res) => {
       100% { transform: rotate(360deg); }
     }
   </style>
+  <script>
+    // 서버 URL 설정 (절대 경로 사용)
+    window.SERVER_URL = '${apiBaseUrl}';
+    window.API_BASE_URL = '${apiBaseUrl}';
+    console.log('서버 URL 설정:', window.SERVER_URL);
+    console.log('API Base URL 설정:', window.API_BASE_URL);
+    
+    // api-config.js의 기능을 인라인으로 구현 (상대 경로 문제 회피)
+    window.apiConfig = {
+      baseUrl: '${apiBaseUrl}',
+      fetch: async function(endpoint, options = {}) {
+        const url = endpoint.startsWith('http') 
+          ? endpoint 
+          : this.baseUrl + endpoint;
+        const defaultOptions = {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        };
+        const mergedOptions = { ...defaultOptions, ...options };
+        return await fetch(url, mergedOptions);
+      },
+      json: async function(endpoint, options = {}) {
+        const response = await this.fetch(endpoint, options);
+        if (!response.ok) {
+          throw new Error('요청 실패');
+        }
+        return await response.json();
+      }
+    };
+    console.log('api-config 인라인 초기화 완료');
+  </script>
 </head>
 <body>
   <div class="loading">
@@ -1780,10 +1850,51 @@ app.get("/auth/kakao/callback", async (req, res) => {
     <p>로그인 중...</p>
   </div>
   <script>
-    // 세션 쿠키가 설정되도록 약간의 지연 후 리다이렉트
-    setTimeout(function() {
-      window.location.href = '/';
-    }, 500);
+    (async function() {
+      console.log('카카오 로그인 콜백 페이지 로드');
+      console.log('현재 URL:', window.location.href);
+      console.log('서버 URL:', window.SERVER_URL);
+      console.log('API Base URL:', window.API_BASE_URL);
+      
+      // 세션 쿠키가 설정되도록 약간의 지연
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // 세션 확인
+      try {
+        const apiUrl = window.apiConfig?.baseUrl || window.SERVER_URL || 'http://b-itsolution.com:3202';
+        console.log('세션 확인 API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl + '/api/me', {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        console.log('세션 확인 응답:', data);
+        
+        if (data.loggedIn && data.user) {
+          // 세션 정보를 localStorage에 저장
+          try {
+            localStorage.setItem('userSession', JSON.stringify({
+              user: data.user,
+              timestamp: Date.now()
+            }));
+            console.log('세션 정보를 localStorage에 저장했습니다.');
+          } catch (e) {
+            console.warn('localStorage 저장 실패:', e);
+          }
+        }
+      } catch (error) {
+        console.error('세션 확인 실패:', error);
+      }
+      
+      // 리다이렉트 (절대 URL 사용 - 루트 경로로)
+      const redirectUrl = window.location.origin + '/';
+      console.log('리다이렉트 URL:', redirectUrl);
+      window.location.href = redirectUrl;
+    })();
   </script>
 </body>
 </html>

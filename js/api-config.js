@@ -25,6 +25,12 @@ const isCapacitor = typeof window !== 'undefined' && window.Capacitor;
 
 // 현재 환경에 따른 API 베이스 URL 결정
 function getApiBaseUrl() {
+  // 서버에서 설정한 SERVER_URL이 있으면 우선 사용 (카카오 콜백 페이지 등)
+  if (typeof window !== 'undefined' && window.SERVER_URL) {
+    console.log('서버에서 설정한 URL 사용:', window.SERVER_URL);
+    return window.SERVER_URL;
+  }
+  
   // Capacitor 앱 환경인 경우
   if (isCapacitor) {
     // 개발 모드 확인 (URL에 localhost가 포함되어 있으면 개발 모드)

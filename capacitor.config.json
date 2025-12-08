@@ -3,6 +3,7 @@
   "appName": "레터비",
   "webDir": "public",
   "server": {
+    "url": "http://b-itsolution.com:3202",
     "androidScheme": "http",
     "iosScheme": "http",
     "allowNavigation": [
@@ -12,7 +13,9 @@
       "https://kapi.kakao.com",
       "https://nid.naver.com",
       "https://accounts.google.com"
-    ]
+    ],
+    "cleartext": true,
+    "errorPath": "/index.html"
   },
   "plugins": {
     "SplashScreen": {

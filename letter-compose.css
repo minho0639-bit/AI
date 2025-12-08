@@ -579,6 +579,9 @@ button:active {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   /* 입력 가능하도록 명시 */
   cursor: text;
+  /* 한글 입력 활성화 */
+  ime-mode: active;
+  -webkit-ime-mode: active;
 }
 
 .paper-body .image-container {
