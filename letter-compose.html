@@ -798,69 +798,26 @@
           body.setAttribute("tabindex", "0");
           body.setAttribute("enterkeyhint", "default");
           
-          // Android WebView에서 한글 입력을 위한 CompositionEvent 처리
-          let compositionText = '';
-          let compositionRange = null;
+          // 웹 브라우저에서 한글 입력을 위한 CompositionEvent 처리
+          // 브라우저가 자동으로 텍스트를 삽입하므로 수동 삽입하지 않음
+          let isComposing = false;
           
           body.addEventListener("compositionstart", (e) => {
             console.log('한글 입력 시작 (compositionstart)');
-            compositionText = '';
-            // 현재 선택 영역 저장
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0) {
-              compositionRange = selection.getRangeAt(0).cloneRange();
-            }
-            e.stopPropagation();
+            isComposing = true;
+            // 기본 동작 허용 (브라우저가 자동으로 처리)
           });
           
           body.addEventListener("compositionupdate", (e) => {
             console.log('한글 입력 중 (compositionupdate):', e.data);
-            if (e.data) {
-              compositionText = e.data;
-              // 조합 중인 텍스트를 임시로 표시
-              if (compositionRange) {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount > 0) {
-                  const range = selection.getRangeAt(0);
-                  // 조합 중인 텍스트 삽입
-                  range.deleteContents();
-                  const textNode = document.createTextNode(compositionText);
-                  range.insertNode(textNode);
-                  range.setStartAfter(textNode);
-                  range.collapse(true);
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-              }
-            }
-            e.stopPropagation();
+            // 브라우저가 자동으로 조합 중인 텍스트를 표시하므로 수동 처리 불필요
           });
           
           body.addEventListener("compositionend", (e) => {
             console.log('한글 입력 완료 (compositionend):', e.data);
-            if (e.data) {
-              compositionText = e.data;
-              // 최종 텍스트 삽입
-              const selection = window.getSelection();
-              if (selection && selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                // 조합 완료된 텍스트로 교체
-                range.deleteContents();
-                const textNode = document.createTextNode(compositionText);
-                range.insertNode(textNode);
-                range.setStartAfter(textNode);
-                range.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(range);
-              }
-            }
-            compositionText = '';
-            compositionRange = null;
-            e.stopPropagation();
-            // 입력 완료 후 처리
-            setTimeout(() => {
-              handleBodyInput(body);
-            }, 0);
+            isComposing = false;
+            // 브라우저가 자동으로 최종 텍스트를 삽입하므로 수동 삽입하지 않음
+            // input 이벤트가 자동으로 발생하므로 여기서는 아무것도 하지 않음
           });
           
           body.addEventListener("focus", () => {
@@ -918,8 +875,11 @@
           });
           
           body.addEventListener("input", (e) => {
-            console.log('paper-body 입력 이벤트 발생');
-            handleBodyInput(body);
+            // composition 중이 아닐 때만 처리 (브라우저가 자동으로 처리하므로)
+            if (!isComposing) {
+              console.log('paper-body 입력 이벤트 발생');
+              handleBodyInput(body);
+            }
           });
           
           // beforeinput 이벤트도 처리 (최신 브라우저)
@@ -978,8 +938,11 @@
             };
             
             body.addEventListener("input", () => {
-              syncToTextarea();
-              handleBodyInput(body);
+              // composition 중이 아닐 때만 처리
+              if (!isComposing) {
+                syncToTextarea();
+                handleBodyInput(body);
+              }
             });
             
             // 포커스 시 textarea에도 포커스 (Android가 인식하도록)
