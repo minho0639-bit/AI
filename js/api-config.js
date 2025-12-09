@@ -143,13 +143,19 @@ async function apiFetch(endpoint, options = {}) {
     }
     
     // 401 에러 처리 (인증 필요)
+    // 관리자 페이지에서는 리다이렉트하지 않음 (관리자 페이지가 자체 로그인 폼을 가지고 있음)
     if (response.status === 401) {
-      if (isCapacitor) {
-        const { App } = await import('@capacitor/app');
-        // 앱에서 로그인 페이지로 이동
-        window.location.href = '/signup.html';
-      } else {
-        window.location.href = '/signup.html';
+      const isAdminPage = window.location.pathname === '/admin.html' || 
+                          window.location.pathname.includes('admin.html');
+      
+      if (!isAdminPage) {
+        if (isCapacitor) {
+          const { App } = await import('@capacitor/app');
+          // 앱에서 로그인 페이지로 이동
+          window.location.href = '/signup.html';
+        } else {
+          window.location.href = '/signup.html';
+        }
       }
       throw new Error('인증이 필요합니다.');
     }
